@@ -16,9 +16,9 @@
       "icons/icon.ico"
     ]
   },
-  "productName": "create-tauri-react",
+  "productName": "NiLLM",
   "version": "0.1.0",
-  "identifier": "com.tauri.app",
+  "identifier": "com.nillm.app",
   "plugins": {
     "process": {
       "active": true
@@ -30,7 +30,7 @@
     },
     "windows": [
       {
-        "title": "Tauri App",
+        "title": "NiLLM",
         "width": 1000,
         "height": 600,
         "dragDropEnabled": false
