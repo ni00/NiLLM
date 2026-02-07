@@ -2,6 +2,7 @@ import { useState, useEffect, KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { useAppStore } from '@/lib/store'
 import { broadcastMessage } from '@/features/benchmark/engine'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -14,16 +15,29 @@ import {
     X,
     Check,
     Pencil,
-    History,
     MessageSquareText,
     Eraser,
     Star,
     Gavel,
     Loader2,
-    LayoutGrid
+    LayoutGrid,
+    ChevronDown,
+    ChevronUp,
+    ChevronsUpDown,
+    Layers,
+    Trash2,
+    Pause,
+    PlayCircle,
+    Download
 } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger
+} from '@/components/ui/popover'
 import { GenerationConfig, LLMModel } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ReactMarkdown from 'react-markdown'
@@ -131,17 +145,22 @@ export function ChatArena() {
         activeModelIds,
         sessions,
         activeSessionId,
-        createSession,
-        addResult,
         toggleModelActivation,
         updateModel,
         updateGlobalConfig,
         globalConfig,
-        clearActiveSession
+        clearActiveSession,
+        messageQueue,
+        isProcessing,
+        addToQueue,
+        removeFromQueue,
+        toggleQueuePause,
+        reorderQueue,
+        setProcessing
     } = useAppStore()
 
     const [input, setInput] = useState('')
-    const [isProcessing, setIsProcessing] = useState(false)
+    // isProcessing is now global
     const [isJudging, setIsJudging] = useState(false)
     const [editingModelId, setEditingModelId] = useState<string | null>(null)
     const [showJudgePanel, setShowJudgePanel] = useState(false)
@@ -150,7 +169,6 @@ export function ChatArena() {
     const [arenaSettingsTab, setArenaSettingsTab] = useState<
         'models' | 'prompt' | 'params'
     >('models')
-    const [showHistoryModelIds, setShowHistoryModelIds] = useState<string[]>([])
     const [judgeStatus, setJudgeStatus] = useState<string | null>(null)
     const [judgePrompt, setJudgePrompt] =
         useState(`You are an impartial AI Judge. 
@@ -185,12 +203,26 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
     const [modelToEdit, setModelToEdit] = useState<LLMModel | null>(null)
     const [editForm, setEditForm] = useState<Partial<LLMModel>>({})
 
-    const toggleHistory = (modelId: string) => {
-        setShowHistoryModelIds((prev) =>
+    const [expandedModelIds, setExpandedModelIds] = useState<string[]>([])
+
+    const toggleExpandAll = (modelId: string) => {
+        setExpandedModelIds((prev) =>
             prev.includes(modelId)
                 ? prev.filter((id) => id !== modelId)
                 : [...prev, modelId]
         )
+    }
+
+    // Track manually toggled blocks
+    const [manuallyExpandedBlocks, setManuallyExpandedBlocks] = useState<
+        Record<string, boolean>
+    >({})
+
+    const toggleBlock = (blockId: string) => {
+        setManuallyExpandedBlocks((prev) => ({
+            ...prev,
+            [blockId]: !prev[blockId]
+        }))
     }
 
     const activeModels = models.filter((m) => activeModelIds.includes(m.id))
@@ -221,6 +253,57 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
     const durationRange = {
         min: Math.min(...durationValues),
         max: Math.max(...durationValues)
+    }
+
+    // Aggregate metrics ranges for footer coloring
+    const aggregateMetrics = activeModels.map((model) => {
+        const results = activeSession?.results[model.id] || []
+        const valid = results.filter((r) => r.metrics)
+        return {
+            avgTtft:
+                valid.length > 0
+                    ? valid.reduce((a, b) => a + (b.metrics?.ttft || 0), 0) /
+                      valid.length
+                    : 0,
+            avgTps:
+                valid.length > 0
+                    ? valid.reduce((a, b) => a + (b.metrics?.tps || 0), 0) /
+                      valid.length
+                    : 0,
+            sumTime: results.reduce(
+                (a, b) => a + (b.metrics?.totalDuration || 0),
+                0
+            ),
+            sumToks: results.reduce(
+                (a, b) => a + (b.metrics?.tokenCount || 0),
+                0
+            )
+        }
+    })
+
+    const fTtftVals = aggregateMetrics
+        .map((a) => a.avgTtft)
+        .filter((v) => v > 0)
+    const fTpsVals = aggregateMetrics.map((a) => a.avgTps).filter((v) => v > 0)
+    const fTimeVals = aggregateMetrics
+        .map((a) => a.sumTime)
+        .filter((v) => v > 0)
+    const fToksVals = aggregateMetrics
+        .map((a) => a.sumToks)
+        .filter((v) => v > 0)
+
+    const fTtftRange = {
+        min: Math.min(...fTtftVals),
+        max: Math.max(...fTtftVals)
+    }
+    const fTpsRange = { min: Math.min(...fTpsVals), max: Math.max(...fTpsVals) }
+    const fTimeRange = {
+        min: Math.min(...fTimeVals),
+        max: Math.max(...fTimeVals)
+    }
+    const fToksRange = {
+        min: Math.min(...fToksVals),
+        max: Math.max(...fToksVals)
     }
 
     const getMetricColor = (
@@ -278,18 +361,45 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
         }
     }
 
-    const handleSend = async () => {
-        if (!input.trim() || isProcessing) return
+    // Queue Processor
+    useEffect(() => {
+        const processQueue = async () => {
+            // ALWAYS get the freshest state from store to avoid stale closures in effects
+            const state = useAppStore.getState()
+            const {
+                isProcessing,
+                messageQueue,
+                setProcessing,
+                removeFromQueue
+            } = state
 
-        setIsProcessing(true)
-        try {
-            await broadcastMessage(input)
-            setInput('')
-        } catch (err) {
-            console.error(err)
-        } finally {
-            setIsProcessing(false)
+            // Find first active item (not paused)
+            const nextItem = messageQueue.find((m) => !m.paused)
+
+            // If processing, or no active items, do nothing
+            // We use the state from useAppStore.getState() to be absolutely sure
+            if (isProcessing || !nextItem) return
+
+            setProcessing(true)
+
+            try {
+                await broadcastMessage(nextItem.prompt, nextItem.sessionId)
+            } catch (err) {
+                console.error('Queue processing error:', err)
+            } finally {
+                removeFromQueue(nextItem.id)
+                setProcessing(false)
+            }
         }
+
+        processQueue()
+    }, [messageQueue, isProcessing, setProcessing, removeFromQueue])
+
+    const handleSend = () => {
+        if (!input.trim()) return
+
+        addToQueue(input)
+        setInput('')
     }
 
     const handleAutoJudge = async () => {
@@ -408,7 +518,10 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                         activeSession.id,
                         fuzzyTarget.modelId,
                         fuzzyTarget.resultId,
-                        { rating: Math.min(5, Math.max(1, Math.round(score))) }
+                        {
+                            rating: Math.min(5, Math.max(1, Math.round(score))),
+                            ratingSource: 'ai'
+                        }
                     )
                     updateCount++
                 }
@@ -431,6 +544,46 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
         } finally {
             setIsJudging(false)
         }
+    }
+
+    const handleExportAll = () => {
+        if (!activeSession || activeModels.length === 0) return
+
+        let fullContent = `# Arena Export - ${new Date().toLocaleString()}\n`
+        fullContent += `Session ID: ${activeSession.id}\n\n`
+
+        activeModels.forEach((model) => {
+            const results = activeSession.results[model.id] || []
+            if (results.length === 0) return
+
+            const provider = model.providerName || model.provider
+            fullContent += `## Model: ${model.name} (${provider})\n\n`
+
+            results.forEach((res, idx) => {
+                const timestamp = new Date(res.timestamp).toLocaleString()
+                fullContent += `### Q${idx + 1} (${timestamp})\n\n`
+                fullContent += `**PROMPT:**\n${res.prompt}\n\n`
+                fullContent += `**RESPONSE:**\n${res.response}\n\n`
+                if (res.rating) {
+                    fullContent += `**RATING:** ${res.rating.toFixed(1)} (${res.ratingSource === 'ai' ? 'AI Judge' : 'Human Judge'})\n`
+                }
+                if (res.metrics) {
+                    fullContent += `**METRICS:** TTFT: ${res.metrics.ttft}ms | SPD: ${res.metrics.tps.toFixed(1)}t/s | TIME: ${(res.metrics.totalDuration / 1000).toFixed(2)}s | TOKS: ${res.metrics.tokenCount}\n`
+                }
+                fullContent += `\n---\n\n`
+            })
+            fullContent += `\n\n`
+        })
+
+        const blob = new Blob([fullContent], { type: 'text/markdown' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `arena_full_export_${new Date().toISOString().slice(0, 10)}.md`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
     }
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -456,19 +609,166 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
     return (
         <div className="flex flex-col h-full w-full max-h-screen relative">
             {/* Header / Toolbar */}
-            <div className="flex-none flex items-center justify-between p-4 border-b bg-background z-20 relative">
-                <h2 className="text-xl font-semibold tracking-tight">Arena</h2>
+            <PageHeader
+                title="Arena"
+                description="Compare multiple models in real-time with unified prompts."
+                icon={Layers}
+                className="p-6 pb-0"
+            >
                 <div className="flex gap-2">
+                    {/* Queue Indicator */}
+                    {messageQueue.length > 0 && (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="relative pr-3 h-10 px-4"
+                                >
+                                    <Layers className="w-4 h-4 mr-2 text-muted-foreground" />
+                                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full border-2 border-background shadow-sm">
+                                        {messageQueue.length}
+                                    </span>
+                                    Queue
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-4" align="end">
+                                <div className="flex items-center justify-between border-b pb-2 mb-3">
+                                    <h3 className="font-semibold text-sm">
+                                        Processing Queue
+                                    </h3>
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                                        {
+                                            messageQueue.filter(
+                                                (m) => !m.paused
+                                            ).length
+                                        }{' '}
+                                        Active
+                                    </span>
+                                </div>
+                                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                    {messageQueue.map((item, index) => (
+                                        <div
+                                            key={item.id}
+                                            className={`flex items-start gap-2 p-2 rounded-lg border text-xs group/item transition-all ${
+                                                item.paused
+                                                    ? 'bg-muted/50 border-dashed opacity-70'
+                                                    : 'bg-card border-solid shadow-sm'
+                                            }`}
+                                        >
+                                            <div className="flex flex-col gap-0.5 mt-0.5">
+                                                <button
+                                                    disabled={index === 0}
+                                                    onClick={() =>
+                                                        reorderQueue(
+                                                            index,
+                                                            index - 1
+                                                        )
+                                                    }
+                                                    className="p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+                                                >
+                                                    <ChevronUp className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                    disabled={
+                                                        index ===
+                                                        messageQueue.length - 1
+                                                    }
+                                                    onClick={() =>
+                                                        reorderQueue(
+                                                            index,
+                                                            index + 1
+                                                        )
+                                                    }
+                                                    className="p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+                                                >
+                                                    <ChevronDown className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                            <div className="flex-1 min-w-0 py-1">
+                                                <div
+                                                    className={`truncate font-medium ${
+                                                        item.paused
+                                                            ? 'line-through text-muted-foreground'
+                                                            : ''
+                                                    }`}
+                                                >
+                                                    {item.prompt}
+                                                </div>
+                                                <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2">
+                                                    <span>
+                                                        {item.paused
+                                                            ? 'Paused'
+                                                            : index === 0 &&
+                                                                !item.paused &&
+                                                                isProcessing
+                                                              ? 'Processing...'
+                                                              : 'Pending'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-1 self-center">
+                                                <button
+                                                    onClick={() =>
+                                                        toggleQueuePause(
+                                                            item.id
+                                                        )
+                                                    }
+                                                    className={`p-1.5 rounded-md transition-colors ${
+                                                        item.paused
+                                                            ? 'hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500'
+                                                            : 'hover:bg-amber-500/10 text-muted-foreground hover:text-amber-500'
+                                                    }`}
+                                                    title={
+                                                        item.paused
+                                                            ? 'Resume'
+                                                            : 'Pause'
+                                                    }
+                                                >
+                                                    {item.paused ? (
+                                                        <PlayCircle className="w-3.5 h-3.5" />
+                                                    ) : (
+                                                        <Pause className="w-3.5 h-3.5" />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        removeFromQueue(item.id)
+                                                    }
+                                                    className="p-1.5 hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-colors"
+                                                    title="Remove"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    )}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportAll}
+                        disabled={!activeSession}
+                        title="Export All Active Models' History"
+                        className="h-10 px-4"
+                    >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export All
+                    </Button>
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setShowJudgePanel(true)}
                         disabled={isJudging || isProcessing}
-                        className={
+                        className={cn(
+                            'h-10 px-4',
                             isJudging
                                 ? 'animate-pulse border-amber-500 text-amber-500'
                                 : ''
-                        }
+                        )}
                         title="AI Judge: Auto-score recent answers"
                     >
                         {isJudging ? (
@@ -481,6 +781,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                     <Button
                         variant="outline"
                         size="sm"
+                        className="h-10 px-4"
                         onClick={() => {
                             setArenaSettingsTab('models')
                             setShowArenaSettings(true)
@@ -489,7 +790,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                         <LayoutGrid className="w-4 h-4 mr-2" /> Arena Settings
                     </Button>
                 </div>
-            </div>
+            </PageHeader>
 
             {/* Dialog Overlays */}
             {(showArenaSettings || showJudgePanel) && (
@@ -602,7 +903,8 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                                                 {model.name}
                                                             </div>
                                                             <div className="text-[10px] text-muted-foreground truncate uppercase">
-                                                                {model.provider}
+                                                                {model.providerName ||
+                                                                    model.provider}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -614,7 +916,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                                     size="sm"
                                                     className="flex-1"
                                                     onClick={() =>
-                                                        navigate('/settings')
+                                                        navigate('/models')
                                                     }
                                                 >
                                                     <Settings2 className="w-3.5 h-3.5 mr-2" />{' '}
@@ -816,33 +1118,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                 <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
                     {activeModels.map((model) => {
                         const results = activeSession?.results[model.id] || []
-                        const lastResult = results[results.length - 1]
                         const isEditing = editingModelId === model.id
-
-                        const ttftColor = lastResult?.metrics
-                            ? getMetricColor(
-                                  lastResult.metrics.ttft,
-                                  ttftRange.min,
-                                  ttftRange.max,
-                                  'min-best'
-                              )
-                            : 'text-foreground'
-                        const tpsColor = lastResult?.metrics
-                            ? getMetricColor(
-                                  lastResult.metrics.tps,
-                                  tpsRange.min,
-                                  tpsRange.max,
-                                  'max-best'
-                              )
-                            : 'text-foreground'
-                        const durationColor = lastResult?.metrics
-                            ? getMetricColor(
-                                  lastResult.metrics.totalDuration,
-                                  durationRange.min,
-                                  durationRange.max,
-                                  'min-best'
-                              )
-                            : 'text-foreground'
 
                         return (
                             <div
@@ -855,8 +1131,57 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                         <div className="w-2 h-2 rounded-full bg-primary" />
                                         <div className="flex items-baseline gap-2 truncate">
                                             <div
-                                                className="font-bold text-sm tracking-tight text-foreground/90 group-hover:text-primary transition-colors truncate"
-                                                title={model.name}
+                                                className="font-bold text-sm tracking-tight text-foreground/90 group-hover:text-primary transition-colors truncate cursor-pointer hover:underline underline-offset-4"
+                                                title={`Click to export ${model.name} history`}
+                                                onClick={() => {
+                                                    if (results.length === 0)
+                                                        return
+
+                                                    const content = results
+                                                        .map((res, idx) => {
+                                                            const timestamp =
+                                                                new Date(
+                                                                    res.timestamp
+                                                                ).toLocaleString()
+                                                            let md = `### Q${idx + 1} (${timestamp})\n\n**PROMPT:**\n${res.prompt}\n\n**RESPONSE:**\n${res.response}\n\n`
+                                                            if (res.rating) {
+                                                                md += `**RATING:** ${res.rating.toFixed(1)} (${res.ratingSource === 'ai' ? 'AI Judge' : 'Human Judge'})\n`
+                                                            }
+                                                            if (res.metrics) {
+                                                                md += `**METRICS:** TTFT: ${res.metrics.ttft}ms | SPD: ${res.metrics.tps.toFixed(1)}t/s | TIME: ${(res.metrics.totalDuration / 1000).toFixed(2)}s | TOKS: ${res.metrics.tokenCount}\n`
+                                                            }
+                                                            return (
+                                                                md + '\n---\n'
+                                                            )
+                                                        })
+                                                        .join('\n')
+
+                                                    const provider =
+                                                        model.providerName ||
+                                                        model.provider
+                                                    const blob = new Blob(
+                                                        [
+                                                            `# ${model.name} (${provider}) Chat History\n\n${content}`
+                                                        ],
+                                                        {
+                                                            type: 'text/markdown'
+                                                        }
+                                                    )
+                                                    const url =
+                                                        URL.createObjectURL(
+                                                            blob
+                                                        )
+                                                    const a =
+                                                        document.createElement(
+                                                            'a'
+                                                        )
+                                                    a.href = url
+                                                    a.download = `${model.name.replace(/\s+/g, '_')}_(${provider.replace(/\s+/g, '_')})_history_${new Date().toISOString().slice(0, 10)}.md`
+                                                    document.body.appendChild(a)
+                                                    a.click()
+                                                    document.body.removeChild(a)
+                                                    URL.revokeObjectURL(url)
+                                                }}
                                             >
                                                 {model.name}
                                             </div>
@@ -873,23 +1198,23 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        {results.length > 0 && (
+                                        {results.length > 1 && (
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className={`h-7 w-7 rounded-full transition-colors ${showHistoryModelIds.includes(model.id) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'}`}
+                                                className={`h-7 w-7 rounded-full transition-colors ${expandedModelIds.includes(model.id) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'}`}
                                                 onClick={() =>
-                                                    toggleHistory(model.id)
+                                                    toggleExpandAll(model.id)
                                                 }
                                                 title={
-                                                    showHistoryModelIds.includes(
+                                                    expandedModelIds.includes(
                                                         model.id
                                                     )
-                                                        ? 'Hide History'
-                                                        : 'Show History'
+                                                        ? 'Collapse All History'
+                                                        : 'Expand All History'
                                                 }
                                             >
-                                                <History className="h-3.5 w-3.5" />
+                                                <ChevronsUpDown className="h-3.5 w-3.5" />
                                             </Button>
                                         )}
                                         <Button
@@ -977,138 +1302,260 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                         <ScrollArea className="h-full">
                                             <div className="p-4 flex flex-col min-h-full">
                                                 {results.length > 0 ? (
-                                                    <div className="flex-1 space-y-8 pb-4">
-                                                        {(showHistoryModelIds.includes(
-                                                            model.id
-                                                        )
-                                                            ? results
-                                                            : [lastResult]
-                                                        ).map((res, idx) => (
-                                                            <div
-                                                                key={
-                                                                    res?.id ||
-                                                                    idx
-                                                                }
-                                                                className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300"
-                                                            >
-                                                                {/* Prompt Context (only in history) */}
-                                                                {showHistoryModelIds.includes(
-                                                                    model.id
-                                                                ) && (
-                                                                    <div className="p-3 bg-muted/40 rounded-lg text-[13px] text-foreground/70 border border-border/40 italic">
-                                                                        "
-                                                                        {
-                                                                            res?.prompt
+                                                    <div className="flex-1 space-y-6 pb-4">
+                                                        {results.map(
+                                                            (res, idx) => {
+                                                                const isLast =
+                                                                    idx ===
+                                                                    results.length -
+                                                                        1
+                                                                const isForceExpanded =
+                                                                    expandedModelIds.includes(
+                                                                        model.id
+                                                                    )
+                                                                const isSelfExpanded =
+                                                                    manuallyExpandedBlocks[
+                                                                        res.id
+                                                                    ]
+                                                                const showContent =
+                                                                    isLast ||
+                                                                    isForceExpanded ||
+                                                                    isSelfExpanded
+
+                                                                return (
+                                                                    <div
+                                                                        key={
+                                                                            res.id
                                                                         }
-                                                                        "
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Response Body */}
-                                                                <div className="markdown-body text-sm leading-relaxed px-1">
-                                                                    {res?.response ? (
-                                                                        <ReactMarkdown
-                                                                            remarkPlugins={[
-                                                                                remarkGfm
-                                                                            ]}
-                                                                        >
-                                                                            {
-                                                                                res.response
-                                                                            }
-                                                                        </ReactMarkdown>
-                                                                    ) : (
-                                                                        <div className="flex items-center gap-2 text-primary font-medium animate-pulse">
-                                                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                                                            <span>
-                                                                                Generating
-                                                                                response...
-                                                                            </span>
-                                                                        </div>
-                                                                    )}
-                                                                    {res?.error && (
-                                                                        <div className="mt-2 p-3 bg-destructive/10 text-destructive text-xs rounded-lg border border-destructive/20">
-                                                                            {
-                                                                                res.error
-                                                                            }
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Star Rating - Fixed and Styled */}
-                                                                {res?.response && (
-                                                                    <div className="flex items-center gap-3 pt-4 border-t border-border/30 mt-4 group/rating">
-                                                                        <div className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                                                                            Score
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1">
-                                                                            {[
-                                                                                1,
-                                                                                2,
-                                                                                3,
-                                                                                4,
-                                                                                5
-                                                                            ].map(
-                                                                                (
-                                                                                    score
-                                                                                ) => (
-                                                                                    <button
-                                                                                        key={
-                                                                                            score
-                                                                                        }
-                                                                                        onClick={() => {
-                                                                                            if (
-                                                                                                !activeSessionId
-                                                                                            )
-                                                                                                return
-                                                                                            useAppStore
-                                                                                                .getState()
-                                                                                                .updateResult(
-                                                                                                    activeSessionId,
-                                                                                                    model.id,
-                                                                                                    res.id,
-                                                                                                    {
-                                                                                                        rating: score
-                                                                                                    }
-                                                                                                )
-                                                                                        }}
-                                                                                        className="focus:outline-none p-1 hover:bg-primary/5 rounded-full transition-all hover:scale-110 active:scale-90"
-                                                                                        title={`Rate ${score} stars`}
-                                                                                    >
-                                                                                        <Star
-                                                                                            className={`w-4 h-4 transition-all ${
-                                                                                                (res.rating ||
-                                                                                                    0) >=
-                                                                                                score
-                                                                                                    ? getStarColor(
-                                                                                                          res.rating ||
-                                                                                                              0
-                                                                                                      )
-                                                                                                    : 'text-muted-foreground/20 group-hover/rating:text-primary/20'
-                                                                                            }`}
-                                                                                        />
-                                                                                    </button>
+                                                                        className={`space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ${!isLast ? 'border-l-2 border-muted pl-4 ml-1' : ''}`}
+                                                                    >
+                                                                        {/* Prompt Context - Clickable for folding */}
+                                                                        <div
+                                                                            className={`p-3 rounded-lg text-[13px] border transition-all cursor-pointer flex items-center justify-between gap-3 group/prompt ${
+                                                                                showContent
+                                                                                    ? 'bg-muted/40 text-foreground/70 border-border/40 italic'
+                                                                                    : 'bg-muted/20 text-muted-foreground/50 border-transparent hover:bg-muted/40'
+                                                                            }`}
+                                                                            onClick={() =>
+                                                                                toggleBlock(
+                                                                                    res.id
                                                                                 )
+                                                                            }
+                                                                        >
+                                                                            <span
+                                                                                className={`text-sm break-words leading-relaxed ${showContent ? '' : 'line-clamp-2'}`}
+                                                                            >
+                                                                                "
+                                                                                {
+                                                                                    res.prompt
+                                                                                }
+                                                                                "
+                                                                            </span>
+                                                                            {!isLast && (
+                                                                                <div className="flex-none">
+                                                                                    {showContent ? (
+                                                                                        <ChevronUp className="h-3 w-3 opacity-40 group-hover/prompt:opacity-100" />
+                                                                                    ) : (
+                                                                                        <ChevronDown className="h-3 w-3 opacity-40 group-hover/prompt:opacity-100" />
+                                                                                    )}
+                                                                                </div>
                                                                             )}
                                                                         </div>
-                                                                        {res.rating && (
-                                                                            <div
-                                                                                className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full border transition-all hover:scale-110 active:scale-95 cursor-default ${getScoreBadgeStyles(res.rating)}`}
-                                                                            >
-                                                                                <span className="text-[10px] font-black uppercase tracking-tighter opacity-80 whitespace-nowrap">
-                                                                                    AI
-                                                                                    Judge
-                                                                                </span>
-                                                                                <span className="text-[14px] font-bold tabular-nums tracking-tight border-l pl-2 ml-0.5 border-current/20 leading-none">
-                                                                                    {res.rating.toFixed(
-                                                                                        1
-                                                                                    )}
-                                                                                </span>
+
+                                                                        {/* Response Body */}
+                                                                        {showContent && (
+                                                                            <div className="markdown-body text-sm leading-relaxed px-1">
+                                                                                {res.response ? (
+                                                                                    <ReactMarkdown
+                                                                                        remarkPlugins={[
+                                                                                            remarkGfm
+                                                                                        ]}
+                                                                                    >
+                                                                                        {
+                                                                                            res.response
+                                                                                        }
+                                                                                    </ReactMarkdown>
+                                                                                ) : (
+                                                                                    <div className="flex items-center gap-2 text-primary font-medium animate-pulse">
+                                                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                                                        <span>
+                                                                                            Generating
+                                                                                            response...
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {res.error && (
+                                                                                    <div className="mt-2 p-3 bg-destructive/10 text-destructive text-xs rounded-lg border border-destructive/20">
+                                                                                        {
+                                                                                            res.error
+                                                                                        }
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* Score Display (Only when unfolded) */}
+                                                                                {res.response && (
+                                                                                    <div className="flex items-center gap-3 pt-4 border-t border-border/30 mt-4 group/rating">
+                                                                                        <div className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                                                                                            Score
+                                                                                        </div>
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            {[
+                                                                                                1,
+                                                                                                2,
+                                                                                                3,
+                                                                                                4,
+                                                                                                5
+                                                                                            ].map(
+                                                                                                (
+                                                                                                    score
+                                                                                                ) => (
+                                                                                                    <button
+                                                                                                        key={
+                                                                                                            score
+                                                                                                        }
+                                                                                                        onClick={() => {
+                                                                                                            if (
+                                                                                                                !activeSessionId
+                                                                                                            )
+                                                                                                                return
+                                                                                                            useAppStore
+                                                                                                                .getState()
+                                                                                                                .updateResult(
+                                                                                                                    activeSessionId,
+                                                                                                                    model.id,
+                                                                                                                    res.id,
+                                                                                                                    {
+                                                                                                                        rating: score,
+                                                                                                                        ratingSource:
+                                                                                                                            'human'
+                                                                                                                    }
+                                                                                                                )
+                                                                                                        }}
+                                                                                                        className="focus:outline-none p-1 hover:bg-primary/5 rounded-full transition-all hover:scale-110 active:scale-90"
+                                                                                                        title={`Rate ${score} stars`}
+                                                                                                    >
+                                                                                                        <Star
+                                                                                                            className={`w-4 h-4 transition-all ${
+                                                                                                                (res.rating ||
+                                                                                                                    0) >=
+                                                                                                                score
+                                                                                                                    ? getStarColor(
+                                                                                                                          res.rating ||
+                                                                                                                              0
+                                                                                                                      )
+                                                                                                                    : 'text-muted-foreground/20 group-hover/rating:text-primary/20'
+                                                                                                            }`}
+                                                                                                        />
+                                                                                                    </button>
+                                                                                                )
+                                                                                            )}
+                                                                                        </div>
+                                                                                        {res.rating && (
+                                                                                            <div
+                                                                                                className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full border transition-all hover:scale-110 active:scale-95 cursor-default ${getScoreBadgeStyles(res.rating)}`}
+                                                                                            >
+                                                                                                <span className="text-[10px] font-black uppercase tracking-tighter opacity-80 whitespace-nowrap">
+                                                                                                    {res.ratingSource ===
+                                                                                                    'ai'
+                                                                                                        ? 'AI Judge'
+                                                                                                        : 'Human Judge'}
+                                                                                                </span>
+                                                                                                <span className="text-[14px] font-bold tabular-nums tracking-tight border-l pl-2 ml-0.5 border-current/20 leading-none">
+                                                                                                    {res.rating.toFixed(
+                                                                                                        1
+                                                                                                    )}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                        {/* Message Metrics */}
+                                                                        {res.metrics && (
+                                                                            <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground tabular-nums pt-3 mt-1 px-1 opacity-70 border-t border-dashed border-border/40">
+                                                                                <div
+                                                                                    title="Time to First Token"
+                                                                                    className="flex items-center gap-1"
+                                                                                >
+                                                                                    <span className="opacity-50 font-semibold">
+                                                                                        TTFT
+                                                                                    </span>
+                                                                                    <span
+                                                                                        className={`font-bold ${getMetricColor(res.metrics.ttft, ttftRange.min, ttftRange.max, 'min-best')}`}
+                                                                                    >
+                                                                                        {
+                                                                                            res
+                                                                                                .metrics
+                                                                                                .ttft
+                                                                                        }
+                                                                                    </span>
+                                                                                    <span className="opacity-40 text-[8px]">
+                                                                                        ms
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div
+                                                                                    title="Tokens Per Second"
+                                                                                    className="flex items-center gap-1"
+                                                                                >
+                                                                                    <span className="opacity-50 font-semibold">
+                                                                                        SPD
+                                                                                    </span>
+                                                                                    <span
+                                                                                        className={`font-bold ${getMetricColor(res.metrics.tps, tpsRange.min, tpsRange.max, 'max-best')}`}
+                                                                                    >
+                                                                                        {res.metrics.tps.toFixed(
+                                                                                            1
+                                                                                        )}
+                                                                                    </span>
+                                                                                    <span className="opacity-40 text-[8px]">
+                                                                                        t/s
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div
+                                                                                    title="Total Duration"
+                                                                                    className="flex items-center gap-1"
+                                                                                >
+                                                                                    <span className="opacity-50 font-semibold">
+                                                                                        TIME
+                                                                                    </span>
+                                                                                    <span
+                                                                                        className={`font-bold ${getMetricColor(res.metrics.totalDuration, durationRange.min, durationRange.max, 'min-best')}`}
+                                                                                    >
+                                                                                        {(
+                                                                                            res
+                                                                                                .metrics
+                                                                                                .totalDuration /
+                                                                                            1000
+                                                                                        ).toFixed(
+                                                                                            2
+                                                                                        )}
+                                                                                    </span>
+                                                                                    <span className="opacity-40 text-[8px]">
+                                                                                        s
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div
+                                                                                    title="Total Tokens"
+                                                                                    className="flex items-center gap-1 ml-auto"
+                                                                                >
+                                                                                    <span className="opacity-50 font-semibold">
+                                                                                        TOKS
+                                                                                    </span>
+                                                                                    <span className="font-bold">
+                                                                                        {
+                                                                                            res
+                                                                                                .metrics
+                                                                                                .tokenCount
+                                                                                        }
+                                                                                    </span>
+                                                                                </div>
                                                                             </div>
                                                                         )}
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
+                                                                )
+                                                            }
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground/30 py-20 gap-3">
@@ -1123,88 +1570,169 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                     )}
                                 </div>
 
-                                {/* Card Footer - Unified Metrics & Provider */}
+                                {/* Card Footer - Aggregated Statistics */}
                                 <div className="flex-none p-3 px-4 border-t bg-muted/10 flex flex-col gap-2">
                                     <div className="flex items-center justify-between min-h-[24px]">
                                         <div className="flex-1 min-w-0">
-                                            {lastResult &&
-                                            lastResult.metrics &&
+                                            {results.length > 0 &&
                                             !isEditing ? (
-                                                <div className="flex items-center gap-4 text-[11px] font-mono text-muted-foreground tabular-nums">
-                                                    <div
-                                                        title="Time to First Token"
-                                                        className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-muted/40"
-                                                    >
-                                                        <span className="opacity-50">
-                                                            TTFT
-                                                        </span>
-                                                        <span
-                                                            className={`font-bold ${ttftColor}`}
-                                                        >
-                                                            {
-                                                                lastResult
-                                                                    .metrics
-                                                                    .ttft
-                                                            }
-                                                        </span>
-                                                        <span className="opacity-40 text-[9px]">
-                                                            ms
-                                                        </span>
-                                                    </div>
-                                                    <div
-                                                        title="Tokens Per Second"
-                                                        className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-muted/40"
-                                                    >
-                                                        <span className="opacity-50">
-                                                            SPEED
-                                                        </span>
-                                                        <span
-                                                            className={`font-bold ${tpsColor}`}
-                                                        >
-                                                            {lastResult.metrics.tps.toFixed(
-                                                                1
-                                                            )}
-                                                        </span>
-                                                        <span className="opacity-40 text-[9px]">
-                                                            t/s
-                                                        </span>
-                                                    </div>
-                                                    <div
-                                                        title="Total Duration"
-                                                        className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-muted/40"
-                                                    >
-                                                        <span className="opacity-50">
-                                                            TIME
-                                                        </span>
-                                                        <span
-                                                            className={`font-bold ${durationColor}`}
-                                                        >
-                                                            {(
-                                                                lastResult
-                                                                    .metrics
-                                                                    .totalDuration /
-                                                                1000
-                                                            ).toFixed(2)}
-                                                        </span>
-                                                        <span className="opacity-40 text-[9px]">
-                                                            s
-                                                        </span>
-                                                    </div>
-                                                    <div
-                                                        title="Total Tokens"
-                                                        className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-muted/40 min-[500px]:flex hidden"
-                                                    >
-                                                        <span className="opacity-50">
-                                                            TOKENS
-                                                        </span>
-                                                        <span className="font-bold text-foreground/80">
-                                                            {
-                                                                lastResult
-                                                                    .metrics
-                                                                    .tokenCount
-                                                            }
-                                                        </span>
-                                                    </div>
+                                                <div className="grid grid-cols-2 min-[1200px]:grid-cols-4 gap-2 text-[10px] font-mono text-muted-foreground tabular-nums">
+                                                    {/* Avg TTFT */}
+                                                    {(() => {
+                                                        const validTtft =
+                                                            results
+                                                                .map(
+                                                                    (m) =>
+                                                                        m
+                                                                            .metrics
+                                                                            ?.ttft
+                                                                )
+                                                                .filter(
+                                                                    (
+                                                                        v
+                                                                    ): v is number =>
+                                                                        !!v &&
+                                                                        v > 0
+                                                                )
+                                                        const avgTtft =
+                                                            validTtft.length > 0
+                                                                ? validTtft.reduce(
+                                                                      (a, b) =>
+                                                                          a + b,
+                                                                      0
+                                                                  ) /
+                                                                  validTtft.length
+                                                                : 0
+                                                        return (
+                                                            <div
+                                                                title="Average TTFT"
+                                                                className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/40 whitespace-nowrap overflow-hidden"
+                                                            >
+                                                                <span className="opacity-50">
+                                                                    AVG.TTFT
+                                                                </span>
+                                                                <span
+                                                                    className={`font-bold ${getMetricColor(avgTtft, fTtftRange.min, fTtftRange.max, 'min-best')}`}
+                                                                >
+                                                                    {Math.round(
+                                                                        avgTtft
+                                                                    )}
+                                                                </span>
+                                                                <span className="opacity-40 text-[8px]">
+                                                                    ms
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })()}
+
+                                                    {/* Avg Speed */}
+                                                    {(() => {
+                                                        const validTps = results
+                                                            .map(
+                                                                (m) =>
+                                                                    m.metrics
+                                                                        ?.tps
+                                                            )
+                                                            .filter(
+                                                                (
+                                                                    v
+                                                                ): v is number =>
+                                                                    !!v && v > 0
+                                                            )
+                                                        const avgTps =
+                                                            validTps.length > 0
+                                                                ? validTps.reduce(
+                                                                      (a, b) =>
+                                                                          a + b,
+                                                                      0
+                                                                  ) /
+                                                                  validTps.length
+                                                                : 0
+                                                        return (
+                                                            <div
+                                                                title="Average Tokens/sec"
+                                                                className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/40 whitespace-nowrap overflow-hidden"
+                                                            >
+                                                                <span className="opacity-50">
+                                                                    AVG.SPD
+                                                                </span>
+                                                                <span
+                                                                    className={`font-bold ${getMetricColor(avgTps, fTpsRange.min, fTpsRange.max, 'max-best')}`}
+                                                                >
+                                                                    {avgTps.toFixed(
+                                                                        1
+                                                                    )}
+                                                                </span>
+                                                                <span className="opacity-40 text-[8px]">
+                                                                    t/s
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })()}
+
+                                                    {/* Sum Time */}
+                                                    {(() => {
+                                                        const sumTime =
+                                                            results.reduce(
+                                                                (acc, r) =>
+                                                                    acc +
+                                                                    (r.metrics
+                                                                        ?.totalDuration ||
+                                                                        0),
+                                                                0
+                                                            )
+                                                        return (
+                                                            <div
+                                                                title="Total Duration"
+                                                                className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/40 whitespace-nowrap overflow-hidden"
+                                                            >
+                                                                <span className="opacity-50">
+                                                                    SUM.TIME
+                                                                </span>
+                                                                <span
+                                                                    className={`font-bold ${getMetricColor(sumTime, fTimeRange.min, fTimeRange.max, 'min-best')}`}
+                                                                >
+                                                                    {(
+                                                                        sumTime /
+                                                                        1000
+                                                                    ).toFixed(
+                                                                        2
+                                                                    )}
+                                                                </span>
+                                                                <span className="opacity-40 text-[8px]">
+                                                                    s
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })()}
+
+                                                    {/* Sum Tokens */}
+                                                    {(() => {
+                                                        const sumToks =
+                                                            results.reduce(
+                                                                (acc, r) =>
+                                                                    acc +
+                                                                    (r.metrics
+                                                                        ?.tokenCount ||
+                                                                        0),
+                                                                0
+                                                            )
+                                                        return (
+                                                            <div
+                                                                title="Total Tokens"
+                                                                className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/40 whitespace-nowrap overflow-hidden"
+                                                            >
+                                                                <span className="opacity-50">
+                                                                    SUM.TOKS
+                                                                </span>
+                                                                <span
+                                                                    className={`font-bold ${getMetricColor(sumToks, fToksRange.min, fToksRange.max, 'min-best')}`}
+                                                                >
+                                                                    {sumToks}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })()}
                                                 </div>
                                             ) : isEditing ? (
                                                 <div className="text-[10px] font-semibold text-primary/60 uppercase tracking-widest pl-1">
@@ -1224,7 +1752,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
 
             {/* Input Area - Fixed at bottom */}
             <div className="flex-none p-4 pt-2 bg-background border-t z-20">
-                <div className="relative max-w-5xl mx-auto w-full group">
+                <div className="relative w-full group">
                     <Textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}

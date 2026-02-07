@@ -46,7 +46,8 @@ export interface BenchmarkResult {
     metrics: BenchmarkMetrics
     timestamp: number
     error?: string
-    rating?: number // 1-5 score given by user
+    rating?: number // 1-5 score
+    ratingSource?: 'human' | 'ai'
 }
 
 export interface ChatSession {

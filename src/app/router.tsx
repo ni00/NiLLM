@@ -6,6 +6,16 @@ const createAppRouter = () =>
     createBrowserRouter([
         {
             element: <Layout />,
+            HydrateFallback: () => (
+                <div className="flex h-screen w-screen items-center justify-center bg-background">
+                    <div className="flex flex-col items-center gap-2">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                        <p className="text-sm text-muted-foreground animate-pulse">
+                            Initializing app...
+                        </p>
+                    </div>
+                </div>
+            ),
             children: [
                 {
                     path: '/',
@@ -20,8 +30,8 @@ const createAppRouter = () =>
                     lazy: () => import('@/app/routes/tests')
                 },
                 {
-                    path: '/settings',
-                    lazy: () => import('@/app/routes/settings')
+                    path: '/models',
+                    lazy: () => import('@/app/routes/models')
                 },
                 {
                     path: '*',

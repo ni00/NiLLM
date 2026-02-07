@@ -40,6 +40,22 @@ interface AppState {
 
     globalConfig: GenerationConfig
     updateGlobalConfig: (updates: Partial<GenerationConfig>) => void
+
+    // Queue System
+    messageQueue: {
+        id: string
+        prompt: string
+        sessionId?: string
+        paused?: boolean
+    }[]
+    isProcessing: boolean
+    addToQueue: (prompt: string, sessionId?: string) => void
+    removeFromQueue: (id: string) => void
+    toggleQueuePause: (id: string) => void
+    reorderQueue: (fromIndex: number, toIndex: number) => void
+    setProcessing: (isProcessing: boolean) => void
+    clearAllResults: () => void
+    clearModelResults: (modelId: string) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -168,12 +184,63 @@ export const useAppStore = create<AppState>()(
                 temperature: 0.7,
                 maxTokens: 1000,
                 topP: 0.9,
-                topK: undefined, // Assuming topK is added and initially undefined
+                topK: undefined,
                 systemPrompt: 'You are a helpful AI assistant.'
             },
             updateGlobalConfig: (updates) =>
                 set((state) => ({
                     globalConfig: { ...state.globalConfig, ...updates }
+                })),
+
+            // Queue System
+            messageQueue: [],
+            isProcessing: false,
+            addToQueue: (prompt, sessionId) =>
+                set((state) => ({
+                    messageQueue: [
+                        ...state.messageQueue,
+                        {
+                            id: crypto.randomUUID(),
+                            prompt,
+                            sessionId,
+                            paused: false
+                        }
+                    ]
+                })),
+            removeFromQueue: (id) =>
+                set((state) => ({
+                    messageQueue: state.messageQueue.filter((m) => m.id !== id)
+                })),
+            toggleQueuePause: (id) =>
+                set((state) => ({
+                    messageQueue: state.messageQueue.map((m) =>
+                        m.id === id ? { ...m, paused: !m.paused } : m
+                    )
+                })),
+            reorderQueue: (fromIndex, toIndex) =>
+                set((state) => {
+                    const newQueue = [...state.messageQueue]
+                    const [moved] = newQueue.splice(fromIndex, 1)
+                    newQueue.splice(toIndex, 0, moved)
+                    return { messageQueue: newQueue }
+                }),
+            setProcessing: (isProcessing) => set({ isProcessing }),
+
+            clearAllResults: () =>
+                set((state) => ({
+                    sessions: state.sessions.map((s) => ({
+                        ...s,
+                        results: {}
+                    }))
+                })),
+
+            clearModelResults: (modelId) =>
+                set((state) => ({
+                    sessions: state.sessions.map((s) => {
+                        const newResults = { ...s.results }
+                        delete newResults[modelId]
+                        return { ...s, results: newResults }
+                    })
                 }))
         }),
         {

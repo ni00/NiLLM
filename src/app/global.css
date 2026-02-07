@@ -113,6 +113,7 @@
     * {
         @apply border-border outline-ring/50;
     }
+
     html {
         /* For native desktop app feeling disallow text selection. */
         @apply select-none;
@@ -120,7 +121,21 @@
         /* Disable overscroll/bouncing */
         @apply h-full overscroll-none;
     }
+
     body {
         @apply bg-background text-foreground;
     }
+}
+
+/* Custom Markdown Styles */
+.markdown-body pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.markdown-body code {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }

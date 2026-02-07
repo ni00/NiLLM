@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router'
-import { Layers, BarChart3, Settings, Box } from 'lucide-react'
+import { Layers, BarChart3, Cpu, Box } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function Layout() {
@@ -9,7 +9,7 @@ export function Layout() {
         { icon: Layers, label: 'Arena', path: '/' },
         { icon: BarChart3, label: 'Stats', path: '/stats' },
         { icon: Box, label: 'Tests', path: '/tests' },
-        { icon: Settings, label: 'Settings', path: '/settings' }
+        { icon: Cpu, label: 'Models', path: '/models' }
     ]
 
     return (
