@@ -185,6 +185,12 @@ export const useAppStore = create<AppState>()(
                 maxTokens: 1000,
                 topP: 0.9,
                 topK: undefined,
+                frequencyPenalty: 0,
+                presencePenalty: 0,
+                repetitionPenalty: undefined,
+                seed: undefined,
+                stopSequences: undefined,
+                minP: undefined,
                 systemPrompt: 'You are a helpful AI assistant.'
             },
             updateGlobalConfig: (updates) =>

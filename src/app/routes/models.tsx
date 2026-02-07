@@ -89,6 +89,7 @@ export function ModelsPage() {
             >
                 {!isAdding && (
                     <Button
+                        variant="outline"
                         onClick={() => {
                             setIsAdding(true)
                             setEditingModelId(null)
@@ -97,7 +98,7 @@ export function ModelsPage() {
                                 enabled: true
                             })
                         }}
-                        className="h-10 px-4 shadow-xl shadow-primary/10 transition-all active:scale-95"
+                        className="h-10 px-4 transition-all active:scale-95"
                     >
                         <Plus className="mr-2 h-4 w-4" /> Add Model
                     </Button>

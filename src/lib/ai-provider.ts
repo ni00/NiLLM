@@ -76,7 +76,28 @@ export async function streamResponse(
             ? {
                   Authorization: `Bearer ${model.apiKey}`
               }
-            : undefined
+            : undefined,
+        // Generation parameters
+        temperature: model.config?.temperature,
+        topP: model.config?.topP,
+        topK: model.config?.topK,
+        maxOutputTokens: model.config?.maxTokens,
+        frequencyPenalty: model.config?.frequencyPenalty,
+        presencePenalty: model.config?.presencePenalty,
+        seed: model.config?.seed,
+        stopSequences: model.config?.stopSequences,
+        // Provider specific options
+        providerOptions: {
+            openai: {
+                // OpenAI compatible providers often support these via extension
+                ...(model.config?.minP !== undefined
+                    ? { min_p: model.config.minP }
+                    : {}),
+                ...(model.config?.repetitionPenalty !== undefined
+                    ? { repetition_penalty: model.config.repetitionPenalty }
+                    : {})
+            }
+        }
     })
 
     const fullStream = result.fullStream

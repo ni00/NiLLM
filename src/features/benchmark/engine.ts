@@ -25,6 +25,18 @@ export async function broadcastMessage(
     const promises = activeModels.map(async (model) => {
         const resultId = crypto.randomUUID()
 
+        // Merge config: Global < Model Override
+        const mergedConfig = {
+            ...store.globalConfig,
+            ...model.config
+        }
+
+        // Create a model object with merged config for streamResponse
+        const modelWithMergedConfig = {
+            ...model,
+            config: mergedConfig
+        }
+
         // Build history for this specific model
         const history: any[] = []
         if (session && session.results[model.id]) {
@@ -71,7 +83,7 @@ export async function broadcastMessage(
 
         try {
             const { fullStream } = await streamResponse(
-                model,
+                modelWithMergedConfig,
                 messages,
                 (metrics) => {
                     const { tokens, ...rest } = metrics as any

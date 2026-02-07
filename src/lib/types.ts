@@ -3,6 +3,12 @@ export interface GenerationConfig {
     maxTokens: number
     topP: number
     topK?: number
+    frequencyPenalty?: number
+    presencePenalty?: number
+    repetitionPenalty?: number
+    seed?: number
+    stopSequences?: string[]
+    minP?: number
     systemPrompt?: string
 }
 

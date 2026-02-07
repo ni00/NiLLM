@@ -52,91 +52,269 @@ const ConfigEditor = ({
 }: {
     config: GenerationConfig
     onChange: (c: GenerationConfig) => void
-}) => (
-    <div className="grid gap-8 py-2">
+}) => {
+    const handleUpdate = (updates: Partial<GenerationConfig>) => {
+        onChange({ ...config, ...updates })
+    }
+
+    const SliderItem = ({
+        label,
+        value,
+        id,
+        min,
+        max,
+        step,
+        onChange: onValChange,
+        labels
+    }: {
+        label: string
+        value: number
+        id: string
+        min: number
+        max: number
+        step: number
+        onChange: (val: number) => void
+        labels?: [string, string]
+    }) => (
         <div className="space-y-3">
             <div className="flex justify-between items-end">
                 <Label
-                    htmlFor="temp"
+                    htmlFor={id}
                     className="text-xs font-semibold opacity-70 uppercase tracking-wider"
                 >
-                    Temperature
+                    {label}
                 </Label>
                 <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded leading-none">
-                    {config.temperature ?? 0.7}
+                    {typeof value === 'number'
+                        ? value.toFixed(step >= 0.1 ? 1 : 2)
+                        : '0.0'}
                 </span>
             </div>
             <input
-                id="temp"
+                id={id}
                 type="range"
-                step="0.1"
-                min="0"
-                max="2"
-                value={config.temperature ?? 0.7}
-                onChange={(e) =>
-                    onChange({
-                        ...config,
-                        temperature: parseFloat(e.target.value)
-                    })
-                }
+                step={step}
+                min={min}
+                max={max}
+                value={value ?? 0}
+                onChange={(e) => onValChange(parseFloat(e.target.value))}
                 className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary transition-all hover:bg-muted/80"
             />
-            <div className="flex justify-between text-[10px] text-muted-foreground font-medium px-0.5">
-                <span>Precise</span>
-                <span>Creative</span>
-            </div>
+            {labels && (
+                <div className="flex justify-between text-[10px] text-muted-foreground font-medium px-0.5">
+                    <span>{labels[0]}</span>
+                    <span>{labels[1]}</span>
+                </div>
+            )}
         </div>
+    )
 
-        <div className="space-y-3">
-            <div className="flex justify-between items-end">
-                <Label
-                    htmlFor="topP"
-                    className="text-xs font-semibold opacity-70 uppercase tracking-wider"
-                >
-                    Top P
-                </Label>
-                <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded leading-none">
-                    {config.topP ?? 0.9}
-                </span>
-            </div>
-            <input
-                id="topP"
-                type="range"
-                step="0.01"
-                min="0"
-                max="1"
-                value={config.topP ?? 0.9}
-                onChange={(e) =>
-                    onChange({ ...config, topP: parseFloat(e.target.value) })
-                }
-                className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary transition-all hover:bg-muted/80"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground font-medium px-0.5">
-                <span>Focused</span>
-                <span>Diverse</span>
-            </div>
-        </div>
+    return (
+        <div className="grid gap-10 py-2">
+            {/* SECTION: Sampling */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="h-px flex-1 bg-border/50" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-2">
+                        Sampling
+                    </span>
+                    <div className="h-px flex-1 bg-border/50" />
+                </div>
 
-        <div className="space-y-3">
-            <Label
-                htmlFor="maxTokens"
-                className="text-xs font-semibold opacity-70 uppercase tracking-wider"
-            >
-                Max Tokens
-            </Label>
-            <Input
-                id="maxTokens"
-                type="number"
-                step="100"
-                value={config.maxTokens ?? 1000}
-                onChange={(e) =>
-                    onChange({ ...config, maxTokens: parseInt(e.target.value) })
-                }
-                className="h-10 bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary/20 font-mono"
-            />
+                <div className="grid gap-6">
+                    <SliderItem
+                        label="Temperature"
+                        id="temp"
+                        value={config.temperature ?? 0.7}
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        onChange={(v) => handleUpdate({ temperature: v })}
+                        labels={['Precise', 'Creative']}
+                    />
+
+                    <SliderItem
+                        label="Top P"
+                        id="topP"
+                        value={config.topP ?? 0.9}
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        onChange={(v) => handleUpdate({ topP: v })}
+                        labels={['Focused', 'Diverse']}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                                Top K
+                            </Label>
+                            <Input
+                                type="number"
+                                placeholder="Auto"
+                                value={config.topK ?? ''}
+                                onChange={(e) =>
+                                    handleUpdate({
+                                        topK: e.target.value
+                                            ? parseInt(e.target.value)
+                                            : undefined
+                                    })
+                                }
+                                className="h-9 bg-muted/20 border-muted/50 font-mono text-sm"
+                            />
+                        </div>
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                                Min P
+                            </Label>
+                            <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="Off"
+                                value={config.minP ?? ''}
+                                onChange={(e) =>
+                                    handleUpdate({
+                                        minP: e.target.value
+                                            ? parseFloat(e.target.value)
+                                            : undefined
+                                    })
+                                }
+                                className="h-9 bg-muted/20 border-muted/50 font-mono text-sm"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* SECTION: Penalties */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="h-px flex-1 bg-border/50" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-2">
+                        Penalties
+                    </span>
+                    <div className="h-px flex-1 bg-border/50" />
+                </div>
+
+                <div className="grid gap-6">
+                    <SliderItem
+                        label="Frequency Penalty"
+                        id="freqP"
+                        value={config.frequencyPenalty ?? 0}
+                        min={-2}
+                        max={2}
+                        step={0.1}
+                        onChange={(v) => handleUpdate({ frequencyPenalty: v })}
+                    />
+                    <SliderItem
+                        label="Presence Penalty"
+                        id="presP"
+                        value={config.presencePenalty ?? 0}
+                        min={-2}
+                        max={2}
+                        step={0.1}
+                        onChange={(v) => handleUpdate({ presencePenalty: v })}
+                    />
+                </div>
+            </div>
+
+            {/* SECTION: Context & Constraints */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="h-px flex-1 bg-border/50" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-2">
+                        Constraints
+                    </span>
+                    <div className="h-px flex-1 bg-border/50" />
+                </div>
+
+                <div className="grid gap-5">
+                    <div className="space-y-2.5">
+                        <Label
+                            htmlFor="maxTokens"
+                            className="text-[11px] font-bold opacity-60 uppercase tracking-tight"
+                        >
+                            Max Tokens
+                        </Label>
+                        <Input
+                            id="maxTokens"
+                            type="number"
+                            step="100"
+                            value={config.maxTokens ?? 1000}
+                            onChange={(e) =>
+                                handleUpdate({
+                                    maxTokens: parseInt(e.target.value)
+                                })
+                            }
+                            className="h-10 bg-muted/20 border-muted/50 font-mono text-sm"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                                Seed
+                            </Label>
+                            <Input
+                                type="number"
+                                placeholder="Random"
+                                value={config.seed ?? ''}
+                                onChange={(e) =>
+                                    handleUpdate({
+                                        seed: e.target.value
+                                            ? parseInt(e.target.value)
+                                            : undefined
+                                    })
+                                }
+                                className="h-9 bg-muted/20 border-muted/50 font-mono text-sm"
+                            />
+                        </div>
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                                Repetition Penalty
+                            </Label>
+                            <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="1.0"
+                                value={config.repetitionPenalty ?? ''}
+                                onChange={(e) =>
+                                    handleUpdate({
+                                        repetitionPenalty: e.target.value
+                                            ? parseFloat(e.target.value)
+                                            : undefined
+                                    })
+                                }
+                                className="h-9 bg-muted/20 border-muted/50 font-mono text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2.5">
+                        <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                            Stop Sequences
+                        </Label>
+                        <Input
+                            placeholder="e.g. \n, USER, END"
+                            value={config.stopSequences?.join(', ') || ''}
+                            onChange={(e) =>
+                                handleUpdate({
+                                    stopSequences: e.target.value
+                                        ? e.target.value
+                                              .split(',')
+                                              .map((s) => s.trim())
+                                              .filter(Boolean)
+                                        : undefined
+                                })
+                            }
+                            className="h-10 bg-muted/20 border-muted/50 text-sm"
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-)
+    )
+}
 
 export function ChatArena() {
     const navigate = useNavigate()
@@ -617,37 +795,42 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
             >
                 <div className="flex gap-2">
                     {/* Queue Indicator */}
-                    {messageQueue.length > 0 && (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="relative pr-3 h-10 px-4"
-                                >
-                                    <Layers className="w-4 h-4 mr-2 text-muted-foreground" />
-                                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full border-2 border-background shadow-sm">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="relative pr-3 h-10 px-4"
+                            >
+                                <Layers className="w-4 h-4 mr-2 text-muted-foreground" />
+                                {messageQueue.length > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full border-2 border-background shadow-sm animate-in zoom-in duration-300">
                                         {messageQueue.length}
                                     </span>
-                                    Queue
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 p-4" align="end">
-                                <div className="flex items-center justify-between border-b pb-2 mb-3">
-                                    <h3 className="font-semibold text-sm">
-                                        Processing Queue
-                                    </h3>
-                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
-                                        {
-                                            messageQueue.filter(
-                                                (m) => !m.paused
-                                            ).length
-                                        }{' '}
-                                        Active
-                                    </span>
-                                </div>
-                                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                                    {messageQueue.map((item, index) => (
+                                )}
+                                Queue
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-4" align="end">
+                            <div className="flex items-center justify-between border-b pb-2 mb-3">
+                                <h3 className="font-semibold text-sm">
+                                    Processing Queue
+                                </h3>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                                    {
+                                        messageQueue.filter((m) => !m.paused)
+                                            .length
+                                    }{' '}
+                                    Active
+                                </span>
+                            </div>
+                            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                {messageQueue.length === 0 ? (
+                                    <div className="py-8 text-center text-muted-foreground italic text-sm">
+                                        Queue is empty
+                                    </div>
+                                ) : (
+                                    messageQueue.map((item, index) => (
                                         <div
                                             key={item.id}
                                             className={`flex items-start gap-2 p-2 rounded-lg border text-xs group/item transition-all ${
@@ -742,11 +925,11 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                                 </button>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    )}
+                                    ))
+                                )}
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                     <Button
                         variant="outline"
                         size="sm"
@@ -762,7 +945,14 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                         variant="outline"
                         size="sm"
                         onClick={() => setShowJudgePanel(true)}
-                        disabled={isJudging || isProcessing}
+                        disabled={
+                            isJudging ||
+                            isProcessing ||
+                            !activeSession ||
+                            !Object.values(activeSession.results).some(
+                                (r) => r.length > 0
+                            )
+                        }
                         className={cn(
                             'h-10 px-4',
                             isJudging
@@ -802,7 +992,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                     }}
                 >
                     <div
-                        className="bg-background border rounded-lg shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200"
+                        className="bg-background border rounded-lg shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {showArenaSettings && (
@@ -854,154 +1044,162 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                     </Button>
                                 </div>
 
-                                <div className="p-6">
-                                    {arenaSettingsTab === 'models' && (
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <h4 className="text-sm font-semibold">
-                                                    Active Models
-                                                </h4>
-                                                <p className="text-[11px] text-muted-foreground">
-                                                    {activeModelIds.length}{' '}
-                                                    models selected
-                                                </p>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto p-1">
-                                                {models.map((model) => (
-                                                    <div
-                                                        key={model.id}
-                                                        onClick={() =>
-                                                            toggleModelActivation(
-                                                                model.id
-                                                            )
-                                                        }
-                                                        className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all hover:shadow-sm ${
-                                                            activeModelIds.includes(
-                                                                model.id
-                                                            )
-                                                                ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20'
-                                                                : 'border-border hover:border-primary/20 hover:bg-muted/30'
-                                                        }`}
-                                                    >
+                                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                                    <div className="p-6">
+                                        {arenaSettingsTab === 'models' && (
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <h4 className="text-sm font-semibold">
+                                                        Active Models
+                                                    </h4>
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        {activeModelIds.length}{' '}
+                                                        models selected
+                                                    </p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 p-1">
+                                                    {models.map((model) => (
                                                         <div
-                                                            className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                                            key={model.id}
+                                                            onClick={() =>
+                                                                toggleModelActivation(
+                                                                    model.id
+                                                                )
+                                                            }
+                                                            className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all hover:shadow-sm ${
                                                                 activeModelIds.includes(
                                                                     model.id
                                                                 )
-                                                                    ? 'bg-primary border-primary'
-                                                                    : 'border-muted-foreground/30'
+                                                                    ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20'
+                                                                    : 'border-border hover:border-primary/20 hover:bg-muted/30'
                                                             }`}
                                                         >
-                                                            {activeModelIds.includes(
-                                                                model.id
-                                                            ) && (
-                                                                <Check className="w-3 h-3 text-white" />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="text-[13px] font-medium truncate">
-                                                                {model.name}
+                                                            <div
+                                                                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                                                    activeModelIds.includes(
+                                                                        model.id
+                                                                    )
+                                                                        ? 'bg-primary border-primary'
+                                                                        : 'border-muted-foreground/30'
+                                                                }`}
+                                                            >
+                                                                {activeModelIds.includes(
+                                                                    model.id
+                                                                ) && (
+                                                                    <Check className="w-3 h-3 text-white" />
+                                                                )}
                                                             </div>
-                                                            <div className="text-[10px] text-muted-foreground truncate uppercase">
-                                                                {model.providerName ||
-                                                                    model.provider}
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="text-[13px] font-medium truncate">
+                                                                    {model.name}
+                                                                </div>
+                                                                <div className="text-[10px] text-muted-foreground truncate uppercase">
+                                                                    {model.providerName ||
+                                                                        model.provider}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    ))}
+                                                </div>
                                             </div>
-                                            <div className="pt-2 border-t flex justify-between gap-3">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="flex-1"
-                                                    onClick={() =>
-                                                        navigate('/models')
-                                                    }
-                                                >
-                                                    <Settings2 className="w-3.5 h-3.5 mr-2" />{' '}
-                                                    Manage Models
-                                                </Button>
-                                                <Button
-                                                    className="flex-1"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        setShowArenaSettings(
-                                                            false
-                                                        )
-                                                    }
-                                                >
-                                                    Confirm
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {arenaSettingsTab === 'prompt' && (
-                                        <div className="space-y-4">
-                                            <div className="space-y-1">
-                                                <h4 className="text-sm font-semibold">
-                                                    Global System Prompt
-                                                </h4>
-                                                <p className="text-[11px] text-muted-foreground">
-                                                    Sets the persona and
-                                                    behavior for all models in
-                                                    the arena.
-                                                </p>
-                                            </div>
-                                            <Textarea
-                                                placeholder="Enter instructions for the AI..."
-                                                value={
-                                                    globalConfig.systemPrompt ||
-                                                    ''
-                                                }
-                                                onChange={(e) =>
-                                                    updateGlobalConfig({
-                                                        systemPrompt:
-                                                            e.target.value
-                                                    })
-                                                }
-                                                className="min-h-[250px] text-sm resize-none focus-visible:ring-primary/20"
-                                            />
-                                            <Button
-                                                className="w-full"
-                                                onClick={() =>
-                                                    setShowArenaSettings(false)
-                                                }
-                                            >
-                                                Save & Close
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    {arenaSettingsTab === 'params' && (
-                                        <div className="space-y-4">
-                                            <div className="space-y-1">
-                                                <h4 className="text-sm font-semibold">
-                                                    Generation Parameters
-                                                </h4>
-                                                <p className="text-[11px] text-muted-foreground">
-                                                    Adjust sampling and length
-                                                    constraints globally.
-                                                </p>
-                                            </div>
-                                            <div className="p-4 border rounded-xl bg-muted/10">
-                                                <ConfigEditor
-                                                    config={globalConfig}
-                                                    onChange={
-                                                        updateGlobalConfig
+                                        {arenaSettingsTab === 'prompt' && (
+                                            <div className="space-y-4">
+                                                <div className="space-y-1">
+                                                    <h4 className="text-sm font-semibold">
+                                                        Global System Prompt
+                                                    </h4>
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        Sets the persona and
+                                                        behavior for all models
+                                                        in the arena.
+                                                    </p>
+                                                </div>
+                                                <Textarea
+                                                    placeholder="Enter instructions for the AI..."
+                                                    value={
+                                                        globalConfig.systemPrompt ||
+                                                        ''
                                                     }
+                                                    onChange={(e) =>
+                                                        updateGlobalConfig({
+                                                            systemPrompt:
+                                                                e.target.value
+                                                        })
+                                                    }
+                                                    className="min-h-[350px] text-sm resize-none focus-visible:ring-primary/20 p-4"
                                                 />
                                             </div>
+                                        )}
+
+                                        {arenaSettingsTab === 'params' && (
+                                            <div className="space-y-4">
+                                                <div className="space-y-1">
+                                                    <h4 className="text-sm font-semibold">
+                                                        Generation Parameters
+                                                    </h4>
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        Adjust sampling and
+                                                        length constraints
+                                                        globally.
+                                                    </p>
+                                                </div>
+                                                <div className="p-4 border rounded-xl bg-muted/5">
+                                                    <ConfigEditor
+                                                        config={globalConfig}
+                                                        onChange={
+                                                            updateGlobalConfig
+                                                        }
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="p-4 border-t bg-muted/20 flex gap-3">
+                                    {arenaSettingsTab === 'models' ? (
+                                        <>
                                             <Button
-                                                className="w-full mt-2"
+                                                variant="outline"
+                                                size="sm"
+                                                className="flex-1 h-10 font-semibold"
+                                                onClick={() =>
+                                                    navigate('/models')
+                                                }
+                                            >
+                                                <Settings2 className="w-3.5 h-3.5 mr-2" />{' '}
+                                                Manage Models
+                                            </Button>
+                                            <Button
+                                                className="flex-1 h-10 font-semibold"
+                                                size="sm"
                                                 onClick={() =>
                                                     setShowArenaSettings(false)
                                                 }
                                             >
-                                                Done
+                                                Confirm
                                             </Button>
-                                        </div>
+                                        </>
+                                    ) : arenaSettingsTab === 'prompt' ? (
+                                        <Button
+                                            className="w-full h-10 font-semibold"
+                                            onClick={() =>
+                                                setShowArenaSettings(false)
+                                            }
+                                        >
+                                            Save & Close
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            className="w-full h-10 font-semibold"
+                                            onClick={() =>
+                                                setShowArenaSettings(false)
+                                            }
+                                        >
+                                            Done
+                                        </Button>
                                     )}
                                 </div>
                             </>
@@ -1083,7 +1281,14 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                     <Button
                                         className="w-full mt-2"
                                         onClick={handleAutoJudge}
-                                        disabled={!judgeModelId || isJudging}
+                                        disabled={
+                                            !judgeModelId ||
+                                            isJudging ||
+                                            !activeSession ||
+                                            !Object.values(
+                                                activeSession.results
+                                            ).some((r) => r.length > 0)
+                                        }
                                     >
                                         {isJudging ? (
                                             <>
@@ -1242,62 +1447,72 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                 {/* Card Content Area */}
                                 <div className="flex-1 relative overflow-hidden min-h-0">
                                     {isEditing ? (
-                                        <ScrollArea className="h-full bg-muted/5">
-                                            <div className="p-5 space-y-6">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <h4 className="text-sm font-bold tracking-tight">
-                                                            Parameters
-                                                        </h4>
-                                                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                                                            Override global
-                                                            generation settings.
-                                                        </p>
+                                        <div className="flex flex-col h-full bg-muted/5">
+                                            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                                                <div className="p-5">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <div>
+                                                            <h4 className="text-sm font-bold tracking-tight">
+                                                                Parameters
+                                                            </h4>
+                                                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                                Override global
+                                                                generation
+                                                                settings.
+                                                            </p>
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 text-[11px] font-medium"
+                                                            onClick={() =>
+                                                                updateModel(
+                                                                    model.id,
+                                                                    {
+                                                                        config: undefined
+                                                                    }
+                                                                )
+                                                            }
+                                                        >
+                                                            Reset
+                                                        </Button>
                                                     </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-7 text-[11px] font-medium"
-                                                        onClick={() =>
-                                                            updateModel(
-                                                                model.id,
-                                                                {
-                                                                    config: undefined
-                                                                }
-                                                            )
-                                                        }
-                                                    >
-                                                        Reset
-                                                    </Button>
-                                                </div>
-                                                <ConfigEditor
-                                                    config={{
-                                                        ...globalConfig,
-                                                        ...model.config
-                                                    }}
-                                                    onChange={(newConfig) =>
-                                                        updateModel(model.id, {
-                                                            config: newConfig
-                                                        })
-                                                    }
-                                                />
-                                                <div className="pt-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="w-full h-9 text-xs font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
-                                                        onClick={() =>
-                                                            startEditingDetails(
-                                                                model
-                                                            )
-                                                        }
-                                                    >
-                                                        <Pencil className="w-3.5 h-3.5 mr-2" />
-                                                        Edit Model Details
-                                                    </Button>
+                                                    <div className="bg-muted/5 rounded-xl border p-4">
+                                                        <ConfigEditor
+                                                            config={{
+                                                                ...globalConfig,
+                                                                ...model.config
+                                                            }}
+                                                            onChange={(
+                                                                newConfig
+                                                            ) =>
+                                                                updateModel(
+                                                                    model.id,
+                                                                    {
+                                                                        config: newConfig
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </ScrollArea>
+                                            <div className="p-4 border-t bg-muted/20">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full h-9 text-xs font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                                                    onClick={() =>
+                                                        startEditingDetails(
+                                                            model
+                                                        )
+                                                    }
+                                                >
+                                                    <Pencil className="w-3.5 h-3.5 mr-2" />
+                                                    Edit Model Details
+                                                </Button>
+                                            </div>
+                                        </div>
                                     ) : (
                                         <ScrollArea className="h-full">
                                             <div className="p-4 flex flex-col min-h-full">
@@ -1349,6 +1564,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                                                                 {
                                                                                     res.prompt
                                                                                 }
+
                                                                                 "
                                                                             </span>
                                                                             {!isLast && (
@@ -1758,7 +1974,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Send a message to all models..."
-                        className="min-h-[80px] max-h-[160px] pr-12 resize-none shadow-sm pb-10"
+                        className="min-h-[64px] max-h-[160px] pr-12 resize-none shadow-sm pb-10"
                     />
                     <div className="absolute bottom-2 left-2 flex items-center gap-2">
                         <Button
