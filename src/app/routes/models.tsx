@@ -87,22 +87,72 @@ export function ModelsPage() {
                 description="Manage your LLM providers and configuration."
                 icon={Cpu}
             >
-                {!isAdding && (
+                <div className="flex items-center gap-2">
+                    <input
+                        type="file"
+                        id="import-models"
+                        className="hidden"
+                        accept=".json"
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                                try {
+                                    const { readJsonFile } =
+                                        await import('@/lib/utils')
+                                    const data = await readJsonFile(file)
+                                    if (Array.isArray(data)) {
+                                        useAppStore
+                                            .getState()
+                                            .importModels(data)
+                                    } else {
+                                        alert('Invalid model data format')
+                                    }
+                                } catch (err) {
+                                    console.error('Failed to import', err)
+                                }
+                                e.target.value = ''
+                            }
+                        }}
+                    />
                     <Button
                         variant="outline"
-                        onClick={() => {
-                            setIsAdding(true)
-                            setEditingModelId(null)
-                            setNewModel({
-                                provider: 'openrouter',
-                                enabled: true
-                            })
-                        }}
-                        className="h-10 px-4 transition-all active:scale-95"
+                        onClick={() =>
+                            document.getElementById('import-models')?.click()
+                        }
+                        className="h-9 text-xs"
                     >
-                        <Plus className="mr-2 h-4 w-4" /> Add Model
+                        Import
                     </Button>
-                )}
+                    <Button
+                        variant="outline"
+                        onClick={async () => {
+                            const { downloadJson } = await import('@/lib/utils')
+                            await downloadJson(
+                                useAppStore.getState().models,
+                                'nillm-models.json'
+                            )
+                        }}
+                        className="h-9 text-xs"
+                    >
+                        Export
+                    </Button>
+                    {!isAdding && (
+                        <Button
+                            variant="default"
+                            onClick={() => {
+                                setIsAdding(true)
+                                setEditingModelId(null)
+                                setNewModel({
+                                    provider: 'openrouter',
+                                    enabled: true
+                                })
+                            }}
+                            className="h-9 px-4 transition-all active:scale-95 text-xs font-semibold"
+                        >
+                            <Plus className="mr-2 h-3.5 w-3.5" /> Add Model
+                        </Button>
+                    )}
+                </div>
             </PageHeader>
 
             <ScrollArea className="flex-1 min-h-0 -mr-4 pr-4">

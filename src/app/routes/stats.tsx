@@ -21,11 +21,11 @@ import {
     Hash,
     Trash2,
     AlertCircle,
-    Eraser,
     Download,
     FileJson,
     FileSpreadsheet,
-    ChevronDown
+    ChevronDown,
+    Upload
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import {
@@ -51,13 +51,13 @@ import {
 } from 'recharts'
 
 export function StatsPage() {
-    const { sessions, models, clearAllResults, clearModelResults } =
-        useAppStore()
+    const { sessions, models, clearModelResults, clearSessions } = useAppStore()
     const [confirmClearAll, setConfirmClearAll] = useState(false)
     const [confirmClearModel, setConfirmClearModel] = useState<string | null>(
         null
     )
     const [mounted, setMounted] = useState(false)
+    const [importing, setImporting] = useState(false)
 
     useEffect(() => {
         const timer = setTimeout(() => setMounted(true), 100)
@@ -162,7 +162,7 @@ export function StatsPage() {
         Responsiveness: (minTTFT / Math.max(s.avgTTFT, 1)) * 100
     }))
 
-    const handleExport = () => {
+    const handleExport = async () => {
         const timestamp = new Date().toISOString()
         const data = {
             metadata: {
@@ -194,20 +194,14 @@ export function StatsPage() {
             }))
         }
 
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-            type: 'application/json'
-        })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `nillm-benchmarks-${new Date().toISOString().split('T')[0]}.json`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+        const { downloadJson } = await import('@/lib/utils')
+        await downloadJson(
+            data,
+            `nillm-benchmarks-${new Date().toISOString().split('T')[0]}.json`
+        )
     }
 
-    const handleExportCSV = () => {
+    const handleExportCSV = async () => {
         const headers = [
             'Model',
             'Provider',
@@ -232,68 +226,160 @@ export function StatsPage() {
             ...rows.map((r) => r.join(','))
         ].join('\n')
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `nillm-benchmarks-${new Date().toISOString().split('T')[0]}.csv`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+        const { downloadFile } = await import('@/lib/utils')
+        await downloadFile(
+            csvContent,
+            `nillm-benchmarks-${new Date().toISOString().split('T')[0]}.csv`,
+            'text/csv;charset=utf-8;'
+        )
+    }
+
+    const handleExportGlobal = async () => {
+        const json = useAppStore.getState().exportData()
+        const { downloadJson } = await import('@/lib/utils')
+        try {
+            const data = JSON.parse(json)
+            await downloadJson(
+                data,
+                `nillm-backup-${new Date().toISOString().slice(0, 10)}.json`
+            )
+        } catch (e) {
+            console.error('Export failed', e)
+        }
+    }
+
+    const handleImportGlobal = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setImporting(true)
+        try {
+            const { readJsonFile } = await import('@/lib/utils')
+            const data = await readJsonFile(file)
+            useAppStore.getState().importData(JSON.stringify(data))
+            alert('Data restored successfully.')
+        } catch (err) {
+            console.error('Import failed', err)
+            alert('Failed to import data')
+        } finally {
+            setImporting(false)
+            e.target.value = ''
+        }
     }
 
     return (
         <div className="flex flex-col h-full gap-6 p-6 overflow-hidden bg-background">
             <PageHeader
-                title="Statistics"
-                description="Comprehensive performance analysis and usage metrics for all active models."
+                title="Performance"
+                description="Live metrics and benchmark results."
                 icon={BarChart3}
             >
-                {modelStats.length > 0 && (
-                    <div className="flex items-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-primary hover:bg-primary/5 transition-colors h-10 px-4"
+                <div className="flex items-center gap-2">
+                    <input
+                        type="file"
+                        id="import-global"
+                        className="hidden"
+                        accept=".json"
+                        onChange={handleImportGlobal}
+                    />
+                    <Button
+                        variant="outline"
+                        onClick={() =>
+                            document.getElementById('import-global')?.click()
+                        }
+                        disabled={importing}
+                        className="h-10 px-4 active:scale-95 transition-all"
+                    >
+                        <Upload className="mr-2 h-4 w-4" />
+                        {importing ? 'Restoring...' : 'Restore Valid Data'}
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        onClick={handleExportGlobal}
+                        className="h-10 px-4 active:scale-95 transition-all"
+                    >
+                        <Download className="mr-2 h-4 w-4" /> Backup Data
+                    </Button>
+
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="text-primary hover:bg-primary/5 transition-colors h-10 px-4"
+                            >
+                                <Download className="h-4 w-4 mr-2" />
+                                Export Reports
+                                <ChevronDown className="h-3 w-3 ml-2 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48 p-2" align="end">
+                            <div className="flex flex-col gap-1">
+                                <button
+                                    onClick={handleExport}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left rounded-md hover:bg-primary/5 hover:text-primary transition-colors"
                                 >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Export Statistics
-                                    <ChevronDown className="h-3 w-3 ml-2 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-48 p-2" align="end">
-                                <div className="flex flex-col gap-1">
-                                    <button
-                                        onClick={handleExport}
-                                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left rounded-md hover:bg-primary/5 hover:text-primary transition-colors"
-                                    >
-                                        <FileJson className="h-4 w-4" />
-                                        Export as JSON
-                                    </button>
-                                    <button
-                                        onClick={handleExportCSV}
-                                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left rounded-md hover:bg-primary/5 hover:text-primary transition-colors"
-                                    >
-                                        <FileSpreadsheet className="h-4 w-4" />
-                                        Export as CSV
-                                    </button>
+                                    <FileJson className="h-4 w-4" />
+                                    Export Stats JSON
+                                </button>
+                                <button
+                                    onClick={handleExportCSV}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left rounded-md hover:bg-primary/5 hover:text-primary transition-colors"
+                                >
+                                    <FileSpreadsheet className="h-4 w-4" />
+                                    Export Stats CSV
+                                </button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                    <Popover
+                        open={confirmClearAll}
+                        onOpenChange={setConfirmClearAll}
+                    >
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="destructive"
+                                className="h-10 px-4 active:scale-95 transition-all"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" /> Clear All
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-4 border-destructive/50">
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-destructive font-semibold">
+                                    <AlertCircle className="h-5 w-5" />
+                                    <span>Danger Zone</span>
                                 </div>
-                            </PopoverContent>
-                        </Popover>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors border-dashed h-10 px-4"
-                            onClick={() => setConfirmClearAll(true)}
-                        >
-                            <Eraser className="h-4 w-4 mr-2" />
-                            Clear All Data
-                        </Button>
-                    </div>
-                )}
+                                <p className="text-sm text-muted-foreground">
+                                    This will permanently delete ALL session
+                                    history and benchmark results.
+                                </p>
+                                <div className="flex justify-end gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                            setConfirmClearAll(false)
+                                        }
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => {
+                                            clearSessions()
+                                            setConfirmClearAll(false)
+                                        }}
+                                    >
+                                        Confirm
+                                    </Button>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                </div>
             </PageHeader>
 
             <ScrollArea className="flex-1 min-h-0 -mr-4 pr-4">
@@ -832,13 +918,11 @@ export function StatsPage() {
             </ScrollArea>
 
             {/* Confirmation Dialogs */}
-            {(confirmClearAll || confirmClearModel) && (
+            {/* Confirmation Dialogs - Only for internal model clearing now, as global clear uses Popover */}
+            {confirmClearModel && (
                 <div
                     className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
-                    onClick={() => {
-                        setConfirmClearAll(false)
-                        setConfirmClearModel(null)
-                    }}
+                    onClick={() => setConfirmClearModel(null)}
                 >
                     <div
                         className="bg-background border rounded-lg shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200"
@@ -848,22 +932,24 @@ export function StatsPage() {
                             <div className="flex items-center gap-3 mb-4 text-destructive">
                                 <AlertCircle className="h-6 w-6" />
                                 <h3 className="text-lg font-bold">
-                                    Clear Statistics?
+                                    Clear Model Statistics?
                                 </h3>
                             </div>
                             <p className="text-sm text-muted-foreground mb-6">
-                                {confirmClearAll
-                                    ? 'This will permanently delete ALL performance data across all sessions. This action cannot be undone.'
-                                    : `This will permanently delete all performance data for "${modelStats.find((s) => s.id === confirmClearModel)?.name}".`}
+                                This will permanently delete all performance
+                                data for "
+                                {
+                                    modelStats.find(
+                                        (s) => s.id === confirmClearModel
+                                    )?.name
+                                }
+                                ".
                             </p>
                             <div className="flex gap-3">
                                 <Button
                                     variant="outline"
                                     className="flex-1"
-                                    onClick={() => {
-                                        setConfirmClearAll(false)
-                                        setConfirmClearModel(null)
-                                    }}
+                                    onClick={() => setConfirmClearModel(null)}
                                 >
                                     Cancel
                                 </Button>
@@ -871,10 +957,7 @@ export function StatsPage() {
                                     variant="destructive"
                                     className="flex-1"
                                     onClick={() => {
-                                        if (confirmClearAll) {
-                                            clearAllResults()
-                                            setConfirmClearAll(false)
-                                        } else if (confirmClearModel) {
+                                        if (confirmClearModel) {
                                             clearModelResults(confirmClearModel)
                                             setConfirmClearModel(null)
                                         }

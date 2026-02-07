@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
     Card,
     CardContent,
@@ -21,11 +23,15 @@ import {
     Code2,
     CheckCircle2,
     Loader2,
-    Box
+    Box,
+    Pencil,
+    X,
+    Save
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { PageHeader } from '@/components/ui/page-header'
 import { TestSet } from '@/lib/types'
+import { downloadJson, readJsonFile } from '@/lib/utils'
 
 const BUILTIN_TESTS: TestSet[] = [
     {
@@ -143,6 +149,7 @@ export function TestsPage() {
         testSets: storedSets,
         addTestSet,
         deleteTestSet,
+        updateTestSet,
         createSession,
         activeModelIds,
         addToQueue
@@ -153,6 +160,14 @@ export function TestsPage() {
     const [runningSetId, setRunningSetId] = useState<string | null>(null)
     const isRunningRef = useRef(false)
 
+    // Edit/Create State
+    const [isEditing, setIsEditing] = useState(false)
+    const [editingSetId, setEditingSetId] = useState<string | null>(null)
+    const [editForm, setEditForm] = useState<{
+        name: string
+        cases: { id: string; prompt: string }[]
+    }>({ name: '', cases: [] })
+
     // Combine stored and builtin
     const allSets = [...BUILTIN_TESTS, ...storedSets]
 
@@ -160,16 +175,11 @@ export function TestsPage() {
         fileInputRef.current?.click()
     }
 
-    const handleExport = (set: TestSet) => {
-        const blob = new Blob([JSON.stringify(set, null, 2)], {
-            type: 'application/json'
-        })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${set.name.toLowerCase().replace(/\s+/g, '_')}.json`
-        a.click()
-        URL.revokeObjectURL(url)
+    const handleExport = async (set: TestSet) => {
+        await downloadJson(
+            set,
+            `${set.name.toLowerCase().replace(/\s+/g, '_')}.json`
+        )
     }
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,8 +188,7 @@ export function TestsPage() {
 
         setIsImporting(true)
         try {
-            const text = await file.text()
-            const data = JSON.parse(text)
+            const data = await readJsonFile(file)
 
             if (!data.name || !Array.isArray(data.cases)) {
                 alert(
@@ -254,6 +263,75 @@ export function TestsPage() {
         }
     }
 
+    // Edit Handlers
+    const openCreateModal = () => {
+        setEditingSetId(null)
+        setEditForm({
+            name: '',
+            cases: [{ id: crypto.randomUUID(), prompt: '' }]
+        })
+        setIsEditing(true)
+    }
+
+    const openEditModal = (set: TestSet) => {
+        setEditingSetId(set.id)
+        setEditForm({
+            name: set.name,
+            cases: set.cases.map((c) => ({ id: c.id, prompt: c.prompt }))
+        })
+        setIsEditing(true)
+    }
+
+    const saveTestSet = () => {
+        if (!editForm.name.trim()) return
+        const validCases = editForm.cases.filter((c) => c.prompt.trim())
+        if (validCases.length === 0) return
+
+        if (editingSetId) {
+            updateTestSet(editingSetId, {
+                name: editForm.name,
+                cases: validCases.map((c) => ({
+                    id: c.id,
+                    prompt: c.prompt
+                }))
+            })
+        } else {
+            addTestSet({
+                id: crypto.randomUUID(),
+                name: editForm.name,
+                cases: validCases.map((c) => ({
+                    id: crypto.randomUUID(),
+                    prompt: c.prompt
+                })),
+                createdAt: Date.now()
+            })
+        }
+        setIsEditing(false)
+    }
+
+    const addCase = () => {
+        setEditForm((prev) => ({
+            ...prev,
+            cases: [...prev.cases, { id: crypto.randomUUID(), prompt: '' }]
+        }))
+    }
+
+    const removeCase = (id: string) => {
+        setEditForm((prev) => ({
+            ...prev,
+            cases: prev.cases.filter((c) => c.id !== id)
+        }))
+    }
+
+    const updateCase = (id: string, text: string) => {
+        setEditForm((prev) => ({
+            ...prev,
+            cases: prev.cases.map((c) =>
+                c.id === id ? { ...c, prompt: text } : c
+            )
+        }))
+    }
+
     return (
         <div className="flex flex-col h-full gap-6 p-6 overflow-hidden bg-background">
             <PageHeader
@@ -278,9 +356,9 @@ export function TestsPage() {
                     {isImporting ? 'Importing...' : 'Import JSON'}
                 </Button>
                 <Button
-                    disabled
                     variant="outline"
-                    className="h-10 px-4 opacity-50 border-dashed"
+                    onClick={openCreateModal}
+                    className="h-10 px-4 transition-all active:scale-95"
                 >
                     <Plus className="mr-2 h-4 w-4" /> Create Set
                 </Button>
@@ -300,12 +378,12 @@ export function TestsPage() {
                             {allSets.map((set) => (
                                 <Card
                                     key={set.id}
-                                    className="group relative border-none bg-muted/30 shadow-none hover:bg-muted/50 transition-colors"
+                                    className="group relative border-none bg-muted/30 shadow-none hover:bg-muted/50 transition-all hover:translate-y-[-2px] hover:shadow-lg"
                                 >
                                     <CardHeader className="pb-3">
                                         <div className="flex justify-between items-start">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-background shadow-sm">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <div className="p-2 rounded-lg bg-background shadow-sm shrink-0">
                                                     {set.id.includes(
                                                         'logic'
                                                     ) && (
@@ -332,12 +410,27 @@ export function TestsPage() {
                                                         <FileJson className="h-4 w-4 text-primary" />
                                                     )}
                                                 </div>
-                                                <CardTitle className="text-base truncate pr-8">
+                                                <CardTitle className="text-base truncate">
                                                     {set.name}
                                                 </CardTitle>
                                             </div>
 
-                                            <div className="flex gap-1">
+                                            <div className="flex gap-1 shrink-0">
+                                                {!set.id.startsWith(
+                                                    'builtin'
+                                                ) && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
+                                                        onClick={() =>
+                                                            openEditModal(set)
+                                                        }
+                                                        title="Edit"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -361,6 +454,7 @@ export function TestsPage() {
                                                                 set.id
                                                             )
                                                         }
+                                                        title="Delete"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -389,6 +483,12 @@ export function TestsPage() {
                                                     <Play className="h-3 w-3 text-primary opacity-0 group-hover/item:opacity-100 transition-opacity" />
                                                 </div>
                                             ))}
+                                            {set.cases.length > 3 && (
+                                                <div className="text-[10px] text-muted-foreground/50 text-center italic">
+                                                    + {set.cases.length - 3}{' '}
+                                                    more cases
+                                                </div>
+                                            )}
                                         </div>
                                         <Button
                                             className="w-full bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border-none transition-all font-semibold"
@@ -422,6 +522,123 @@ export function TestsPage() {
                     )}
                 </div>
             </ScrollArea>
+
+            {isEditing && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-3xl bg-card border border-border/50 shadow-2xl rounded-xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-border/50 flex justify-between items-center bg-muted/10">
+                            <div>
+                                <h2 className="text-xl font-bold tracking-tight">
+                                    {editingSetId
+                                        ? 'Edit Test Set'
+                                        : 'Create Test Set'}
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Configure your test cases and prompts.
+                                </p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsEditing(false)}
+                            >
+                                <X className="h-5 w-5" />
+                            </Button>
+                        </div>
+
+                        <div className="p-6 flex-1 overflow-auto space-y-6">
+                            <div className="space-y-2">
+                                <Label>Set Name</Label>
+                                <Input
+                                    value={editForm.name}
+                                    onChange={(e) =>
+                                        setEditForm((prev) => ({
+                                            ...prev,
+                                            name: e.target.value
+                                        }))
+                                    }
+                                    placeholder="e.g. Challenging Logic Puzzles"
+                                    className="font-bold"
+                                />
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <Label>
+                                        Test Cases ({editForm.cases.length})
+                                    </Label>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={addCase}
+                                    >
+                                        <Plus className="h-3 w-3 mr-2" /> Add
+                                        Case
+                                    </Button>
+                                </div>
+                                <div className="space-y-3">
+                                    {editForm.cases.map((c, idx) => (
+                                        <div
+                                            key={c.id}
+                                            className="flex gap-3 items-start group"
+                                        >
+                                            <span className="text-xs text-muted-foreground pt-3 w-6 text-center">
+                                                {idx + 1}
+                                            </span>
+                                            <div className="flex-1">
+                                                <Input
+                                                    value={c.prompt}
+                                                    onChange={(e) =>
+                                                        updateCase(
+                                                            c.id,
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    placeholder="Enter test prompt..."
+                                                />
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => removeCase(c.id)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    {editForm.cases.length === 0 && (
+                                        <div className="text-center py-8 text-muted-foreground italic bg-muted/20 rounded-lg">
+                                            No test cases yet. Click "Add Case"
+                                            to start.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-border/50 bg-muted/10 flex justify-end gap-3">
+                            <Button
+                                variant="ghost"
+                                onClick={() => setIsEditing(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={saveTestSet}
+                                disabled={
+                                    !editForm.name ||
+                                    editForm.cases.filter((c) =>
+                                        c.prompt.trim()
+                                    ).length === 0
+                                }
+                            >
+                                <Save className="h-4 w-4 mr-2" /> Save Set
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

@@ -724,7 +724,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
         }
     }
 
-    const handleExportAll = () => {
+    const handleExportAll = async () => {
         if (!activeSession || activeModels.length === 0) return
 
         let fullContent = `# Arena Export - ${new Date().toLocaleString()}\n`
@@ -753,15 +753,12 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
             fullContent += `\n\n`
         })
 
-        const blob = new Blob([fullContent], { type: 'text/markdown' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `arena_full_export_${new Date().toISOString().slice(0, 10)}.md`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+        const { downloadFile } = await import('@/lib/utils')
+        await downloadFile(
+            fullContent,
+            `arena_full_export_${new Date().toISOString().slice(0, 10)}.md`,
+            'text/markdown'
+        )
     }
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1220,7 +1217,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                         <X className="h-4 w-4" />
                                     </Button>
                                 </div>
-                                <div className="p-6 space-y-4">
+                                <div className="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                                     <div className="space-y-2">
                                         <Label>Select Judge Model</Label>
                                         <div className="grid gap-2 max-h-[200px] overflow-y-auto border rounded-md p-2">
@@ -1278,8 +1275,10 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                             className="min-h-[150px] text-[13px] leading-relaxed resize-none focus-visible:ring-primary/20"
                                         />
                                     </div>
+                                </div>
+                                <div className="p-4 border-t bg-muted/20 flex flex-col gap-3">
                                     <Button
-                                        className="w-full mt-2"
+                                        className="w-full"
                                         onClick={handleAutoJudge}
                                         disabled={
                                             !judgeModelId ||
@@ -1302,7 +1301,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
 
                                     {judgeStatus && (
                                         <div
-                                            className={`text-[11px] text-center font-medium mt-3 px-3 py-1.5 rounded-md ${
+                                            className={`text-[11px] text-center font-medium px-3 py-1.5 rounded-md ${
                                                 judgeStatus.startsWith('Error')
                                                     ? 'bg-destructive/10 text-destructive border border-destructive/20'
                                                     : 'bg-primary/5 text-primary border border-primary/10'
@@ -1338,7 +1337,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                             <div
                                                 className="font-bold text-sm tracking-tight text-foreground/90 group-hover:text-primary transition-colors truncate cursor-pointer hover:underline underline-offset-4"
                                                 title={`Click to export ${model.name} history`}
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     if (results.length === 0)
                                                         return
 
@@ -1364,28 +1363,16 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                                     const provider =
                                                         model.providerName ||
                                                         model.provider
-                                                    const blob = new Blob(
-                                                        [
-                                                            `# ${model.name} (${provider}) Chat History\n\n${content}`
-                                                        ],
-                                                        {
-                                                            type: 'text/markdown'
-                                                        }
+
+                                                    const fullContent = `# ${model.name} (${provider}) Chat History\n\n${content}`
+
+                                                    const { downloadFile } =
+                                                        await import('@/lib/utils')
+                                                    await downloadFile(
+                                                        fullContent,
+                                                        `${model.name.replace(/\s+/g, '_')}_(${provider.replace(/\s+/g, '_')})_history_${new Date().toISOString().slice(0, 10)}.md`,
+                                                        'text/markdown'
                                                     )
-                                                    const url =
-                                                        URL.createObjectURL(
-                                                            blob
-                                                        )
-                                                    const a =
-                                                        document.createElement(
-                                                            'a'
-                                                        )
-                                                    a.href = url
-                                                    a.download = `${model.name.replace(/\s+/g, '_')}_(${provider.replace(/\s+/g, '_')})_history_${new Date().toISOString().slice(0, 10)}.md`
-                                                    document.body.appendChild(a)
-                                                    a.click()
-                                                    document.body.removeChild(a)
-                                                    URL.revokeObjectURL(url)
                                                 }}
                                             >
                                                 {model.name}

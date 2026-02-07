@@ -12,6 +12,20 @@ interface AppState {
     models: LLMModel[]
     activeModelIds: string[]
     sessions: ChatSession[]
+    // Data Management
+    setSessions: (sessions: ChatSession[]) => void
+    clearSessions: () => void
+
+    setModels: (models: LLMModel[]) => void
+    importModels: (models: LLMModel[]) => void // Merge or replace strategy? Let's use replacement/append logic in implementation
+
+    setTestSets: (testSets: TestSet[]) => void
+    updateTestSet: (id: string, updates: Partial<TestSet>) => void
+
+    // Bulk Import/Export Helpers
+    exportData: () => string
+    importData: (data: string) => void
+
     activeSessionId: string | null
 
     // Actions
@@ -231,6 +245,50 @@ export const useAppStore = create<AppState>()(
                     return { messageQueue: newQueue }
                 }),
             setProcessing: (isProcessing) => set({ isProcessing }),
+
+            setSessions: (sessions) => set({ sessions }),
+            clearSessions: () => set({ sessions: [], activeSessionId: null }),
+
+            setModels: (models) => set({ models }),
+            importModels: (newModels) =>
+                set((state) => {
+                    const existingIds = new Set(state.models.map((m) => m.id))
+                    const modelsToAdd = newModels.filter(
+                        (m) => !existingIds.has(m.id)
+                    )
+                    return { models: [...state.models, ...modelsToAdd] }
+                }),
+
+            setTestSets: (testSets) => set({ testSets }),
+            updateTestSet: (id, updates) =>
+                set((state) => ({
+                    testSets: state.testSets.map((ts) =>
+                        ts.id === id ? { ...ts, ...updates } : ts
+                    )
+                })),
+
+            exportData: () => {
+                const state = useAppStore.getState()
+                return JSON.stringify({
+                    models: state.models,
+                    sessions: state.sessions,
+                    testSets: state.testSets,
+                    globalConfig: state.globalConfig
+                })
+            },
+            importData: (json) => {
+                try {
+                    const data = JSON.parse(json)
+                    set((state) => ({
+                        models: data.models || state.models,
+                        sessions: data.sessions || state.sessions,
+                        testSets: data.testSets || state.testSets,
+                        globalConfig: data.globalConfig || state.globalConfig
+                    }))
+                } catch (e) {
+                    console.error('Failed to import data:', e)
+                }
+            },
 
             clearAllResults: () =>
                 set((state) => ({
