@@ -5,9 +5,13 @@ on:
             - main
         tags:
             - 'v*'
+
     pull_request:
         branches:
             - main
+
+permissions:
+    contents: write
 
 jobs:
     publish:
