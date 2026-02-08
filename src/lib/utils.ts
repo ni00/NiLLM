@@ -14,7 +14,7 @@ export async function downloadFile(
     // @ts-ignore
     const isTauri =
         typeof window !== 'undefined' &&
-        !!(window.__TAURI_INTERNALS__ || window.__TAURI__)
+        !!((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
 
     if (isTauri) {
         try {

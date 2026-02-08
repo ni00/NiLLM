@@ -26,133 +26,37 @@ import {
     Box,
     Pencil,
     X,
-    Save
+    Save,
+    RotateCcw,
+    Languages,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react'
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger
+} from '@/components/ui/popover'
 import { useNavigate } from 'react-router'
 import { PageHeader } from '@/components/ui/page-header'
 import { TestSet } from '@/lib/types'
 import { downloadJson, readJsonFile } from '@/lib/utils'
 
-const BUILTIN_TESTS: TestSet[] = [
-    {
-        id: 'builtin-logic',
-        name: 'Logical Reasoning (CRITICAL)',
-        createdAt: Date.now(),
-        cases: [
-            {
-                id: 'l1',
-                prompt: 'If all bloops are blips and some blips are blops, are all bloops necessarily blops?'
-            },
-            {
-                id: 'l2',
-                prompt: 'A man has 53 socks, 21 identical blue, 15 identical black and 17 identical red. How many socks must he pull out to guarantee he has a pair?'
-            },
-            {
-                id: 'l3',
-                prompt: 'Sally has 3 brothers. Each brother has 2 sisters. How many sisters does Sally have?'
-            },
-            {
-                id: 'l4',
-                prompt: 'Which word does not belong: Apple, Banana, Potato, Cherry, Orange?'
-            },
-            {
-                id: 'l5',
-                prompt: 'If 5 machines take 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?'
-            }
-        ]
-    },
-    {
-        id: 'builtin-creative',
-        name: 'Creative Writing',
-        createdAt: Date.now(),
-        cases: [
-            {
-                id: 'c1',
-                prompt: 'Write a short story about a toaster that discovers it can travel through time.'
-            },
-            {
-                id: 'c2',
-                prompt: 'Write a poem about the color of the wind in a cybernetic future.'
-            },
-            {
-                id: 'c3',
-                prompt: 'Imagine a new animal: describe its appearance, habitat, and one unique survival mechanism.'
-            },
-            {
-                id: 'c4',
-                prompt: 'Create a dialogue between a philosopher and a smart fridge about the meaning of "expired".'
-            },
-            {
-                id: 'c5',
-                prompt: 'Write a tagline for a company that sells "bottled silence".'
-            }
-        ]
-    },
-    {
-        id: 'builtin-coding',
-        name: 'Coding & Algorithmic',
-        createdAt: Date.now(),
-        cases: [
-            {
-                id: 'cd1',
-                prompt: 'Write a Python function to check if a string is a palindrome, but you cannot use string slicing or the word "reverse".'
-            },
-            {
-                id: 'cd2',
-                prompt: 'Explain the difference between a REST API and a GraphQL API using an analogy that a 10-year-old would understand.'
-            },
-            {
-                id: 'cd3',
-                prompt: 'Write a CSS-only solution to center a div both vertically and horizontally.'
-            },
-            {
-                id: 'cd4',
-                prompt: 'Optimize this SQL query for performance: SELECT * FROM users WHERE last_login > "2023-01-01" ORDER BY name ASC.'
-            },
-            {
-                id: 'cd5',
-                prompt: "Explain how React's Virtual DOM works in three simple sentences."
-            }
-        ]
-    },
-    {
-        id: 'builtin-roleplay',
-        name: 'Professional Contexts',
-        createdAt: Date.now(),
-        cases: [
-            {
-                id: 'r1',
-                prompt: 'You are a senior HR manager. Draft a polite but firm rejection email for a candidate who was well-qualified but lacked "cultural fit".'
-            },
-            {
-                id: 'r2',
-                prompt: 'Act as a customer support agent. A customer is angry because their package arrived damaged. Resolve the situation.'
-            },
-            {
-                id: 'r3',
-                prompt: 'You are a VC investor. Give me a 2-minute elevator pitch for a startup that replaces all lawyers with AI.'
-            },
-            {
-                id: 'r4',
-                prompt: 'Write a formal apology for a small business that accidentally leaked its customer email list.'
-            },
-            {
-                id: 'r5',
-                prompt: 'As a travel agent, plan a 3-day "hidden gems" itinerary for Tokyo.'
-            }
-        ]
-    }
-]
+import { getBuiltinTests } from '@/data/builtin-tests'
+
+// BUILTIN_TESTS removed, will act dynamically
 
 export function TestsPage() {
     const {
-        testSets: storedSets,
         addTestSet,
         deleteTestSet,
         updateTestSet,
         createSession,
         activeModelIds,
-        addToQueue
+        addToQueue,
+        language,
+        setLanguage,
+        testSets: storedSets
     } = useAppStore()
     const navigate = useNavigate()
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -168,8 +72,14 @@ export function TestsPage() {
         cases: { id: string; prompt: string }[]
     }>({ name: '', cases: [] })
 
-    // Combine stored and builtin
-    const allSets = [...BUILTIN_TESTS, ...storedSets]
+    // Combine stored and builtin, allowing stored to override builtin
+    // Combine stored and builtin, allowing stored to override builtin
+    const builtInTests = getBuiltinTests(language)
+    const storedMap = new Map(storedSets.map((s) => [s.id, s]))
+    const allSets = [
+        ...builtInTests.map((b) => storedMap.get(b.id) || b),
+        ...storedSets.filter((s) => !builtInTests.find((b) => b.id === s.id))
+    ]
 
     const handleImportClick = () => {
         fileInputRef.current?.click()
@@ -288,13 +198,26 @@ export function TestsPage() {
         if (validCases.length === 0) return
 
         if (editingSetId) {
-            updateTestSet(editingSetId, {
+            const existsInStore = storedSets.some((s) => s.id === editingSetId)
+            const updates = {
                 name: editForm.name,
                 cases: validCases.map((c) => ({
                     id: c.id,
                     prompt: c.prompt
                 }))
-            })
+            }
+
+            if (existsInStore) {
+                updateTestSet(editingSetId, updates)
+            } else {
+                // First time editing a built-in set - create an override
+                const original = builtInTests.find((b) => b.id === editingSetId)
+                addTestSet({
+                    id: editingSetId,
+                    ...updates,
+                    createdAt: original?.createdAt || Date.now()
+                })
+            }
         } else {
             addTestSet({
                 id: crypto.randomUUID(),
@@ -332,6 +255,22 @@ export function TestsPage() {
         }))
     }
 
+    const moveCase = (index: number, direction: 'up' | 'down') => {
+        setEditForm((prev) => {
+            const newCases = [...prev.cases]
+            if (direction === 'up' && index > 0) {
+                const temp = newCases[index]
+                newCases[index] = newCases[index - 1]
+                newCases[index - 1] = temp
+            } else if (direction === 'down' && index < newCases.length - 1) {
+                const temp = newCases[index]
+                newCases[index] = newCases[index + 1]
+                newCases[index + 1] = temp
+            }
+            return { ...prev, cases: newCases }
+        })
+    }
+
     return (
         <div className="flex flex-col h-full gap-6 p-6 overflow-hidden bg-background">
             <PageHeader
@@ -346,6 +285,46 @@ export function TestsPage() {
                     className="hidden"
                     accept=".json"
                 />
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className="h-10 px-4 shadow-sm transition-all active:scale-95 gap-2"
+                        >
+                            <Languages className="h-4 w-4" />
+                            {language === 'zh'
+                                ? '中文'
+                                : language === 'ja'
+                                  ? '日本語'
+                                  : 'English'}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-40 p-1" align="end">
+                        <div className="grid gap-1">
+                            <Button
+                                variant="ghost"
+                                className="justify-start font-normal h-8 px-2"
+                                onClick={() => setLanguage('en')}
+                            >
+                                🇺🇸 English
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                className="justify-start font-normal h-8 px-2"
+                                onClick={() => setLanguage('zh')}
+                            >
+                                🇨🇳 中文
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                className="justify-start font-normal h-8 px-2"
+                                onClick={() => setLanguage('ja')}
+                            >
+                                🇯🇵 日本語
+                            </Button>
+                        </div>
+                    </PopoverContent>
+                </Popover>
                 <Button
                     variant="outline"
                     onClick={handleImportClick}
@@ -416,21 +395,17 @@ export function TestsPage() {
                                             </div>
 
                                             <div className="flex gap-1 shrink-0">
-                                                {!set.id.startsWith(
-                                                    'builtin'
-                                                ) && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
-                                                        onClick={() =>
-                                                            openEditModal(set)
-                                                        }
-                                                        title="Edit"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
+                                                    onClick={() =>
+                                                        openEditModal(set)
+                                                    }
+                                                    title="Edit"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -444,7 +419,7 @@ export function TestsPage() {
                                                 </Button>
                                                 {!set.id.startsWith(
                                                     'builtin'
-                                                ) && (
+                                                ) ? (
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
@@ -458,6 +433,24 @@ export function TestsPage() {
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
+                                                ) : (
+                                                    storedSets.some(
+                                                        (s) => s.id === set.id
+                                                    ) && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                                                            onClick={() =>
+                                                                deleteTestSet(
+                                                                    set.id
+                                                                )
+                                                            }
+                                                            title="Reset to default"
+                                                        >
+                                                            <RotateCcw className="h-4 w-4" />
+                                                        </Button>
+                                                    )
                                                 )}
                                             </div>
                                         </div>
@@ -484,7 +477,12 @@ export function TestsPage() {
                                                 </div>
                                             ))}
                                             {set.cases.length > 3 && (
-                                                <div className="text-[10px] text-muted-foreground/50 text-center italic">
+                                                <div
+                                                    className="text-[10px] text-muted-foreground/50 text-center italic cursor-pointer hover:text-primary transition-colors"
+                                                    onClick={() =>
+                                                        openEditModal(set)
+                                                    }
+                                                >
                                                     + {set.cases.length - 3}{' '}
                                                     more cases
                                                 </div>
@@ -597,14 +595,63 @@ export function TestsPage() {
                                                     placeholder="Enter test prompt..."
                                                 />
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                                onClick={() => removeCase(c.id)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <div className="flex gap-1 shrink-0 mt-[2px]">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-primary hover:bg-primary/10 transition-colors"
+                                                    onClick={() =>
+                                                        handleRunSingle(
+                                                            c.prompt
+                                                        )
+                                                    }
+                                                    title="Run this case"
+                                                >
+                                                    <Play className="h-4 w-4" />
+                                                </Button>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-4 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                                        onClick={() =>
+                                                            moveCase(idx, 'up')
+                                                        }
+                                                        disabled={idx === 0}
+                                                    >
+                                                        <ArrowUp className="h-3 w-3" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-4 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                                        onClick={() =>
+                                                            moveCase(
+                                                                idx,
+                                                                'down'
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            idx ===
+                                                            editForm.cases
+                                                                .length -
+                                                                1
+                                                        }
+                                                    >
+                                                        <ArrowDown className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                                                    onClick={() =>
+                                                        removeCase(c.id)
+                                                    }
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
                                     ))}
                                     {editForm.cases.length === 0 && (

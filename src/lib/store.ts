@@ -12,9 +12,11 @@ interface AppState {
     models: LLMModel[]
     activeModelIds: string[]
     sessions: ChatSession[]
+    language: 'en' | 'zh' | 'ja'
     // Data Management
     setSessions: (sessions: ChatSession[]) => void
     clearSessions: () => void
+    setLanguage: (lang: 'en' | 'zh' | 'ja') => void
 
     setModels: (models: LLMModel[]) => void
     importModels: (models: LLMModel[]) => void // Merge or replace strategy? Let's use replacement/append logic in implementation
@@ -74,7 +76,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             models: [
                 {
                     id: 'gpt-4o',
@@ -90,10 +92,11 @@ export const useAppStore = create<AppState>()(
                     providerId: 'anthropic/claude-3-opus',
                     enabled: true
                 }
-            ],
+            ] as LLMModel[],
             activeModelIds: ['gpt-4o'],
-            sessions: [],
-            activeSessionId: null,
+            sessions: [] as ChatSession[],
+            activeSessionId: null as string | null,
+            language: 'en' as 'en' | 'zh' | 'ja',
 
             addModel: (model) =>
                 set((state) => ({ models: [...state.models, model] })),
@@ -121,7 +124,7 @@ export const useAppStore = create<AppState>()(
                 }),
 
             createSession: (title, modelIds) => {
-                const id = crypto.randomUUID()
+                const id = crypto.randomUUID() as string
                 const newSession: ChatSession = {
                     id,
                     title,
@@ -186,7 +189,7 @@ export const useAppStore = create<AppState>()(
                     })
                 })),
 
-            testSets: [],
+            testSets: [] as TestSet[],
             addTestSet: (testSet) =>
                 set((state) => ({ testSets: [...state.testSets, testSet] })),
             deleteTestSet: (id) =>
@@ -213,14 +216,14 @@ export const useAppStore = create<AppState>()(
                 })),
 
             // Queue System
-            messageQueue: [],
+            messageQueue: [] as AppState['messageQueue'],
             isProcessing: false,
             addToQueue: (prompt, sessionId) =>
                 set((state) => ({
                     messageQueue: [
                         ...state.messageQueue,
                         {
-                            id: crypto.randomUUID(),
+                            id: crypto.randomUUID() as string,
                             prompt,
                             sessionId,
                             paused: false
@@ -248,6 +251,7 @@ export const useAppStore = create<AppState>()(
 
             setSessions: (sessions) => set({ sessions }),
             clearSessions: () => set({ sessions: [], activeSessionId: null }),
+            setLanguage: (language) => set({ language }),
 
             setModels: (models) => set({ models }),
             importModels: (newModels) =>
@@ -267,8 +271,8 @@ export const useAppStore = create<AppState>()(
                     )
                 })),
 
-            exportData: () => {
-                const state = useAppStore.getState()
+            exportData: (): string => {
+                const state = get()
                 return JSON.stringify({
                     models: state.models,
                     sessions: state.sessions,
@@ -276,7 +280,7 @@ export const useAppStore = create<AppState>()(
                     globalConfig: state.globalConfig
                 })
             },
-            importData: (json) => {
+            importData: (json: string) => {
                 try {
                     const data = JSON.parse(json)
                     set((state) => ({
@@ -298,7 +302,7 @@ export const useAppStore = create<AppState>()(
                     }))
                 })),
 
-            clearModelResults: (modelId) =>
+            clearModelResults: (modelId: string) =>
                 set((state) => ({
                     sessions: state.sessions.map((s) => {
                         const newResults = { ...s.results }
