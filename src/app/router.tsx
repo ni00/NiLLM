@@ -34,6 +34,10 @@ const createAppRouter = () =>
                     lazy: () => import('@/app/routes/models')
                 },
                 {
+                    path: '/prompts',
+                    lazy: () => import('@/app/routes/prompts')
+                },
+                {
                     path: '*',
                     lazy: () => import('@/app/routes/not-found')
                 }

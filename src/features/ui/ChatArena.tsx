@@ -334,7 +334,9 @@ export function ChatArena() {
         removeFromQueue,
         toggleQueuePause,
         reorderQueue,
-        setProcessing
+        setProcessing,
+        pendingPrompt,
+        setPendingPrompt
     } = useAppStore()
 
     const [input, setInput] = useState('')
@@ -376,6 +378,14 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
             setJudgeModelId(preferred ? preferred.id : models[0].id)
         }
     }, [models, judgeModelId])
+
+    // Handle Pending Prompt
+    useEffect(() => {
+        if (pendingPrompt) {
+            setInput(pendingPrompt)
+            setPendingPrompt(null)
+        }
+    }, [pendingPrompt, setPendingPrompt])
 
     // Inline edit form state
     const [modelToEdit, setModelToEdit] = useState<LLMModel | null>(null)

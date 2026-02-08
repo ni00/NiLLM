@@ -5,7 +5,8 @@ import {
     ChatSession,
     BenchmarkResult,
     TestSet,
-    GenerationConfig
+    GenerationConfig,
+    PromptTemplate
 } from './types'
 
 interface AppState {
@@ -57,7 +58,19 @@ interface AppState {
     globalConfig: GenerationConfig
     updateGlobalConfig: (updates: Partial<GenerationConfig>) => void
 
+    // Prompt Templates
+    promptTemplates: PromptTemplate[]
+    setPromptTemplates: (templates: PromptTemplate[]) => void
+    addPromptTemplate: (template: PromptTemplate) => void
+    updatePromptTemplate: (id: string, updates: Partial<PromptTemplate>) => void
+    deletePromptTemplate: (id: string) => void
+
+    // Arena Integration
+    pendingPrompt: string | null
+    setPendingPrompt: (content: string | null) => void
+
     // Queue System
+
     messageQueue: {
         id: string
         prompt: string
@@ -263,6 +276,68 @@ export const useAppStore = create<AppState>()(
                     return { models: [...state.models, ...modelsToAdd] }
                 }),
 
+            promptTemplates: [
+                {
+                    id: 'builtin-1',
+                    title: 'Summarize Text',
+                    content:
+                        'Please summarize the following text into 3 key points:\n\n{{text}}',
+                    variables: [
+                        { name: 'text', description: 'The text to summarize' }
+                    ],
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                },
+                {
+                    id: 'builtin-2',
+                    title: 'Explain Code',
+                    content:
+                        'Explain the following code snippet step-by-step:\n\n```{{language}}\n{{code}}\n```',
+                    variables: [
+                        {
+                            name: 'language',
+                            description: 'Programming language'
+                        },
+                        { name: 'code', description: 'The code snippet' }
+                    ],
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                },
+                {
+                    id: 'builtin-3',
+                    title: 'Creative Writing',
+                    content:
+                        'Write a short story about {{topic}} in the style of {{author}}.',
+                    variables: [
+                        { name: 'topic', description: 'The main subject' },
+                        { name: 'author', description: 'The style author' }
+                    ],
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                }
+            ] as PromptTemplate[],
+            addPromptTemplate: (tmpl) =>
+                set((state) => ({
+                    promptTemplates: [...state.promptTemplates, tmpl]
+                })),
+            updatePromptTemplate: (id, updates) =>
+                set((state) => ({
+                    promptTemplates: state.promptTemplates.map((t) =>
+                        t.id === id ? { ...t, ...updates } : t
+                    )
+                })),
+            deletePromptTemplate: (id) =>
+                set((state) => ({
+                    promptTemplates: state.promptTemplates.filter(
+                        (t) => t.id !== id
+                    )
+                })),
+            setPromptTemplates: (templates) =>
+                set({ promptTemplates: templates }),
+
+            pendingPrompt: null,
+            setPendingPrompt: (content) => set({ pendingPrompt: content }),
+
             setTestSets: (testSets) => set({ testSets }),
             updateTestSet: (id, updates) =>
                 set((state) => ({
@@ -277,6 +352,7 @@ export const useAppStore = create<AppState>()(
                     models: state.models,
                     sessions: state.sessions,
                     testSets: state.testSets,
+                    promptTemplates: state.promptTemplates,
                     globalConfig: state.globalConfig
                 })
             },
@@ -287,6 +363,8 @@ export const useAppStore = create<AppState>()(
                         models: data.models || state.models,
                         sessions: data.sessions || state.sessions,
                         testSets: data.testSets || state.testSets,
+                        promptTemplates:
+                            data.promptTemplates || state.promptTemplates,
                         globalConfig: data.globalConfig || state.globalConfig
                     }))
                 } catch (e) {

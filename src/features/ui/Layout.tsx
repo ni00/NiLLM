@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router'
-import { Layers, BarChart3, Cpu, Box } from 'lucide-react'
+import { Layers, BarChart3, Cpu, Box, BookTemplate } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function Layout() {
@@ -7,6 +7,7 @@ export function Layout() {
 
     const navItems = [
         { icon: Layers, label: 'Arena', path: '/' },
+        { icon: BookTemplate, label: 'Prompts', path: '/prompts' },
         { icon: BarChart3, label: 'Stats', path: '/stats' },
         { icon: Box, label: 'Tests', path: '/tests' },
         { icon: Cpu, label: 'Models', path: '/models' }

@@ -77,3 +77,17 @@ export interface TestSet {
     cases: TestCase[]
     createdAt: number
 }
+
+export interface PromptVariable {
+    name: string
+    description: string
+}
+
+export interface PromptTemplate {
+    id: string
+    title: string
+    content: string
+    variables: PromptVariable[]
+    createdAt: number
+    updatedAt: number
+}
