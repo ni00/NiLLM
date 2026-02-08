@@ -8,9 +8,9 @@ export function Layout() {
     const navItems = [
         { icon: Layers, label: 'Arena', path: '/' },
         { icon: BookTemplate, label: 'Prompts', path: '/prompts' },
-        { icon: BarChart3, label: 'Stats', path: '/stats' },
         { icon: Box, label: 'Tests', path: '/tests' },
-        { icon: Cpu, label: 'Models', path: '/models' }
+        { icon: Cpu, label: 'Models', path: '/models' },
+        { icon: BarChart3, label: 'Stats', path: '/stats' }
     ]
 
     return (
