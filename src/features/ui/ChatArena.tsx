@@ -336,7 +336,8 @@ export function ChatArena() {
         reorderQueue,
         setProcessing,
         pendingPrompt,
-        setPendingPrompt
+        setPendingPrompt,
+        streamingData
     } = useAppStore()
 
     const [input, setInput] = useState('')
@@ -420,7 +421,12 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
     const allLastMetrics = activeModels
         .map((model) => {
             const results = activeSession?.results[model.id] || []
-            return results[results.length - 1]?.metrics
+            const lastRes = results[results.length - 1]
+            if (!lastRes) return undefined
+            const streaming = streamingData[lastRes.id]
+            return streaming?.metrics
+                ? { ...lastRes.metrics, ...streaming.metrics }
+                : lastRes.metrics
         })
         .filter((m): m is NonNullable<typeof m> => !!m)
 
@@ -446,7 +452,16 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
     // Aggregate metrics ranges for footer coloring
     const aggregateMetrics = activeModels.map((model) => {
         const results = activeSession?.results[model.id] || []
-        const valid = results.filter((r) => r.metrics)
+        // We need to map ALL results to their streaming versions if applicable
+        const valid = results
+            .map((r) => {
+                const s = streamingData[r.id]
+                return s?.metrics
+                    ? { ...r, metrics: { ...r.metrics, ...s.metrics } }
+                    : r
+            })
+            .filter((r) => r.metrics)
+
         return {
             avgTtft:
                 valid.length > 0
@@ -458,14 +473,11 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                     ? valid.reduce((a, b) => a + (b.metrics?.tps || 0), 0) /
                       valid.length
                     : 0,
-            sumTime: results.reduce(
+            sumTime: valid.reduce(
                 (a, b) => a + (b.metrics?.totalDuration || 0),
                 0
             ),
-            sumToks: results.reduce(
-                (a, b) => a + (b.metrics?.tokenCount || 0),
-                0
-            )
+            sumToks: valid.reduce((a, b) => a + (b.metrics?.tokenCount || 0), 0)
         }
     })
 
@@ -1534,6 +1546,18 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                                                     isForceExpanded ||
                                                                     isSelfExpanded
 
+                                                                // Merge streaming data
+                                                                const streaming =
+                                                                    streamingData[
+                                                                        res.id
+                                                                    ]
+                                                                const effectiveResponse =
+                                                                    streaming?.response !==
+                                                                    undefined
+                                                                        ? streaming.response
+                                                                        : res.response
+                                                                // Metrics are not displayed inline in the markdown body, but if we did, we'd merge them too
+
                                                                 return (
                                                                     <div
                                                                         key={
@@ -1578,14 +1602,14 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                                                                         {/* Response Body */}
                                                                         {showContent && (
                                                                             <div className="markdown-body text-sm leading-relaxed px-1">
-                                                                                {res.response ? (
+                                                                                {effectiveResponse ? (
                                                                                     <ReactMarkdown
                                                                                         remarkPlugins={[
                                                                                             remarkGfm
                                                                                         ]}
                                                                                     >
                                                                                         {
-                                                                                            res.response
+                                                                                            effectiveResponse
                                                                                         }
                                                                                     </ReactMarkdown>
                                                                                 ) : (

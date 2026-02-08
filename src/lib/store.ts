@@ -85,6 +85,10 @@ interface AppState {
     setProcessing: (isProcessing: boolean) => void
     clearAllResults: () => void
     clearModelResults: (modelId: string) => void
+    // Streaming State (Transient)
+    streamingData: Record<string, Partial<BenchmarkResult>> // resultId -> partial data
+    setStreamingData: (resultId: string, data: Partial<BenchmarkResult>) => void
+    clearStreamingData: (resultId: string) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -387,10 +391,34 @@ export const useAppStore = create<AppState>()(
                         delete newResults[modelId]
                         return { ...s, results: newResults }
                     })
-                }))
+                })),
+
+            streamingData: {},
+            setStreamingData: (resultId, data) =>
+                set((state) => ({
+                    streamingData: {
+                        ...state.streamingData,
+                        [resultId]: {
+                            ...state.streamingData[resultId],
+                            ...data
+                        }
+                    }
+                })),
+            clearStreamingData: (resultId) =>
+                set((state) => {
+                    const newData = { ...state.streamingData }
+                    delete newData[resultId]
+                    return { streamingData: newData }
+                })
         }),
         {
-            name: 'nillm-storage'
+            name: 'nillm-storage',
+            partialize: (state) =>
+                Object.fromEntries(
+                    Object.entries(state).filter(
+                        ([key]) => !['streamingData'].includes(key)
+                    )
+                ) as AppState
         }
     )
 )

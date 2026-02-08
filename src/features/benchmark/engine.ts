@@ -92,8 +92,8 @@ export async function broadcastMessage(
                         ...rest,
                         tokenCount: tokens ?? currentMetrics.tokenCount
                     }
-                    // Update metrics specifically (e.g. TTFT)
-                    store.updateResult(sessionId, model.id, resultId, {
+                    // Update metrics specifically (e.g. TTFT) via transient store
+                    store.setStreamingData(resultId, {
                         metrics: {
                             ttft: currentMetrics.ttft || 0,
                             tps: currentMetrics.tps || 0,
@@ -115,8 +115,8 @@ export async function broadcastMessage(
                         (value as any).textDelta ?? (value as any).text ?? ''
                     currentText += delta
 
-                    // Streaming update
-                    store.updateResult(sessionId, model.id, resultId, {
+                    // Streaming update - Transient
+                    store.setStreamingData(resultId, {
                         response: currentText,
                         metrics: {
                             ...currentMetrics,
@@ -129,7 +129,7 @@ export async function broadcastMessage(
             const endTime = performance.now()
             const totalDuration = endTime - startTime
 
-            // Final update
+            // Final update - Persist
             store.updateResult(sessionId, model.id, resultId, {
                 response: currentText,
                 metrics: {
@@ -139,11 +139,14 @@ export async function broadcastMessage(
                     totalDuration: totalDuration
                 }
             })
+            // Cleanup transient
+            store.clearStreamingData(resultId)
         } catch (error: any) {
             console.error(`Error with model ${model.name}:`, error)
             store.updateResult(sessionId, model.id, resultId, {
                 error: error.message || 'Unknown error'
             })
+            store.clearStreamingData(resultId)
         }
     })
 
