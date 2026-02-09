@@ -1,6 +1,6 @@
 {
     "name": "nillm",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "NiLLM Arena App",
     "type": "module",
     "scripts": {
@@ -10,7 +10,8 @@
         "tauri": "tauri",
         "prepare": "husky",
         "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
-        "format": "prettier --write ."
+        "format": "prettier --write .",
+        "bump": "node scripts/bump-version.js"
     },
     "lint-staged": {
         "**/*": "prettier --write --ignore-unknown"

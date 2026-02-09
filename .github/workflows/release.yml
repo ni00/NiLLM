@@ -60,14 +60,20 @@ jobs:
             - name: Install frontend dependencies
               run: pnpm install
 
+            - name: Get version
+              id: get_version
+              shell: bash
+              run: |
+                  echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
             - name: Build and Publish
               uses: tauri-apps/tauri-action@v0
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tagName: v__VERSION__
-                  releaseName: 'NiLLM v__VERSION__'
+                  tagName: v${{ steps.get_version.outputs.VERSION }}
+                  releaseName: 'NiLLM v${{ steps.get_version.outputs.VERSION }}'
                   releaseBody: 'See the assets below to download the latest version of NiLLM.'
-                  releaseDraft: true
+                  releaseDraft: false
                   prerelease: false
                   args: ${{ matrix.args }}
