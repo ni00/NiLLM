@@ -120,18 +120,40 @@ export async function streamResponse(
                     }
 
                     if (value.type === 'text-delta') {
-                        tokenCount++
+                        const delta = value.text
+                        // Update our local count based on length as a heuristic since we don't have a tokenizer here
+                        const isCJK = /[\u4e00-\u9fa5]/.test(delta)
+                        if (isCJK) {
+                            tokenCount += delta.length * 1.5 // CJK chars generally use more tokens (approx 1.5 per char)
+                        } else {
+                            // English: simple word count or group of chars
+                            tokenCount += Math.max(1, delta.length / 4)
+                        }
+
+                        onMetrics({
+                            tokens: Math.round(tokenCount)
+                        })
                     }
 
                     if (value.type === 'finish') {
                         const now = performance.now()
                         const duration = (now - (firstTokenTime || now)) / 1000
-                        // Use totalUsage if available, otherwise fallback to tokenCount
                         const usage =
                             (value as any).usage || (value as any).totalUsage
-                        const tokens = usage?.completionTokens || tokenCount
-                        const tps = duration > 0 ? tokens / duration : 0
-                        onMetrics({ tps: Math.round(tps * 100) / 100, tokens })
+
+                        // If we have real usage data from API, use it (it's most accurate),
+                        // but sometimes providers return wrong lower values, so we take the max of our estimation and their report
+                        const apiTokens = usage?.completionTokens || 0
+                        const finalTokens = Math.max(
+                            apiTokens,
+                            Math.round(tokenCount)
+                        )
+                        const tps = duration > 0 ? finalTokens / duration : 0
+
+                        onMetrics({
+                            tps: Math.round(tps * 100) / 100,
+                            tokens: finalTokens
+                        })
                     }
 
                     controller.enqueue(value)

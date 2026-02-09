@@ -1,6 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router'
 
-import { Layout } from '@/features/ui/Layout'
+import { Layout } from '@/features/layout/Layout'
 
 const createAppRouter = () =>
     createBrowserRouter([
@@ -19,27 +19,27 @@ const createAppRouter = () =>
             children: [
                 {
                     path: '/',
-                    lazy: () => import('@/app/routes/home')
+                    lazy: () => import('@/pages/home')
                 },
                 {
                     path: '/stats',
-                    lazy: () => import('@/app/routes/stats')
+                    lazy: () => import('@/pages/stats')
                 },
                 {
                     path: '/tests',
-                    lazy: () => import('@/app/routes/tests')
+                    lazy: () => import('@/pages/tests')
                 },
                 {
                     path: '/models',
-                    lazy: () => import('@/app/routes/models')
+                    lazy: () => import('@/pages/models')
                 },
                 {
                     path: '/prompts',
-                    lazy: () => import('@/app/routes/prompts')
+                    lazy: () => import('@/pages/prompts')
                 },
                 {
                     path: '*',
-                    lazy: () => import('@/app/routes/not-found')
+                    lazy: () => import('@/pages/not-found')
                 }
             ]
         }
