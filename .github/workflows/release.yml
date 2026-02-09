@@ -6,15 +6,37 @@ on:
         tags:
             - 'v*'
 
-    pull_request:
-        branches:
-            - main
-
 permissions:
     contents: write
 
 jobs:
-    publish:
+    create-release:
+        runs-on: ubuntu-latest
+        outputs:
+            release_id: ${{ steps.create-release.outputs.id }}
+            version: ${{ steps.get_version.outputs.VERSION }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Get version
+              id: get_version
+              shell: bash
+              run: |
+                  echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+            - name: Create Release
+              id: create-release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: v${{ steps.get_version.outputs.VERSION }}
+                  name: NiLLM v${{ steps.get_version.outputs.VERSION }}
+                  draft: true
+                  prerelease: false
+                  generate_release_notes: true # 自动生成更新日志
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    build-and-upload:
+        needs: create-release
         strategy:
             fail-fast: false
             matrix:
@@ -60,20 +82,25 @@ jobs:
             - name: Install frontend dependencies
               run: pnpm install
 
-            - name: Get version
-              id: get_version
-              shell: bash
-              run: |
-                  echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-            - name: Build and Publish
+            - name: Build and Upload
               uses: tauri-apps/tauri-action@v0
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tagName: v${{ steps.get_version.outputs.VERSION }}
-                  releaseName: 'NiLLM v${{ steps.get_version.outputs.VERSION }}'
-                  releaseBody: 'See the assets below to download the latest version of NiLLM.'
-                  releaseDraft: false
+                  tagName: v${{ needs.create-release.outputs.version }}
+                  releaseName: 'NiLLM v${{ needs.create-release.outputs.version }}'
+                  releaseDraft: true # 这里必须保持为 true，因为它只负责上传到现有的草稿
                   prerelease: false
                   args: ${{ matrix.args }}
+
+    publish-release:
+        needs: [create-release, build-and-upload]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Publish Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  id: ${{ needs.create-release.outputs.release_id }}
+                  draft: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
