@@ -21,7 +21,9 @@ export function ArenaPage() {
         globalConfig,
         isProcessing,
         addToQueue,
-        streamingData
+        streamingData,
+        arenaColumns,
+        arenaSortBy
     } = useAppStore()
 
     const {
@@ -149,7 +151,7 @@ export function ArenaPage() {
         )
     }
 
-    // --- RANGE CALCULATIONS ---
+    // --- RANGE & SORT CALCULATIONS ---
     const allLastMetrics = activeModels
         .map((model) => {
             const results = activeSession?.results[model.id] || []
@@ -188,7 +190,15 @@ export function ArenaPage() {
             })
             .filter((r) => r.metrics)
 
+        const ratedResults = results.filter((r) => r.rating)
+        const avgRating =
+            ratedResults.length > 0
+                ? ratedResults.reduce((a, b) => a + (b.rating || 0), 0) /
+                  ratedResults.length
+                : 0
+
         return {
+            modelId: model.id,
             avgTtft:
                 valid.length > 0
                     ? valid.reduce((a, b) => a + (b.metrics?.ttft || 0), 0) /
@@ -203,9 +213,29 @@ export function ArenaPage() {
                 (a, b) => a + (b.metrics?.totalDuration || 0),
                 0
             ),
-            sumToks: valid.reduce((a, b) => a + (b.metrics?.tokenCount || 0), 0)
+            sumToks: valid.reduce(
+                (a, b) => a + (b.metrics?.tokenCount || 0),
+                0
+            ),
+            avgRating
         }
     })
+
+    const displayModels = [...activeModels]
+    if (arenaSortBy !== 'default') {
+        displayModels.sort((a, b) => {
+            const mA = aggregateMetrics.find((m) => m.modelId === a.id)
+            const mB = aggregateMetrics.find((m) => m.modelId === b.id)
+            if (arenaSortBy === 'name') return a.name.localeCompare(b.name)
+            if (arenaSortBy === 'ttft')
+                return (mA?.avgTtft || 999999) - (mB?.avgTtft || 999999)
+            if (arenaSortBy === 'tps')
+                return (mB?.avgTps || 0) - (mA?.avgTps || 0)
+            if (arenaSortBy === 'rating')
+                return (mB?.avgRating || 0) - (mA?.avgRating || 0)
+            return 0
+        })
+    }
 
     const fTtftVals = aggregateMetrics
         .map((a) => a.avgTtft)
@@ -224,6 +254,17 @@ export function ArenaPage() {
         duration: { min: Math.min(...fTimeVals), max: Math.max(...fTimeVals) },
         tokens: { min: Math.min(...fToksVals), max: Math.max(...fToksVals) }
     }
+
+    const gridColsClass =
+        arenaColumns === 0
+            ? 'grid-cols-[repeat(auto-fit,minmax(350px,1fr))]'
+            : arenaColumns === 1
+              ? 'grid-cols-1'
+              : arenaColumns === 2
+                ? 'grid-cols-2'
+                : arenaColumns === 3
+                  ? 'grid-cols-3'
+                  : 'grid-cols-4'
 
     return (
         <div className="flex flex-col h-full w-full max-h-screen relative">
@@ -263,8 +304,8 @@ export function ArenaPage() {
             )}
 
             <div className="flex-1 min-h-0 overflow-y-auto p-4">
-                <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(350px,1fr))]">
-                    {activeModels.map((model) => (
+                <div className={`grid gap-4 ${gridColsClass}`}>
+                    {displayModels.map((model) => (
                         <ModelColumn
                             key={model.id}
                             model={model}

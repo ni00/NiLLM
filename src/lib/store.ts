@@ -14,13 +14,22 @@ interface AppState {
     activeModelIds: string[]
     sessions: ChatSession[]
     language: 'en' | 'zh' | 'ja'
+
+    // Arena UI Persistence
+    arenaColumns: number // 0: auto, 1-4: fixed
+    arenaSortBy: 'default' | 'name' | 'ttft' | 'tps' | 'rating'
+    setArenaColumns: (cols: number) => void
+    setArenaSortBy: (
+        sortBy: 'default' | 'name' | 'ttft' | 'tps' | 'rating'
+    ) => void
+
     // Data Management
     setSessions: (sessions: ChatSession[]) => void
     clearSessions: () => void
     setLanguage: (lang: 'en' | 'zh' | 'ja') => void
 
     setModels: (models: LLMModel[]) => void
-    importModels: (models: LLMModel[]) => void // Merge or replace strategy? Let's use replacement/append logic in implementation
+    importModels: (models: LLMModel[]) => void
 
     setTestSets: (testSets: TestSet[]) => void
     updateTestSet: (id: string, updates: Partial<TestSet>) => void
@@ -36,6 +45,7 @@ interface AppState {
     updateModel: (id: string, updates: Partial<LLMModel>) => void
     deleteModel: (id: string) => void
     toggleModelActivation: (id: string) => void
+    reorderModels: (fromIndex: number, toIndex: number) => void
 
     createSession: (title: string, modelIds: string[]) => string
     addResult: (
@@ -70,7 +80,6 @@ interface AppState {
     setPendingPrompt: (content: string | null) => void
 
     // Queue System
-
     messageQueue: {
         id: string
         prompt: string
@@ -85,6 +94,7 @@ interface AppState {
     setProcessing: (isProcessing: boolean) => void
     clearAllResults: () => void
     clearModelResults: (modelId: string) => void
+
     // Streaming State (Transient)
     streamingData: Record<string, Partial<BenchmarkResult>> // resultId -> partial data
     setStreamingData: (resultId: string, data: Partial<BenchmarkResult>) => void
@@ -141,6 +151,13 @@ export const useAppStore = create<AppState>()(
                             ? state.activeModelIds.filter((mid) => mid !== id)
                             : [...state.activeModelIds, id]
                     }
+                }),
+            reorderModels: (fromIndex, toIndex) =>
+                set((state) => {
+                    const newModels = [...state.models]
+                    const [moved] = newModels.splice(fromIndex, 1)
+                    newModels.splice(toIndex, 0, moved)
+                    return { models: newModels }
                 }),
 
             createSession: (title, modelIds) => {
@@ -425,7 +442,12 @@ export const useAppStore = create<AppState>()(
                     const newData = { ...state.streamingData }
                     delete newData[resultId]
                     return { streamingData: newData }
-                })
+                }),
+
+            arenaColumns: 0,
+            arenaSortBy: 'default',
+            setArenaColumns: (arenaColumns) => set({ arenaColumns }),
+            setArenaSortBy: (arenaSortBy) => set({ arenaSortBy })
         }),
         {
             name: 'nillm-storage',

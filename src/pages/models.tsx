@@ -14,10 +14,205 @@ import {
     Cpu,
     Zap,
     Clock,
-    BarChart3
+    BarChart3,
+    GripVertical
 } from 'lucide-react'
 import { LLMModel } from '@/lib/types'
 import { PageHeader } from '@/components/ui/page-header'
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+    DragStartEvent,
+    DragOverlay,
+    defaultDropAnimationSideEffects
+} from '@dnd-kit/core'
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    rectSortingStrategy,
+    useSortable
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { restrictToParentElement } from '@dnd-kit/modifiers'
+
+interface SortableCardProps {
+    model: LLMModel
+    isActive: boolean
+    avgTPS: string
+    avgTTFT: string
+    totalTokens: number
+    onEdit: (model: LLMModel) => void
+    onDuplicate: (model: LLMModel) => void
+    onDelete: (id: string) => void
+    onToggle: (id: string) => void
+    isOverlay?: boolean
+}
+
+function ModelCardContent({
+    model,
+    isActive,
+    avgTPS,
+    avgTTFT,
+    totalTokens,
+    onEdit,
+    onDuplicate,
+    onDelete,
+    onToggle,
+    isOverlay,
+    dragHandleProps
+}: SortableCardProps & { dragHandleProps?: any }) {
+    return (
+        <Card
+            className={`group relative overflow-hidden h-full transition-all duration-300 ${isOverlay ? 'shadow-2xl scale-105 border-primary/50' : 'hover:shadow-lg'} bg-gradient-to-br from-card/80 via-card/50 to-muted/5 backdrop-blur-xl border-border/30`}
+        >
+            {/* Active Glow Indicator */}
+            <div
+                className={`absolute top-0 left-0 w-[2px] h-full transition-all duration-500 ${isActive ? 'bg-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]' : 'bg-transparent opacity-0'}`}
+            />
+
+            <div className="p-4 flex flex-col gap-3 h-full">
+                {/* Top: Tech Identity & Status */}
+                <div className="flex items-start justify-between">
+                    <div className="space-y-1 flex-1 min-w-0 mr-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <div
+                                {...dragHandleProps}
+                                className="cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-muted/50 rounded transition-colors"
+                            >
+                                <GripVertical className="h-3 w-3 text-muted-foreground/40" />
+                            </div>
+                            <span className="text-[10px] font-bold tracking-wider text-primary uppercase">
+                                {model.providerName || model.provider}
+                            </span>
+                        </div>
+                        <h3
+                            className="text-sm font-bold tracking-tight text-foreground truncate"
+                            title={model.name}
+                        >
+                            {model.name}
+                        </h3>
+                    </div>
+                    <Switch
+                        checked={isActive}
+                        onCheckedChange={() => onToggle(model.id)}
+                        className="scale-75 data-[state=checked]:bg-primary"
+                    />
+                </div>
+
+                {/* Middle: Performance Matrix */}
+                <div className="grid grid-cols-3 gap-2 py-3 border-y border-border/10">
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+                            <Zap className="h-2.5 w-2.5 text-yellow-500" />{' '}
+                            Speed
+                        </span>
+                        <span className="text-xs font-mono font-bold text-foreground">
+                            {avgTPS}
+                            <span className="text-[9px] ml-0.5 font-normal opacity-50">
+                                t/s
+                            </span>
+                        </span>
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5 text-blue-500" />{' '}
+                            Latency
+                        </span>
+                        <span className="text-xs font-mono font-bold text-foreground">
+                            {avgTTFT}
+                            <span className="text-[9px] ml-0.5 font-normal opacity-50">
+                                ms
+                            </span>
+                        </span>
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+                            <BarChart3 className="h-2.5 w-2.5 text-green-500" />{' '}
+                            Tokens
+                        </span>
+                        <span className="text-xs font-mono font-bold text-foreground">
+                            {(totalTokens / 1000).toFixed(1)}
+                            <span className="text-[9px] ml-0.5 font-normal opacity-50">
+                                k
+                            </span>
+                        </span>
+                    </div>
+                </div>
+
+                {/* Bottom: Internal ID & Explicit Actions */}
+                <div className="flex items-center justify-between gap-2 mt-auto pt-1">
+                    <code
+                        className="text-[9px] text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded font-mono truncate flex-1 opacity-70"
+                        title={model.providerId}
+                    >
+                        {model.providerId}
+                    </code>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground bg-transparent"
+                            onClick={() => onDuplicate(model)}
+                            title="Duplicate"
+                        >
+                            <Copy className="h-3 w-3" />
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground bg-transparent"
+                            onClick={() => onEdit(model)}
+                            title="Edit"
+                        >
+                            <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-7 w-7 rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors text-muted-foreground bg-transparent"
+                            onClick={() => onDelete(model.id)}
+                            title="Delete"
+                        >
+                            <Trash2 className="h-3 w-3" />
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </Card>
+    )
+}
+
+function SortableModelCard(props: SortableCardProps) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: props.model.id })
+
+    const style = {
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1
+    }
+
+    return (
+        <div ref={setNodeRef} style={style} className="h-full">
+            <ModelCardContent
+                {...props}
+                dragHandleProps={{ ...attributes, ...listeners }}
+            />
+        </div>
+    )
+}
 
 export function ModelsPage() {
     const {
@@ -27,14 +222,38 @@ export function ModelsPage() {
         deleteModel,
         activeModelIds,
         toggleModelActivation,
+        reorderModels,
         sessions
     } = useAppStore()
     const [editingModelId, setEditingModelId] = useState<string | null>(null)
     const [isAdding, setIsAdding] = useState(false)
+    const [activeId, setActiveId] = useState<string | null>(null)
     const [newModel, setNewModel] = useState<Partial<LLMModel>>({
         provider: 'openrouter',
         enabled: true
     })
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates
+        })
+    )
+
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(event.active.id as string)
+    }
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event
+
+        if (over && active.id !== over.id) {
+            const oldIndex = models.findIndex((m) => m.id === active.id)
+            const newIndex = models.findIndex((m) => m.id === over.id)
+            reorderModels(oldIndex, newIndex)
+        }
+        setActiveId(null)
+    }
 
     const handleSaveModel = () => {
         if (!newModel.name || !newModel.providerId) return
@@ -80,6 +299,40 @@ export function ModelsPage() {
         addModel(duplicated)
     }
 
+    const activeModel = models.find((m) => m.id === activeId)
+
+    // Calculate stats for overlay
+    const getStats = (model: LLMModel) => {
+        let totalTPS = 0,
+            tpsCount = 0
+        let totalTTFT = 0,
+            ttftCount = 0
+        let totalTokens = 0
+
+        sessions.forEach((session: any) => {
+            const results = session.results[model.id] || []
+            results.forEach((r: any) => {
+                if (r.metrics?.tps > 0) {
+                    totalTPS += r.metrics.tps
+                    tpsCount++
+                }
+                if (r.metrics?.ttft > 0) {
+                    totalTTFT += r.metrics.ttft
+                    ttftCount++
+                }
+                if (r.metrics?.tokenCount > 0) {
+                    totalTokens += r.metrics.tokenCount
+                }
+            })
+        })
+
+        return {
+            avgTPS: tpsCount > 0 ? (totalTPS / tpsCount).toFixed(1) : '-',
+            avgTTFT: ttftCount > 0 ? (totalTTFT / ttftCount).toFixed(0) : '-',
+            totalTokens
+        }
+    }
+
     return (
         <div className="flex flex-col h-full gap-6 p-6 overflow-hidden bg-background">
             <PageHeader
@@ -101,9 +354,8 @@ export function ModelsPage() {
                                         await import('@/lib/utils')
                                     const data = await readJsonFile(file)
                                     if (Array.isArray(data)) {
-                                        useAppStore
-                                            .getState()
-                                            .importModels(data)
+                                        const store = useAppStore.getState()
+                                        store.importModels(data as LLMModel[])
                                     } else {
                                         alert('Invalid model data format')
                                     }
@@ -156,190 +408,68 @@ export function ModelsPage() {
             </PageHeader>
 
             <ScrollArea className="flex-1 min-h-0 -mr-4 pr-4">
-                <div className="flex flex-col gap-8 pb-8">
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                        {models.map((model) => {
-                            const isActive = activeModelIds.includes(model.id)
+                <div className="flex flex-col gap-6 pb-8 overflow-x-hidden">
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        modifiers={[restrictToParentElement]}
+                    >
+                        <SortableContext
+                            items={models.map((m: LLMModel) => m.id)}
+                            strategy={rectSortingStrategy}
+                        >
+                            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                                {models.map((model: LLMModel) => {
+                                    const isActive = activeModelIds.includes(
+                                        model.id
+                                    )
+                                    const stats = getStats(model)
 
-                            // Calculate quick stats for this specific model card
-                            let totalTPS = 0,
-                                tpsCount = 0
-                            let totalTTFT = 0,
-                                ttftCount = 0
-                            let totalTokens = 0
+                                    return (
+                                        <SortableModelCard
+                                            key={model.id}
+                                            model={model}
+                                            isActive={isActive}
+                                            avgTPS={stats.avgTPS}
+                                            avgTTFT={stats.avgTTFT}
+                                            totalTokens={stats.totalTokens}
+                                            onEdit={handleEditClick}
+                                            onDuplicate={handleDuplicateModel}
+                                            onDelete={deleteModel}
+                                            onToggle={toggleModelActivation}
+                                        />
+                                    )
+                                })}
+                            </div>
+                        </SortableContext>
 
-                            sessions.forEach((session) => {
-                                const results = session.results[model.id] || []
-                                results.forEach((r) => {
-                                    if (r.metrics?.tps > 0) {
-                                        totalTPS += r.metrics.tps
-                                        tpsCount++
-                                    }
-                                    if (r.metrics?.ttft > 0) {
-                                        totalTTFT += r.metrics.ttft
-                                        ttftCount++
-                                    }
-                                    if (r.metrics?.tokenCount > 0) {
-                                        totalTokens += r.metrics.tokenCount
+                        <DragOverlay
+                            dropAnimation={{
+                                sideEffects: defaultDropAnimationSideEffects({
+                                    styles: {
+                                        active: {
+                                            opacity: '0.3'
+                                        }
                                     }
                                 })
-                            })
-
-                            const avgTPS =
-                                tpsCount > 0
-                                    ? (totalTPS / tpsCount).toFixed(1)
-                                    : '-'
-                            const avgTTFT =
-                                ttftCount > 0
-                                    ? (totalTTFT / ttftCount).toFixed(0)
-                                    : '-'
-
-                            return (
-                                <Card
-                                    key={model.id}
-                                    className="group relative overflow-hidden transition-all duration-500 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-card/80 via-card/50 to-muted/5 backdrop-blur-2xl border-border/30"
-                                >
-                                    {/* Active Glow Indicator */}
-                                    <div
-                                        className={`absolute top-0 left-0 w-[3px] h-full transition-all duration-700 ${isActive ? 'bg-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]' : 'bg-transparent opacity-0'}`}
-                                    />
-
-                                    <div className="p-6 flex flex-col gap-6">
-                                        {/* Top: Tech Identity & Status */}
-                                        <div className="flex items-start justify-between">
-                                            <div className="space-y-1.5 flex-1 min-w-0 mr-2">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-[11px] font-bold tracking-[0.1em] text-primary uppercase">
-                                                        {model.providerName ||
-                                                            model.provider}
-                                                    </span>
-                                                    {model.baseURL && (
-                                                        <span className="text-[10px] text-muted-foreground font-medium opacity-60 truncate">
-                                                            •{' '}
-                                                            {
-                                                                model.baseURL
-                                                                    ?.split(
-                                                                        '//'
-                                                                    )[1]
-                                                                    ?.split(
-                                                                        '/'
-                                                                    )[0]
-                                                            }
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <h3
-                                                    className="text-xl font-extrabold tracking-tight text-foreground truncate"
-                                                    title={model.name}
-                                                >
-                                                    {model.name}
-                                                </h3>
-                                            </div>
-                                            <Switch
-                                                checked={isActive}
-                                                onCheckedChange={() =>
-                                                    toggleModelActivation(
-                                                        model.id
-                                                    )
-                                                }
-                                                className="scale-90 data-[state=checked]:bg-primary shadow-sm"
-                                            />
-                                        </div>
-
-                                        {/* Middle: Performance Matrix */}
-                                        <div className="grid grid-cols-3 gap-3 py-4 border-y border-border/10">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
-                                                    <Zap className="h-3 w-3 text-yellow-500" />{' '}
-                                                    Speed
-                                                </span>
-                                                <span className="text-base font-mono font-bold text-foreground">
-                                                    {avgTPS}
-                                                    <span className="text-[10px] ml-0.5 font-normal opacity-50">
-                                                        t/s
-                                                    </span>
-                                                </span>
-                                            </div>
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
-                                                    <Clock className="h-3 w-3 text-blue-500" />{' '}
-                                                    Latency
-                                                </span>
-                                                <span className="text-base font-mono font-bold text-foreground">
-                                                    {avgTTFT}
-                                                    <span className="text-[10px] ml-0.5 font-normal opacity-50">
-                                                        ms
-                                                    </span>
-                                                </span>
-                                            </div>
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
-                                                    <BarChart3 className="h-3 w-3 text-green-500" />{' '}
-                                                    Tokens
-                                                </span>
-                                                <span className="text-base font-mono font-bold text-foreground">
-                                                    {(
-                                                        totalTokens / 1000
-                                                    ).toFixed(1)}
-                                                    <span className="text-[10px] ml-0.5 font-normal opacity-50">
-                                                        k
-                                                    </span>
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Bottom: Internal ID & Explicit Actions */}
-                                        <div className="flex items-center justify-between gap-4">
-                                            <code
-                                                className="text-[11px] text-muted-foreground bg-muted/40 px-2 py-1 rounded font-mono truncate flex-1"
-                                                title={model.providerId}
-                                            >
-                                                {model.providerId}
-                                            </code>
-
-                                            <div className="flex items-center gap-1.5 shrink-0">
-                                                <Button
-                                                    variant="secondary"
-                                                    size="icon"
-                                                    className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground"
-                                                    onClick={() =>
-                                                        handleDuplicateModel(
-                                                            model
-                                                        )
-                                                    }
-                                                    title="Duplicate"
-                                                >
-                                                    <Copy className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <Button
-                                                    variant="secondary"
-                                                    size="icon"
-                                                    className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground"
-                                                    onClick={() =>
-                                                        handleEditClick(model)
-                                                    }
-                                                    title="Edit"
-                                                >
-                                                    <Pencil className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <Button
-                                                    variant="secondary"
-                                                    size="icon"
-                                                    className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors text-muted-foreground"
-                                                    onClick={() =>
-                                                        deleteModel(model.id)
-                                                    }
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card>
-                            )
-                        })}
-                    </div>
+                            }}
+                        >
+                            {activeId && activeModel ? (
+                                <ModelCardContent
+                                    model={activeModel}
+                                    isActive={activeModelIds.includes(activeId)}
+                                    {...getStats(activeModel)}
+                                    onEdit={() => {}}
+                                    onDuplicate={() => {}}
+                                    onDelete={() => {}}
+                                    onToggle={() => {}}
+                                    isOverlay
+                                />
+                            ) : null}
+                        </DragOverlay>
+                    </DndContext>
                 </div>
             </ScrollArea>
 
