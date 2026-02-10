@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useAppStore } from '@/lib/store'
 import { useNavigate } from 'react-router'
-import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,7 +12,6 @@ import {
     CardContent,
     CardDescription
 } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
     BookTemplate,
     Plus,
@@ -26,10 +24,9 @@ import {
     FolderOutput,
     ChevronDown,
     Zap,
-    Search,
-    FolderInput,
-    Copy
+    FolderInput
 } from 'lucide-react'
+import { SelectDropdown } from '@/components/ui/select-dropdown'
 import { PromptTemplate, PromptVariable } from '@/lib/types'
 import { generateText } from 'ai'
 import { getProvider } from '@/lib/ai-provider'
@@ -39,6 +36,7 @@ import {
     PopoverContent,
     PopoverTrigger
 } from '@/components/ui/popover'
+import { PageLayout } from '@/features/layout/PageLayout'
 
 export function PromptsPage() {
     const {
@@ -248,13 +246,11 @@ export function PromptsPage() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-background relative overflow-hidden">
-            <PageHeader
-                title="Prompt Templates"
-                description="Manage and use reusable prompt templates with variable support."
-                icon={BookTemplate}
-                className="p-6 pb-0"
-            >
+        <PageLayout
+            title="Prompt Templates"
+            description="Manage and use reusable prompt templates with variable support."
+            icon={BookTemplate}
+            actions={
                 <div className="flex gap-2">
                     <div className="relative">
                         <input
@@ -262,6 +258,7 @@ export function PromptsPage() {
                             onChange={handleImport}
                             className="absolute inset-0 opacity-0 cursor-pointer"
                             accept=".json"
+                            title="Import JSON Template"
                         />
                         <Button
                             variant="outline"
@@ -280,82 +277,78 @@ export function PromptsPage() {
                         <span className="text-xs font-medium">Create</span>
                     </Button>
                 </div>
-            </PageHeader>
-
-            <ScrollArea className="flex-1 p-6">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-10">
-                    {promptTemplates.map((tmpl) => (
-                        <Card
-                            key={tmpl.id}
-                            className="group relative hover:shadow-lg transition-all"
-                        >
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <CardTitle
-                                            className="text-lg line-clamp-1"
-                                            title={tmpl.title}
-                                        >
-                                            {tmpl.title}
-                                        </CardTitle>
-                                        <CardDescription className="text-xs">
-                                            {tmpl.variables.length} variables •{' '}
-                                            {new Date(
-                                                tmpl.updatedAt
-                                            ).toLocaleDateString()}
-                                        </CardDescription>
-                                    </div>
-                                    <div className="flex gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleEdit(tmpl)}
-                                            className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                        >
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleExport(tmpl)}
-                                            className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                        >
-                                            <FolderOutput className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() =>
-                                                handleDelete(tmpl.id)
-                                            }
-                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
+            }
+        >
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-10">
+                {promptTemplates.map((tmpl) => (
+                    <Card
+                        key={tmpl.id}
+                        className="group relative hover:shadow-lg transition-all"
+                    >
+                        <CardHeader>
+                            <div className="flex justify-between items-start">
+                                <div className="space-y-1">
+                                    <CardTitle
+                                        className="text-lg line-clamp-1"
+                                        title={tmpl.title}
+                                    >
+                                        {tmpl.title}
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        {tmpl.variables.length} variables •{' '}
+                                        {new Date(
+                                            tmpl.updatedAt
+                                        ).toLocaleDateString()}
+                                    </CardDescription>
                                 </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="bg-muted/30 p-3 rounded-md text-xs font-mono text-muted-foreground line-clamp-3 mb-4 h-16">
-                                    {tmpl.content}
+                                <div className="flex gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleEdit(tmpl)}
+                                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleExport(tmpl)}
+                                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                    >
+                                        <FolderOutput className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleDelete(tmpl.id)}
+                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <Button
-                                    className="w-full gap-2"
-                                    onClick={() => handleUse(tmpl)}
-                                >
-                                    <Play className="h-4 w-4" /> Use Template
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ))}
-                    {promptTemplates.length === 0 && (
-                        <div className="col-span-full flex flex-col items-center justify-center p-12 text-muted-foreground border-2 border-dashed rounded-xl bg-muted/10">
-                            <BookTemplate className="h-10 w-10 mb-4 opacity-30" />
-                            <p>No templates yet. Create one to get started!</p>
-                        </div>
-                    )}
-                </div>
-            </ScrollArea>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="bg-muted/30 p-3 rounded-md text-xs font-mono text-muted-foreground line-clamp-3 mb-4 h-16">
+                                {tmpl.content}
+                            </div>
+                            <Button
+                                className="w-full gap-2"
+                                onClick={() => handleUse(tmpl)}
+                            >
+                                <Play className="h-4 w-4" /> Use Template
+                            </Button>
+                        </CardContent>
+                    </Card>
+                ))}
+                {promptTemplates.length === 0 && (
+                    <div className="col-span-full flex flex-col items-center justify-center p-12 text-muted-foreground border-2 border-dashed rounded-xl bg-muted/10">
+                        <BookTemplate className="h-10 w-10 mb-4 opacity-30" />
+                        <p>No templates yet. Create one to get started!</p>
+                    </div>
+                )}
+            </div>
 
             {/* Edit Modal */}
             {isEditing && (
@@ -534,64 +527,26 @@ export function PromptsPage() {
                                         settings.
                                     </span>
                                 ) : (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                disabled={isGenerating}
-                                                className="gap-2 text-primary border-primary/20 hover:bg-primary/5 min-w-[140px] justify-between"
-                                            >
-                                                <span className="flex items-center gap-2">
-                                                    <Sparkles className="h-3 w-3" />
-                                                    {isGenerating
-                                                        ? 'Generating...'
-                                                        : models.find(
-                                                              (m) =>
-                                                                  m.id ===
-                                                                  selectedModelId
-                                                          )?.name ||
-                                                          'Select Model'}
-                                                </span>
-                                                <ChevronDown className="h-3 w-3 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                            align="end"
-                                            className="w-[200px] max-h-[300px] overflow-auto p-1"
-                                        >
-                                            <div className="grid gap-1">
-                                                {models
-                                                    .filter((m) => m.enabled)
-                                                    .map((model) => (
-                                                        <Button
-                                                            key={model.id}
-                                                            variant="ghost"
-                                                            onClick={() =>
-                                                                handleAutoFill(
-                                                                    model.id
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                isGenerating
-                                                            }
-                                                            className="w-full justify-start gap-2 h-8 px-2 font-normal"
-                                                        >
-                                                            <Zap className="h-3 w-3 text-muted-foreground" />
-                                                            <span className="truncate">
-                                                                {model.name}
-                                                            </span>
-                                                        </Button>
-                                                    ))}
-                                                {models.filter((m) => m.enabled)
-                                                    .length === 0 && (
-                                                    <div className="p-2 text-xs text-center text-muted-foreground">
-                                                        No enabled models
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <SelectDropdown
+                                        value={selectedModelId}
+                                        onChange={(val) => {
+                                            setSelectedModelId(val)
+                                            handleAutoFill(val)
+                                        }}
+                                        options={models
+                                            .filter((m) => m.enabled)
+                                            .map((m) => ({
+                                                label: m.name,
+                                                value: m.id,
+                                                description:
+                                                    m.providerName || m.provider
+                                            }))}
+                                        placeholder="Select Model..."
+                                        width={200}
+                                        disabled={
+                                            models.length === 0 || isGenerating
+                                        }
+                                    />
                                 )}
                             </div>
 
@@ -633,7 +588,7 @@ export function PromptsPage() {
                     </div>
                 </div>
             )}
-        </div>
+        </PageLayout>
     )
 }
 

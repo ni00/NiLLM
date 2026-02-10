@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Card } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
     Trash2,
     Plus,
@@ -19,8 +18,8 @@ import {
     FolderInput,
     FolderOutput
 } from 'lucide-react'
+import { SelectDropdown } from '@/components/ui/select-dropdown'
 import { LLMModel } from '@/lib/types'
-import { PageHeader } from '@/components/ui/page-header'
 import {
     DndContext,
     closestCenter,
@@ -41,6 +40,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { restrictToParentElement } from '@dnd-kit/modifiers'
+import { PageLayout } from '@/features/layout/PageLayout'
 
 interface SortableCardProps {
     model: LLMModel
@@ -336,12 +336,11 @@ export function ModelsPage() {
     }
 
     return (
-        <div className="flex flex-col h-full gap-6 p-6 overflow-hidden bg-background">
-            <PageHeader
-                title="Models"
-                description="Manage your LLM providers and configuration."
-                icon={Cpu}
-            >
+        <PageLayout
+            title="Models"
+            description="Manage your LLM providers and configuration."
+            icon={Cpu}
+            actions={
                 <div className="flex items-center gap-2">
                     <input
                         type="file"
@@ -410,73 +409,67 @@ export function ModelsPage() {
                         </Button>
                     )}
                 </div>
-            </PageHeader>
+            }
+        >
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                modifiers={[restrictToParentElement]}
+            >
+                <SortableContext
+                    items={models.map((m: LLMModel) => m.id)}
+                    strategy={rectSortingStrategy}
+                >
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                        {models.map((model: LLMModel) => {
+                            const isActive = activeModelIds.includes(model.id)
+                            const stats = getStats(model)
 
-            <ScrollArea className="flex-1 min-h-0 -mr-4 pr-4">
-                <div className="flex flex-col gap-6 pb-8 overflow-x-hidden">
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
-                        modifiers={[restrictToParentElement]}
-                    >
-                        <SortableContext
-                            items={models.map((m: LLMModel) => m.id)}
-                            strategy={rectSortingStrategy}
-                        >
-                            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                                {models.map((model: LLMModel) => {
-                                    const isActive = activeModelIds.includes(
-                                        model.id
-                                    )
-                                    const stats = getStats(model)
-
-                                    return (
-                                        <SortableModelCard
-                                            key={model.id}
-                                            model={model}
-                                            isActive={isActive}
-                                            avgTPS={stats.avgTPS}
-                                            avgTTFT={stats.avgTTFT}
-                                            totalTokens={stats.totalTokens}
-                                            onEdit={handleEditClick}
-                                            onDuplicate={handleDuplicateModel}
-                                            onDelete={deleteModel}
-                                            onToggle={toggleModelActivation}
-                                        />
-                                    )
-                                })}
-                            </div>
-                        </SortableContext>
-
-                        <DragOverlay
-                            dropAnimation={{
-                                sideEffects: defaultDropAnimationSideEffects({
-                                    styles: {
-                                        active: {
-                                            opacity: '0.3'
-                                        }
-                                    }
-                                })
-                            }}
-                        >
-                            {activeId && activeModel ? (
-                                <ModelCardContent
-                                    model={activeModel}
-                                    isActive={activeModelIds.includes(activeId)}
-                                    {...getStats(activeModel)}
-                                    onEdit={() => {}}
-                                    onDuplicate={() => {}}
-                                    onDelete={() => {}}
-                                    onToggle={() => {}}
-                                    isOverlay
+                            return (
+                                <SortableModelCard
+                                    key={model.id}
+                                    model={model}
+                                    isActive={isActive}
+                                    avgTPS={stats.avgTPS}
+                                    avgTTFT={stats.avgTTFT}
+                                    totalTokens={stats.totalTokens}
+                                    onEdit={handleEditClick}
+                                    onDuplicate={handleDuplicateModel}
+                                    onDelete={deleteModel}
+                                    onToggle={toggleModelActivation}
                                 />
-                            ) : null}
-                        </DragOverlay>
-                    </DndContext>
-                </div>
-            </ScrollArea>
+                            )
+                        })}
+                    </div>
+                </SortableContext>
+
+                <DragOverlay
+                    dropAnimation={{
+                        sideEffects: defaultDropAnimationSideEffects({
+                            styles: {
+                                active: {
+                                    opacity: '0.3'
+                                }
+                            }
+                        })
+                    }}
+                >
+                    {activeId && activeModel ? (
+                        <ModelCardContent
+                            model={activeModel}
+                            isActive={activeModelIds.includes(activeId)}
+                            {...getStats(activeModel)}
+                            onEdit={() => {}}
+                            onDuplicate={() => {}}
+                            onDelete={() => {}}
+                            onToggle={() => {}}
+                            isOverlay
+                        />
+                    ) : null}
+                </DragOverlay>
+            </DndContext>
 
             {/* Modal Dialog for Add/Edit */}
             {isAdding && (
@@ -522,33 +515,38 @@ export function ModelsPage() {
                                         <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
                                             Provider
                                         </Label>
-                                        <select
-                                            className="flex h-10 w-full rounded-md border border-border/50 bg-muted/20 px-3 py-1 text-sm shadow-sm transition-all focus:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
-                                            value={newModel.provider}
-                                            onChange={(e) =>
+                                        <SelectDropdown
+                                            value={newModel.provider || ''}
+                                            onChange={(val) =>
                                                 setNewModel({
                                                     ...newModel,
-                                                    provider: e.target
-                                                        .value as any
+                                                    provider: val as any
                                                 })
                                             }
-                                        >
-                                            <option value="openrouter">
-                                                OpenRouter
-                                            </option>
-                                            <option value="openai">
-                                                OpenAI
-                                            </option>
-                                            <option value="anthropic">
-                                                Anthropic
-                                            </option>
-                                            <option value="google">
-                                                Google
-                                            </option>
-                                            <option value="custom">
-                                                Custom (OpenAI Compatible)
-                                            </option>
-                                        </select>
+                                            className="h-10 border-border/50 bg-muted/20 transition-all justify-between"
+                                            options={[
+                                                {
+                                                    label: 'OpenRouter',
+                                                    value: 'openrouter'
+                                                },
+                                                {
+                                                    label: 'OpenAI',
+                                                    value: 'openai'
+                                                },
+                                                {
+                                                    label: 'Anthropic',
+                                                    value: 'anthropic'
+                                                },
+                                                {
+                                                    label: 'Google',
+                                                    value: 'google'
+                                                },
+                                                {
+                                                    label: 'Custom (OpenAI Compatible)',
+                                                    value: 'custom'
+                                                }
+                                            ]}
+                                        />
                                     </div>
                                 </div>
 
@@ -644,7 +642,7 @@ export function ModelsPage() {
                     </div>
                 </div>
             )}
-        </div>
+        </PageLayout>
     )
 }
 

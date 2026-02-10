@@ -10,6 +10,8 @@ import { ModelEditDialog } from '@/features/chat-arena/components/ModelEditDialo
 import { useQueueProcessor } from '@/features/chat-arena/hooks/useQueueProcessor'
 import { useAutoJudge } from '@/features/chat-arena/hooks/useAutoJudge'
 import { useArenaState } from '@/features/chat-arena/hooks/useArenaState'
+import { PageLayout } from '@/features/layout/PageLayout'
+import { Layers } from 'lucide-react'
 
 export function ArenaPage() {
     const {
@@ -267,13 +269,20 @@ export function ArenaPage() {
                   : 'grid-cols-4'
 
     return (
-        <div className="flex flex-col h-full w-full max-h-screen relative">
-            <ArenaHeader
-                onExportAll={handleExportAll}
-                onShowJudgePanel={() => setShowJudgePanel(true)}
-                onShowArenaSettings={() => setShowArenaSettings(true)}
-            />
-
+        <PageLayout
+            title="Arena"
+            description="Compare multiple models in real-time with unified prompts."
+            icon={Layers}
+            actions={
+                <ArenaHeader
+                    onExportAll={handleExportAll}
+                    onShowJudgePanel={() => setShowJudgePanel(true)}
+                    onShowArenaSettings={() => setShowArenaSettings(true)}
+                />
+            }
+            isScrollable={false}
+            className="w-full max-h-screen"
+        >
             {/* Overlays */}
             {(showArenaSettings || showJudgePanel) && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
@@ -349,6 +358,6 @@ export function ArenaPage() {
                     onSave={saveDetails}
                 />
             )}
-        </div>
+        </PageLayout>
     )
 }

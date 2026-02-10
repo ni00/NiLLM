@@ -1,4 +1,4 @@
-import { ArenaPage } from './ArenaPage'
+import { ArenaPage } from './arena'
 
 export function HomePage() {
     return <ArenaPage />
