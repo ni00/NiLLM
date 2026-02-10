@@ -29,15 +29,15 @@ export const QueuePopover = () => {
                 <Button
                     variant="outline"
                     size="sm"
-                    className="relative pr-3 h-10 px-4"
+                    className="relative h-10 px-4 group gap-2"
                 >
-                    <Layers className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <Layers className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     {messageQueue.length > 0 && (
                         <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full border-2 border-background shadow-sm animate-in zoom-in duration-300">
                             {messageQueue.length}
                         </span>
                     )}
-                    Queue
+                    <span className="text-xs font-medium">Queue</span>
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-4" align="end">

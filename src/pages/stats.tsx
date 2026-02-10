@@ -25,7 +25,9 @@ import {
     FileJson,
     FileSpreadsheet,
     ChevronDown,
-    Upload
+    History,
+    Database,
+    FileBarChart
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import {
@@ -289,29 +291,34 @@ export function StatsPage() {
                             document.getElementById('import-global')?.click()
                         }
                         disabled={importing}
-                        className="h-10 px-4 active:scale-95 transition-all"
+                        className="h-10 px-4 group gap-2 active:scale-95 transition-all"
                     >
-                        <Upload className="mr-2 h-4 w-4" />
-                        {importing ? 'Restoring...' : 'Restore Valid Data'}
+                        <History className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="text-xs font-medium">
+                            {importing ? 'Restoring...' : 'Restore'}
+                        </span>
                     </Button>
 
                     <Button
                         variant="outline"
                         onClick={handleExportGlobal}
-                        className="h-10 px-4 active:scale-95 transition-all"
+                        className="h-10 px-4 group gap-2 active:scale-95 transition-all"
                     >
-                        <Download className="mr-2 h-4 w-4" /> Backup Data
+                        <Database className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="text-xs font-medium">Backup</span>
                     </Button>
 
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
                                 variant="outline"
-                                className="text-primary hover:bg-primary/5 transition-colors h-10 px-4"
+                                className="h-10 px-4 group gap-2 transition-colors"
                             >
-                                <Download className="h-4 w-4 mr-2" />
-                                Export Reports
-                                <ChevronDown className="h-3 w-3 ml-2 opacity-50" />
+                                <FileBarChart className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                <span className="text-xs font-medium">
+                                    Reports
+                                </span>
+                                <ChevronDown className="h-3 w-3 opacity-50 transition-transform group-data-[state=open]:rotate-180" />
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-48 p-2" align="end">
@@ -339,10 +346,13 @@ export function StatsPage() {
                     >
                         <PopoverTrigger asChild>
                             <Button
-                                variant="destructive"
-                                className="h-10 px-4 active:scale-95 transition-all"
+                                variant="outline"
+                                className="h-10 px-4 group gap-2 active:scale-95 transition-all hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
                             >
-                                <Trash2 className="mr-2 h-4 w-4" /> Clear All
+                                <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
+                                <span className="text-xs font-medium">
+                                    Clear
+                                </span>
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-4 border-destructive/50">

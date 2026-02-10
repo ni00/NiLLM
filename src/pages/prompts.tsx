@@ -23,10 +23,12 @@ import {
     Sparkles,
     X,
     Save,
-    Upload,
-    Download,
+    FolderOutput,
     ChevronDown,
-    Zap
+    Zap,
+    Search,
+    FolderInput,
+    Copy
 } from 'lucide-react'
 import { PromptTemplate, PromptVariable } from '@/lib/types'
 import { generateText } from 'ai'
@@ -261,12 +263,21 @@ export function PromptsPage() {
                             className="absolute inset-0 opacity-0 cursor-pointer"
                             accept=".json"
                         />
-                        <Button variant="outline" className="gap-2">
-                            <Upload className="h-4 w-4" /> Import
+                        <Button
+                            variant="outline"
+                            className="h-10 px-4 group gap-2"
+                        >
+                            <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <span className="text-xs font-medium">Import</span>
                         </Button>
                     </div>
-                    <Button onClick={handleCreate} className="gap-2">
-                        <Plus className="h-4 w-4" /> New Template
+                    <Button
+                        variant="outline"
+                        onClick={handleCreate}
+                        className="h-10 px-4 group gap-2"
+                    >
+                        <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="text-xs font-medium">Create</span>
                     </Button>
                 </div>
             </PageHeader>
@@ -309,7 +320,7 @@ export function PromptsPage() {
                                             onClick={() => handleExport(tmpl)}
                                             className="h-8 w-8 text-muted-foreground hover:text-primary"
                                         >
-                                            <Download className="h-4 w-4" />
+                                            <FolderOutput className="h-4 w-4" />
                                         </Button>
                                         <Button
                                             variant="ghost"

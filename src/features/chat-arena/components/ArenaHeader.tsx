@@ -1,6 +1,6 @@
 import {
     Layers,
-    Download,
+    FolderOutput,
     Sparkles,
     Settings2,
     LayoutGrid,
@@ -136,30 +136,30 @@ export const ArenaHeader = ({
                     variant="outline"
                     size="sm"
                     onClick={onExportAll}
-                    className="h-10 px-4 group"
+                    className="h-10 px-4 group gap-2"
                 >
-                    <Download className="w-4 h-4 mr-2 text-muted-foreground group-hover:text-primary transition-colors" />
-                    Export
+                    <FolderOutput className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <span className="text-xs font-medium">Export</span>
                 </Button>
 
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={onShowJudgePanel}
-                    className="h-10 px-4 group"
+                    className="h-10 px-4 group gap-2"
                 >
-                    <Sparkles className="w-4 h-4 mr-2 text-muted-foreground group-hover:text-primary transition-colors" />
-                    Judge
+                    <Sparkles className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <span className="text-xs font-medium">Judge</span>
                 </Button>
 
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={() => onShowArenaSettings()}
-                    className="h-10 px-4 group"
+                    className="h-10 px-4 group gap-2"
                 >
-                    <Settings2 className="w-4 h-4 mr-2 text-muted-foreground group-hover:rotate-90 transition-all duration-300" />
-                    Configure
+                    <Settings2 className="w-4 h-4 text-muted-foreground group-hover:rotate-90 transition-all duration-300" />
+                    <span className="text-xs font-medium">Configure</span>
                 </Button>
             </div>
         </PageHeader>

@@ -12,12 +12,12 @@ import {
 } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-    Upload,
+    FolderInput,
     Play,
     Trash2,
     FileJson,
     Plus,
-    Download,
+    FolderOutput,
     Sparkles,
     BrainCircuit,
     Code2,
@@ -289,14 +289,16 @@ export function TestsPage() {
                     <PopoverTrigger asChild>
                         <Button
                             variant="outline"
-                            className="h-10 px-4 shadow-sm transition-all active:scale-95 gap-2"
+                            className="h-10 px-4 group gap-2 shadow-sm transition-all active:scale-95"
                         >
-                            <Languages className="h-4 w-4" />
-                            {language === 'zh'
-                                ? '中文'
-                                : language === 'ja'
-                                  ? '日本語'
-                                  : 'English'}
+                            <Languages className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <span className="text-xs font-medium">
+                                {language === 'zh'
+                                    ? '中文'
+                                    : language === 'ja'
+                                      ? '日本語'
+                                      : 'English'}
+                            </span>
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-40 p-1" align="end">
@@ -329,17 +331,20 @@ export function TestsPage() {
                     variant="outline"
                     onClick={handleImportClick}
                     disabled={isImporting}
-                    className="h-10 px-4 shadow-sm transition-all active:scale-95"
+                    className="h-10 px-4 group gap-2 shadow-sm transition-all active:scale-95"
                 >
-                    <Upload className="mr-2 h-4 w-4 text-primary" />
-                    {isImporting ? 'Importing...' : 'Import JSON'}
+                    <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <span className="text-xs font-medium">
+                        {isImporting ? 'Importing...' : 'Import'}
+                    </span>
                 </Button>
                 <Button
                     variant="outline"
                     onClick={openCreateModal}
-                    className="h-10 px-4 transition-all active:scale-95"
+                    className="h-10 px-4 group gap-2 transition-all active:scale-95"
                 >
-                    <Plus className="mr-2 h-4 w-4" /> Create Set
+                    <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <span className="text-xs font-medium">Create</span>
                 </Button>
             </PageHeader>
 
@@ -415,7 +420,7 @@ export function TestsPage() {
                                                     }
                                                     title="Export to JSON"
                                                 >
-                                                    <Download className="h-4 w-4" />
+                                                    <FolderOutput className="h-4 w-4" />
                                                 </Button>
                                                 {!set.id.startsWith(
                                                     'builtin'
@@ -508,7 +513,7 @@ export function TestsPage() {
 
                     {!storedSets.length && (
                         <div className="flex flex-col items-center justify-center p-12 bg-muted/10 border-2 border-dashed rounded-xl">
-                            <Upload className="h-10 w-10 text-muted-foreground/30 mb-4" />
+                            <FolderInput className="h-10 w-10 text-muted-foreground/30 mb-4" />
                             <h3 className="text-lg font-semibold text-muted-foreground">
                                 Import Custom Tests
                             </h3>

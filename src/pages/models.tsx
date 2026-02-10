@@ -15,7 +15,9 @@ import {
     Zap,
     Clock,
     BarChart3,
-    GripVertical
+    GripVertical,
+    FolderInput,
+    FolderOutput
 } from 'lucide-react'
 import { LLMModel } from '@/lib/types'
 import { PageHeader } from '@/components/ui/page-header'
@@ -371,9 +373,10 @@ export function ModelsPage() {
                         onClick={() =>
                             document.getElementById('import-models')?.click()
                         }
-                        className="h-9 text-xs"
+                        className="h-10 px-4 group gap-2 shadow-sm transition-all active:scale-95"
                     >
-                        Import
+                        <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="text-xs font-medium">Import</span>
                     </Button>
                     <Button
                         variant="outline"
@@ -384,13 +387,14 @@ export function ModelsPage() {
                                 'nillm-models.json'
                             )
                         }}
-                        className="h-9 text-xs"
+                        className="h-10 px-4 group gap-2 shadow-sm transition-all active:scale-95"
                     >
-                        Export
+                        <FolderOutput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="text-xs font-medium">Export</span>
                     </Button>
                     {!isAdding && (
                         <Button
-                            variant="default"
+                            variant="outline"
                             onClick={() => {
                                 setIsAdding(true)
                                 setEditingModelId(null)
@@ -399,9 +403,10 @@ export function ModelsPage() {
                                     enabled: true
                                 })
                             }}
-                            className="h-9 px-4 transition-all active:scale-95 text-xs font-semibold"
+                            className="h-10 px-4 group gap-2 shadow-sm transition-all active:scale-95"
                         >
-                            <Plus className="mr-2 h-3.5 w-3.5" /> Add Model
+                            <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <span className="text-xs font-medium">Add</span>
                         </Button>
                     )}
                 </div>
