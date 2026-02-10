@@ -10,6 +10,8 @@ export interface GenerationConfig {
     stopSequences?: string[]
     minP?: number
     systemPrompt?: string
+    connectTimeout?: number // ms
+    readTimeout?: number // ms
 }
 
 export interface LLMModel {

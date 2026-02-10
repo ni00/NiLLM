@@ -88,6 +88,9 @@ interface AppState {
     // Streaming State (Transient)
     streamingData: Record<string, Partial<BenchmarkResult>> // resultId -> partial data
     setStreamingData: (resultId: string, data: Partial<BenchmarkResult>) => void
+    setBatchedStreamingData: (
+        updates: Record<string, Partial<BenchmarkResult>>
+    ) => void
     clearStreamingData: (resultId: string) => void
 }
 
@@ -216,7 +219,7 @@ export const useAppStore = create<AppState>()(
 
             globalConfig: {
                 temperature: 0.7,
-                maxTokens: 1000,
+                maxTokens: 100000,
                 topP: 0.9,
                 topK: undefined,
                 frequencyPenalty: 0,
@@ -225,7 +228,9 @@ export const useAppStore = create<AppState>()(
                 seed: undefined,
                 stopSequences: undefined,
                 minP: undefined,
-                systemPrompt: 'You are a helpful AI assistant.'
+                systemPrompt: 'You are a helpful AI assistant.',
+                connectTimeout: 15000,
+                readTimeout: 30000
             },
             updateGlobalConfig: (updates) =>
                 set((state) => ({
@@ -404,6 +409,17 @@ export const useAppStore = create<AppState>()(
                         }
                     }
                 })),
+            setBatchedStreamingData: (updates) =>
+                set((state) => {
+                    const newStreamingData = { ...state.streamingData }
+                    Object.entries(updates).forEach(([id, data]) => {
+                        newStreamingData[id] = {
+                            ...newStreamingData[id],
+                            ...data
+                        }
+                    })
+                    return { streamingData: newStreamingData }
+                }),
             clearStreamingData: (resultId) =>
                 set((state) => {
                     const newData = { ...state.streamingData }

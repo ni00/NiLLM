@@ -1,6 +1,7 @@
 import { GenerationConfig } from '@/lib/types'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { ConfigSlider } from './ConfigSlider'
 
 interface ConfigEditorProps {
     config: GenerationConfig
@@ -12,55 +13,13 @@ export const ConfigEditor = ({ config, onChange }: ConfigEditorProps) => {
         onChange({ ...config, ...updates })
     }
 
-    const SliderItem = ({
-        label,
-        value,
-        id,
-        min,
-        max,
-        step,
-        onChange: onValChange,
-        labels
-    }: {
-        label: string
-        value: number
-        id: string
-        min: number
-        max: number
-        step: number
-        onChange: (val: number) => void
-        labels?: [string, string]
-    }) => (
-        <div className="space-y-3">
-            <div className="flex justify-between items-end">
-                <Label
-                    htmlFor={id}
-                    className="text-xs font-semibold opacity-70 uppercase tracking-wider"
-                >
-                    {label}
-                </Label>
-                <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded leading-none">
-                    {typeof value === 'number'
-                        ? value.toFixed(step >= 0.1 ? 1 : 2)
-                        : '0.0'}
-                </span>
-            </div>
-            <input
-                id={id}
-                type="range"
-                step={step}
-                min={min}
-                max={max}
-                value={value ?? 0}
-                onChange={(e) => onValChange(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary transition-all hover:bg-muted/80"
-            />
-            {labels && (
-                <div className="flex justify-between text-[10px] text-muted-foreground font-medium px-0.5">
-                    <span>{labels[0]}</span>
-                    <span>{labels[1]}</span>
-                </div>
-            )}
+    const SectionHeader = ({ title }: { title: string }) => (
+        <div className="flex items-center gap-2 mb-2">
+            <div className="h-px flex-1 bg-border/50" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-2 whitespace-nowrap">
+                {title}
+            </span>
+            <div className="h-px flex-1 bg-border/50" />
         </div>
     )
 
@@ -68,16 +27,10 @@ export const ConfigEditor = ({ config, onChange }: ConfigEditorProps) => {
         <div className="grid gap-10 py-2">
             {/* SECTION: Sampling */}
             <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="h-px flex-1 bg-border/50" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-2">
-                        Sampling
-                    </span>
-                    <div className="h-px flex-1 bg-border/50" />
-                </div>
+                <SectionHeader title="Sampling" />
 
                 <div className="grid gap-6">
-                    <SliderItem
+                    <ConfigSlider
                         label="Temperature"
                         id="temp"
                         value={config.temperature ?? 0.7}
@@ -88,7 +41,7 @@ export const ConfigEditor = ({ config, onChange }: ConfigEditorProps) => {
                         labels={['Precise', 'Creative']}
                     />
 
-                    <SliderItem
+                    <ConfigSlider
                         label="Top P"
                         id="topP"
                         value={config.topP ?? 0.9}
@@ -143,16 +96,10 @@ export const ConfigEditor = ({ config, onChange }: ConfigEditorProps) => {
 
             {/* SECTION: Penalties */}
             <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="h-px flex-1 bg-border/50" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-2">
-                        Penalties
-                    </span>
-                    <div className="h-px flex-1 bg-border/50" />
-                </div>
+                <SectionHeader title="Penalties" />
 
                 <div className="grid gap-6">
-                    <SliderItem
+                    <ConfigSlider
                         label="Frequency Penalty"
                         id="freqP"
                         value={config.frequencyPenalty ?? 0}
@@ -161,7 +108,7 @@ export const ConfigEditor = ({ config, onChange }: ConfigEditorProps) => {
                         step={0.1}
                         onChange={(v) => handleUpdate({ frequencyPenalty: v })}
                     />
-                    <SliderItem
+                    <ConfigSlider
                         label="Presence Penalty"
                         id="presP"
                         value={config.presencePenalty ?? 0}
@@ -175,13 +122,7 @@ export const ConfigEditor = ({ config, onChange }: ConfigEditorProps) => {
 
             {/* SECTION: Context & Constraints */}
             <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="h-px flex-1 bg-border/50" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-2">
-                        Constraints
-                    </span>
-                    <div className="h-px flex-1 bg-border/50" />
-                </div>
+                <SectionHeader title="Constraints" />
 
                 <div className="grid gap-5">
                     <div className="space-y-2.5">
@@ -195,7 +136,7 @@ export const ConfigEditor = ({ config, onChange }: ConfigEditorProps) => {
                             id="maxTokens"
                             type="number"
                             step="100"
-                            value={config.maxTokens ?? 1000}
+                            value={config.maxTokens ?? 100000}
                             onChange={(e) =>
                                 handleUpdate({
                                     maxTokens: parseInt(e.target.value)
@@ -263,6 +204,53 @@ export const ConfigEditor = ({ config, onChange }: ConfigEditorProps) => {
                                 })
                             }
                             className="h-10 bg-muted/20 border-muted/50 text-sm"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* SECTION: Connection & Timeout */}
+            <div className="space-y-6 pt-4 border-t border-border/40">
+                <SectionHeader title="Timeouts (ms)" />
+
+                <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                            <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                                Connect
+                            </Label>
+                            <span className="text-[10px] font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
+                                {config.connectTimeout || 15000}
+                            </span>
+                        </div>
+                        <ConfigSlider
+                            id="connectTimeout"
+                            value={config.connectTimeout || 15000}
+                            min={1000}
+                            max={60000}
+                            step={1000}
+                            onChange={(v) =>
+                                handleUpdate({ connectTimeout: v })
+                            }
+                        />
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                            <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                                Read
+                            </Label>
+                            <span className="text-[10px] font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
+                                {config.readTimeout || 30000}
+                            </span>
+                        </div>
+                        <ConfigSlider
+                            id="readTimeout"
+                            value={config.readTimeout || 30000}
+                            min={5000}
+                            max={120000}
+                            step={5000}
+                            onChange={(v) => handleUpdate({ readTimeout: v })}
                         />
                     </div>
                 </div>

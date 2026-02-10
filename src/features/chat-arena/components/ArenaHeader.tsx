@@ -40,10 +40,10 @@ export const ArenaHeader = ({
                     variant="outline"
                     size="sm"
                     onClick={onShowJudgePanel}
-                    className="h-10 px-4 group bg-primary/5 border-primary/20 hover:bg-primary/10"
+                    className="h-10 px-4 group"
                 >
-                    <Sparkles className="w-4 h-4 mr-2 text-primary" />
-                    Auto Judge
+                    <Sparkles className="w-4 h-4 mr-2 text-muted-foreground group-hover:text-primary transition-colors" />
+                    Judge
                 </Button>
 
                 <Button
