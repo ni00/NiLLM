@@ -31,7 +31,7 @@ jobs:
                   name: NiLLM v${{ steps.get_version.outputs.VERSION }}
                   draft: true
                   prerelease: false
-                  generate_release_notes: true # 自动生成更新日志
+                  generate_release_notes: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -100,7 +100,7 @@ jobs:
             - name: Publish Release
               uses: softprops/action-gh-release@v2
               with:
-                  id: ${{ needs.create-release.outputs.release_id }}
+                  tag_name: v${{ needs.create-release.outputs.version }}
                   draft: false
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
