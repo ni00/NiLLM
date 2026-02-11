@@ -51,7 +51,7 @@ export function PageLayout({
             </PageHeader>
 
             {isScrollable ? (
-                <ScrollArea className="flex-1 w-full">
+                <ScrollArea className="flex-1 w-full min-h-0">
                     <div
                         className={cn(
                             'flex flex-col gap-6',

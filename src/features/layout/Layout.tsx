@@ -50,7 +50,7 @@ export function Layout() {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+            <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
                 <Outlet />
             </main>
         </div>

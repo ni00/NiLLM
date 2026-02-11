@@ -18,12 +18,9 @@ import {
     Pencil,
     Trash2,
     Play,
-    Sparkles,
     X,
     Save,
     FolderOutput,
-    ChevronDown,
-    Zap,
     FolderInput
 } from 'lucide-react'
 import { SelectDropdown } from '@/components/ui/select-dropdown'
@@ -31,11 +28,6 @@ import { PromptTemplate, PromptVariable } from '@/lib/types'
 import { generateText } from 'ai'
 import { getProvider } from '@/lib/ai-provider'
 import { downloadFile, readJsonFile } from '@/lib/utils'
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger
-} from '@/components/ui/popover'
 import { PageLayout } from '@/features/layout/PageLayout'
 
 export function PromptsPage() {

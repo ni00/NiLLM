@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { LLMModel } from '@/lib/types'
+import { SelectDropdown } from '@/components/ui/select-dropdown'
 
 interface ModelEditDialogProps {
     editForm: Partial<LLMModel>
@@ -51,22 +52,25 @@ export const ModelEditDialog = ({
                         </div>
                         <div className="space-y-2">
                             <Label>Provider Type</Label>
-                            <select
-                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                value={editForm.provider}
-                                onChange={(e) =>
+                            <SelectDropdown
+                                value={editForm.provider || ''}
+                                onChange={(val) =>
                                     setEditForm((prev: any) => ({
                                         ...prev,
-                                        provider: e.target.value as any
+                                        provider: val as any
                                     }))
                                 }
-                            >
-                                <option value="openrouter">OpenRouter</option>
-                                <option value="openai">OpenAI</option>
-                                <option value="anthropic">Anthropic</option>
-                                <option value="google">Google</option>
-                                <option value="custom">Custom</option>
-                            </select>
+                                options={[
+                                    {
+                                        label: 'OpenRouter',
+                                        value: 'openrouter'
+                                    },
+                                    { label: 'OpenAI', value: 'openai' },
+                                    { label: 'Anthropic', value: 'anthropic' },
+                                    { label: 'Google', value: 'google' },
+                                    { label: 'Custom', value: 'custom' }
+                                ]}
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label>Provider Tag (Optional)</Label>
