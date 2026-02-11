@@ -10,10 +10,9 @@ permissions:
     contents: write
 
 jobs:
-    create-release:
+    metadata:
         runs-on: ubuntu-latest
         outputs:
-            release_id: ${{ steps.create-release.outputs.id }}
             version: ${{ steps.get_version.outputs.VERSION }}
         steps:
             - uses: actions/checkout@v4
@@ -23,12 +22,18 @@ jobs:
               run: |
                   echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
+    create-release:
+        needs: metadata
+        if: startsWith(github.ref, 'refs/tags/v')
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
             - name: Create Release
               id: create-release
               uses: softprops/action-gh-release@v2
               with:
-                  tag_name: v${{ steps.get_version.outputs.VERSION }}
-                  name: NiLLM v${{ steps.get_version.outputs.VERSION }}
+                  tag_name: v${{ needs.metadata.outputs.version }}
+                  name: NiLLM v${{ needs.metadata.outputs.version }}
                   draft: true
                   prerelease: false
                   generate_release_notes: true
@@ -36,7 +41,8 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     build-and-upload:
-        needs: create-release
+        needs: [metadata, create-release]
+        if: always() && needs.metadata.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
         strategy:
             fail-fast: false
             matrix:
@@ -77,7 +83,7 @@ jobs:
               if: matrix.platform == 'ubuntu-22.04'
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+                  sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm
 
             - name: Install frontend dependencies
               run: pnpm install
@@ -87,20 +93,34 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tagName: v${{ needs.create-release.outputs.version }}
-                  releaseName: 'NiLLM v${{ needs.create-release.outputs.version }}'
-                  releaseDraft: true # 这里必须保持为 true，因为它只负责上传到现有的草稿
+                  tagName: ${{ startsWith(github.ref, 'refs/tags/v') && format('v{0}', needs.metadata.outputs.version) || '' }}
+                  releaseName: 'NiLLM v${{ needs.metadata.outputs.version }}'
+                  releaseDraft: true
                   prerelease: false
                   args: ${{ matrix.args }}
 
+            - name: Upload Artifacts (main only)
+              if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+              uses: actions/upload-artifact@v4
+              with:
+                  name: NiLLM-${{ matrix.platform }}
+                  path: |
+                      src-tauri/target/release/bundle/**/*.msi
+                      src-tauri/target/release/bundle/**/*.exe
+                      src-tauri/target/release/bundle/**/*.dmg
+                      src-tauri/target/release/bundle/**/*.deb
+                      src-tauri/target/release/bundle/**/*.AppImage
+                      src-tauri/target/release/bundle/**/*.rpm
+
     publish-release:
-        needs: [create-release, build-and-upload]
+        needs: [metadata, create-release, build-and-upload]
+        if: startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest
         steps:
             - name: Publish Release
               uses: softprops/action-gh-release@v2
               with:
-                  tag_name: v${{ needs.create-release.outputs.version }}
+                  tag_name: v${{ needs.metadata.outputs.version }}
                   draft: false
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
