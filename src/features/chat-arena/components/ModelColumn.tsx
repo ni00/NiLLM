@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { LLMModel, BenchmarkResult } from '@/lib/types'
 import { useAppStore } from '@/lib/store'
+import { cn } from '@/lib/utils'
 import { ResultBlock } from './ResultBlock'
 import { ModelColumnStats } from './ModelColumnStats'
 import { ModelConfigPanel } from './ModelConfigPanel'
@@ -40,6 +41,7 @@ interface ModelColumnProps {
         duration: { min: number; max: number }
         tokens: { min: number; max: number }
     }
+    className?: string
 }
 
 export const ModelColumn = React.memo(
@@ -57,7 +59,8 @@ export const ModelColumn = React.memo(
         globalConfig,
         streamingData,
         metricsRanges,
-        footerRanges
+        footerRanges,
+        className
     }: ModelColumnProps) => {
         const { updateModel, activeSessionId, updateResult } = useAppStore()
         const scrollRef = useRef<HTMLDivElement>(null)
@@ -99,7 +102,10 @@ export const ModelColumn = React.memo(
 
         return (
             <div
-                className="flex flex-col h-[600px] border rounded-xl bg-card shadow-sm overflow-hidden group relative transition-all duration-300 hover:shadow-md hover:border-primary/30"
+                className={cn(
+                    'flex flex-col h-[600px] border rounded-xl bg-card shadow-sm overflow-hidden group relative transition-all duration-300 hover:shadow-md hover:border-primary/30',
+                    className
+                )}
                 style={{ contain: 'layout style' }}
             >
                 {/* Card Header */}
