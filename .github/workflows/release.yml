@@ -147,6 +147,9 @@ jobs:
             - name: Install frontend dependencies
               run: pnpm install
 
+            - name: Initialize Android project
+              run: pnpm tauri android init --ci
+
             - name: Build Android
               run: pnpm tauri android build --apk
 
