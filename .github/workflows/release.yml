@@ -21,7 +21,6 @@ jobs:
               shell: bash
               run: |
                   echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
     create-release:
         needs: metadata
         if: startsWith(github.ref, 'refs/tags/v')
@@ -84,7 +83,6 @@ jobs:
               run: |
                   sudo apt-get update
                   sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm
-
             - name: Install frontend dependencies
               run: pnpm install
 
@@ -111,7 +109,6 @@ jobs:
                       src-tauri/target/release/bundle/**/*.deb
                       src-tauri/target/release/bundle/**/*.AppImage
                       src-tauri/target/release/bundle/**/*.rpm
-
     build-android:
         needs: [metadata, create-release]
         if: always() && needs.metadata.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
@@ -161,36 +158,19 @@ jobs:
             - name: Initialize Android project
               run: pnpm tauri android init --ci
 
-            - name: Configure Android signing
+            - name: Setup Android signing
               run: |
                   cd src-tauri/gen/android
-                  echo "storeFile=$RUNNER_TEMP/nillm-keystore.jks" > keystore.properties
-                  echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> keystore.properties
+                  echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
                   echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> keystore.properties
                   echo "keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> keystore.properties
-                  echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $RUNNER_TEMP/nillm-keystore.jks
+                  echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $RUNNER_TEMP/keystore.jks
+                  echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
 
             - name: Configure Gradle signing
               run: |
                   cd src-tauri/gen/android/app
-                  cat >> build.gradle.kts << 'EOF'
-
-                  android.signingConfigs.create("release") {
-                      val keystorePropertiesFile = rootProject.file("keystore.properties")
-                      val keystoreProperties = java.util.Properties()
-                      if (keystorePropertiesFile.exists()) {
-                          keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
-                      }
-                      keyAlias = keystoreProperties["keyAlias"] as String
-                      keyPassword = keystoreProperties["storePassword"] as String
-                      storeFile = file(keystoreProperties["storeFile"] as String)
-                      storePassword = keystoreProperties["storePassword"] as String
-                  }
-                  android.buildTypes.getByName("release") {
-                      signingConfig = android.signingConfigs.getByName("release")
-                  }
-                  EOF
-
+                  node ${{ github.workspace }}/scripts/setup-android-signing.js
             - name: Build Android APK (${{ matrix.arch }})
               run: pnpm tauri android build --apk --target ${{ matrix.tauri_target }}
 
@@ -202,7 +182,6 @@ jobs:
                     mv "$APK_PATH" "$NEW_NAME"
                     echo "apk_file=$NEW_NAME" >> $GITHUB_OUTPUT
                   fi
-
             - name: Upload Artifacts
               if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
               uses: actions/upload-artifact@v4
@@ -257,36 +236,19 @@ jobs:
             - name: Initialize Android project
               run: pnpm tauri android init --ci
 
-            - name: Configure Android signing
+            - name: Setup Android signing
               run: |
                   cd src-tauri/gen/android
-                  echo "storeFile=$RUNNER_TEMP/nillm-keystore.jks" > keystore.properties
-                  echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> keystore.properties
+                  echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
                   echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> keystore.properties
                   echo "keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> keystore.properties
-                  echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $RUNNER_TEMP/nillm-keystore.jks
+                  echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $RUNNER_TEMP/keystore.jks
+                  echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
 
             - name: Configure Gradle signing
               run: |
                   cd src-tauri/gen/android/app
-                  cat >> build.gradle.kts << 'EOF'
-
-                  android.signingConfigs.create("release") {
-                      val keystorePropertiesFile = rootProject.file("keystore.properties")
-                      val keystoreProperties = java.util.Properties()
-                      if (keystorePropertiesFile.exists()) {
-                          keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
-                      }
-                      keyAlias = keystoreProperties["keyAlias"] as String
-                      keyPassword = keystoreProperties["storePassword"] as String
-                      storeFile = file(keystoreProperties["storeFile"] as String)
-                      storePassword = keystoreProperties["storePassword"] as String
-                  }
-                  android.buildTypes.getByName("release") {
-                      signingConfig = android.signingConfigs.getByName("release")
-                  }
-                  EOF
-
+                  node ${{ github.workspace }}/scripts/setup-android-signing.js
             - name: Build Android AAB
               run: pnpm tauri android build --aab
 
