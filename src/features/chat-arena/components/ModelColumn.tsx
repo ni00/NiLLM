@@ -99,7 +99,7 @@ export const ModelColumn = React.memo(
 
         return (
             <div
-                className="flex flex-col h-[600px] border rounded-xl bg-card/50 backdrop-blur-sm shadow-sm overflow-hidden group relative transition-all duration-300 hover:shadow-md hover:border-primary/30"
+                className="flex flex-col h-[600px] border rounded-xl bg-card shadow-sm overflow-hidden group relative transition-all duration-300 hover:shadow-md hover:border-primary/30"
                 style={{ contain: 'layout style' }}
             >
                 {/* Card Header */}

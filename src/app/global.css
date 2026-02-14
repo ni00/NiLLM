@@ -112,6 +112,28 @@
 @layer base {
     * {
         @apply border-border outline-ring/50;
+        scrollbar-width: thin;
+        scrollbar-color: var(--muted-foreground) transparent;
+    }
+
+    /* WebKit/Blink browsers */
+    *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    *::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        @apply bg-muted-foreground/30 rounded-full;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+        @apply bg-muted-foreground/60;
     }
 
     html {
@@ -120,6 +142,8 @@
 
         /* Disable overscroll/bouncing */
         @apply h-full overscroll-none;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
     }
 
     body {

@@ -13,6 +13,7 @@ import { useArenaState } from '@/features/chat-arena/hooks/useArenaState'
 import { useArenaMetrics } from '@/features/chat-arena/hooks/useArenaMetrics'
 import { useArenaExport } from '@/features/chat-arena/hooks/useArenaExport'
 import { PageLayout } from '@/features/layout/PageLayout'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Layers } from 'lucide-react'
 
 export function ArenaPage() {
@@ -155,8 +156,8 @@ export function ArenaPage() {
                 </div>
             )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto p-4">
-                <div className={`grid gap-4 ${gridColsClass}`}>
+            <ScrollArea className="flex-1 min-h-0">
+                <div className={`grid gap-4 p-4 ${gridColsClass}`}>
                     {displayModels.map((model: LLMModel) => (
                         <ModelColumn
                             key={model.id}
@@ -183,7 +184,7 @@ export function ArenaPage() {
                         />
                     ))}
                 </div>
-            </div>
+            </ScrollArea>
 
             <ArenaInput
                 input={input}
