@@ -20,7 +20,7 @@ export function MetricsBar({ metrics, ranges }: MetricsBarProps) {
     const { ttft: ttftRange, tps: tpsRange, duration: durationRange } = ranges
 
     return (
-        <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground tabular-nums pt-3 mt-1 px-1 opacity-70 border-t border-dashed border-border/40">
+        <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground tabular-nums pt-3 mt-1 px-1 opacity-70 border-t border-dashed border-border/40">
             <div
                 title="Time to First Token"
                 className="flex items-center gap-1"

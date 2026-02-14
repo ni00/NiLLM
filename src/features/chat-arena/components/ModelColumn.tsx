@@ -113,7 +113,7 @@ export const ModelColumn = React.memo(
                             >
                                 {model.name}
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30 truncate">
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/30 truncate">
                                 {model.providerName || model.provider}
                             </span>
                         </div>
@@ -233,7 +233,7 @@ export const ModelColumn = React.memo(
                                     footerRanges={footerRanges}
                                 />
                             ) : isEditing ? (
-                                <div className="text-[10px] font-semibold text-primary/60 uppercase tracking-widest pl-1">
+                                <div className="text-xs font-semibold text-primary/60 uppercase tracking-widest pl-1">
                                     Configuration Mode
                                 </div>
                             ) : (

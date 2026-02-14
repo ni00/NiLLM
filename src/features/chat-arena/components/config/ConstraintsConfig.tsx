@@ -11,7 +11,7 @@ export function ConstraintsConfig({ config, onChange }: ConfigSectionProps) {
                 <div className="space-y-2.5">
                     <Label
                         htmlFor="maxTokens"
-                        className="text-[11px] font-bold opacity-60 uppercase tracking-tight"
+                        className="text-xs font-bold opacity-60 uppercase tracking-tight"
                     >
                         Max Tokens
                     </Label>
@@ -31,7 +31,7 @@ export function ConstraintsConfig({ config, onChange }: ConfigSectionProps) {
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2.5">
-                        <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                        <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
                             Seed
                         </Label>
                         <Input
@@ -49,7 +49,7 @@ export function ConstraintsConfig({ config, onChange }: ConfigSectionProps) {
                         />
                     </div>
                     <div className="space-y-2.5">
-                        <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                        <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
                             Repetition Penalty
                         </Label>
                         <Input
@@ -70,7 +70,7 @@ export function ConstraintsConfig({ config, onChange }: ConfigSectionProps) {
                 </div>
 
                 <div className="space-y-2.5">
-                    <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                    <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
                         Stop Sequences
                     </Label>
                     <Input

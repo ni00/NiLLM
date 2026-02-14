@@ -57,7 +57,7 @@ export const ArenaHeader = ({
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-10 px-4 group gap-2"
+                        className="h-9 px-4 group gap-2"
                     >
                         <LayoutGrid className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="text-xs font-medium">Layout</span>
@@ -91,7 +91,7 @@ export const ArenaHeader = ({
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-10 px-4 group gap-2"
+                        className="h-9 px-4 group gap-2"
                     >
                         <ArrowUpDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="text-xs font-medium">Sort</span>
@@ -126,7 +126,7 @@ export const ArenaHeader = ({
                 variant="outline"
                 size="sm"
                 onClick={onExportAll}
-                className="h-10 px-4 group gap-2"
+                className="h-9 px-4 group gap-2"
             >
                 <FolderOutput className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="text-xs font-medium">Export</span>
@@ -136,7 +136,7 @@ export const ArenaHeader = ({
                 variant="outline"
                 size="sm"
                 onClick={onShowJudgePanel}
-                className="h-10 px-4 group gap-2"
+                className="h-9 px-4 group gap-2"
             >
                 <Sparkles className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="text-xs font-medium">Judge</span>
@@ -146,7 +146,7 @@ export const ArenaHeader = ({
                 variant="outline"
                 size="sm"
                 onClick={() => onShowArenaSettings()}
-                className="h-10 px-4 group gap-2"
+                className="h-9 px-4 group gap-2"
             >
                 <Settings2 className="w-4 h-4 text-muted-foreground group-hover:rotate-90 transition-all duration-300" />
                 <span className="text-xs font-medium">Configure</span>

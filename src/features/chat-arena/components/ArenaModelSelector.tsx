@@ -14,7 +14,7 @@ export const ArenaModelSelector = React.memo(
             <div className="space-y-4">
                 <div className="space-y-1">
                     <h4 className="text-sm font-semibold">Model Selection</h4>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                         Select the models to compare in the arena.
                     </p>
                 </div>
@@ -43,7 +43,7 @@ export const ArenaModelSelector = React.memo(
                                 <div className="text-sm font-bold tracking-tight truncate">
                                     {model.name}
                                 </div>
-                                <div className="text-[10px] text-muted-foreground font-mono truncate uppercase mt-0.5">
+                                <div className="text-xs text-muted-foreground font-mono truncate uppercase mt-0.5">
                                     {model.providerName || model.provider}
                                 </div>
                             </label>

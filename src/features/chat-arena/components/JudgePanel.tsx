@@ -69,7 +69,7 @@ export const JudgePanel = ({
                                     <div className="font-medium text-sm truncate">
                                         {model.name}
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground truncate">
+                                    <div className="text-xs text-muted-foreground truncate">
                                         {model.providerName || model.provider}
                                     </div>
                                 </div>
@@ -85,7 +85,7 @@ export const JudgePanel = ({
                         value={judgePrompt}
                         onChange={(e) => setJudgePrompt(e.target.value)}
                         placeholder="Enter judge instructions..."
-                        className="min-h-[150px] text-[13px] leading-relaxed resize-none focus-visible:ring-primary/20"
+                        className="min-h-[150px] text-sm leading-relaxed resize-none focus-visible:ring-primary/20"
                     />
                 </div>
             </div>
@@ -114,7 +114,7 @@ export const JudgePanel = ({
 
                 {judgeStatus && (
                     <div
-                        className={`text-[11px] text-center font-medium px-3 py-1.5 rounded-md ${
+                        className={`text-xs text-center font-medium px-3 py-1.5 rounded-md ${
                             judgeStatus.startsWith('Error')
                                 ? 'bg-destructive/10 text-destructive border border-destructive/20'
                                 : 'bg-primary/5 text-primary border border-primary/10'

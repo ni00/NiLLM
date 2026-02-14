@@ -15,7 +15,7 @@ export const ArenaGlobalParams = React.memo(
                     <h4 className="text-sm font-semibold">
                         Generation Parameters
                     </h4>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                         Adjust sampling and length constraints globally.
                     </p>
                 </div>

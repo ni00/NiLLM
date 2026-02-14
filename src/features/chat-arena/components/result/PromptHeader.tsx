@@ -15,7 +15,7 @@ export function PromptHeader({
 }: PromptHeaderProps) {
     return (
         <div
-            className={`p-3 rounded-lg text-[13px] border transition-all cursor-pointer flex items-center justify-between gap-3 group/prompt ${
+            className={`p-3 rounded-lg text-sm border transition-all cursor-pointer flex items-center justify-between gap-3 group/prompt ${
                 showContent
                     ? 'bg-muted/40 text-foreground/70 border-border/40 italic'
                     : 'bg-muted/20 text-muted-foreground/50 border-transparent hover:bg-muted/40'

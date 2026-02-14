@@ -170,7 +170,7 @@ export function ExportMenu({
                     document.getElementById('import-global')?.click()
                 }
                 disabled={importing}
-                className="h-10 px-4 group gap-2 active:scale-95 transition-all"
+                className="h-9 px-4 group gap-2 active:scale-95 transition-all"
             >
                 <History className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="text-xs font-medium">
@@ -181,7 +181,7 @@ export function ExportMenu({
             <Button
                 variant="outline"
                 onClick={handleExportGlobal}
-                className="h-10 px-4 group gap-2 active:scale-95 transition-all"
+                className="h-9 px-4 group gap-2 active:scale-95 transition-all"
             >
                 <Database className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="text-xs font-medium">Backup</span>
@@ -191,7 +191,7 @@ export function ExportMenu({
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
-                        className="h-10 px-4 group gap-2 transition-colors"
+                        className="h-9 px-4 group gap-2 transition-colors"
                     >
                         <FileBarChart className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="text-xs font-medium">Reports</span>
@@ -222,7 +222,7 @@ export function ExportMenu({
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
-                        className="h-10 px-4 group gap-2 active:scale-95 transition-all hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                        className="h-9 px-4 group gap-2 active:scale-95 transition-all hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
                     >
                         <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
                         <span className="text-xs font-medium">Clear</span>

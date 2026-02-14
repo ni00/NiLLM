@@ -50,7 +50,7 @@ export const ConfigSlider = React.memo(
                 className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary transition-all hover:bg-muted/80"
             />
             {labels && (
-                <div className="flex justify-between text-[10px] text-muted-foreground font-medium px-0.5">
+                <div className="flex justify-between text-xs text-muted-foreground font-medium px-0.5">
                     <span>{labels[0]}</span>
                     <span>{labels[1]}</span>
                 </div>

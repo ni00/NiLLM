@@ -77,12 +77,12 @@ export function StatsOverview({
                 </div>
             </Card>
 
-            <Card className="relative overflow-hidden border-none bg-amber-500/5 shadow-none">
+            <Card className="relative overflow-hidden border-none bg-emerald-500/5 shadow-none">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">
                         Top Performer
                     </CardTitle>
-                    <Trophy className="h-4 w-4 text-amber-500" />
+                    <Trophy className="h-4 w-4 text-emerald-500" />
                 </CardHeader>
                 <CardContent>
                     <div
@@ -95,7 +95,7 @@ export function StatsOverview({
                         Highest throughput (TPS)
                     </p>
                 </CardContent>
-                <div className="absolute -right-2 -bottom-2 opacity-10 text-amber-500">
+                <div className="absolute -right-2 -bottom-2 opacity-10 text-emerald-500">
                     <Trophy className="h-16 w-16" />
                 </div>
             </Card>

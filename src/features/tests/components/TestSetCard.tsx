@@ -133,7 +133,7 @@ export function TestSetCard({
                     ))}
                     {testSet.cases.length > 3 && (
                         <div
-                            className="text-[10px] text-muted-foreground/50 text-center italic cursor-pointer hover:text-primary transition-colors"
+                            className="text-xs text-muted-foreground/50 text-center italic cursor-pointer hover:text-primary transition-colors"
                             onClick={() => onEdit(testSet)}
                         >
                             + {testSet.cases.length - 3} more cases

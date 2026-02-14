@@ -10,10 +10,10 @@ export function TimeoutsConfig({ config, onChange }: ConfigSectionProps) {
             <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                        <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                        <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
                             Connect
                         </Label>
-                        <span className="text-[10px] font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
+                        <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
                             {config.connectTimeout || 15000}
                         </span>
                     </div>
@@ -29,10 +29,10 @@ export function TimeoutsConfig({ config, onChange }: ConfigSectionProps) {
 
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                        <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                        <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
                             Read
                         </Label>
-                        <span className="text-[10px] font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
+                        <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
                             {config.readTimeout || 30000}
                         </span>
                     </div>

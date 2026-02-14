@@ -12,7 +12,7 @@ export function RatingBar({ rating, ratingSource, onRate }: RatingBarProps) {
 
     return (
         <div className="flex items-center gap-3 pt-4 border-t border-border/30 mt-4 group/rating">
-            <div className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+            <div className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
                 Score
             </div>
             <div className="flex items-center gap-1">
@@ -32,7 +32,7 @@ export function RatingBar({ rating, ratingSource, onRate }: RatingBarProps) {
                 <div
                     className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full border transition-all hover:scale-110 active:scale-95 cursor-default ${getScoreBadgeStyles(rating)}`}
                 >
-                    <span className="text-[10px] font-black uppercase tracking-tighter opacity-80 whitespace-nowrap">
+                    <span className="text-xs font-black uppercase tracking-tighter opacity-80 whitespace-nowrap">
                         {ratingSource === 'ai' ? 'AI Judge' : 'Human Judge'}
                     </span>
                     <span className="text-[14px] font-bold tabular-nums tracking-tight border-l pl-2 ml-0.5 border-current/20 leading-none">

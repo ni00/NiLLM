@@ -29,11 +29,11 @@ export const QueuePopover = () => {
                 <Button
                     variant="outline"
                     size="sm"
-                    className="relative h-10 px-4 group gap-2"
+                    className="relative h-9 px-4 group gap-2"
                 >
                     <Layers className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     {messageQueue.length > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full border-2 border-background shadow-sm animate-in zoom-in duration-300">
+                        <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-xs font-bold px-1.5 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full border-2 border-background shadow-sm animate-in zoom-in duration-300">
                             {messageQueue.length}
                         </span>
                     )}
@@ -43,7 +43,7 @@ export const QueuePopover = () => {
             <PopoverContent className="w-80 p-4" align="end">
                 <div className="flex items-center justify-between border-b pb-2 mb-3">
                     <h3 className="font-semibold text-sm">Processing Queue</h3>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">
                         {messageQueue.filter((m) => !m.paused).length} Active
                     </span>
                 </div>
@@ -94,7 +94,7 @@ export const QueuePopover = () => {
                                     >
                                         {item.prompt}
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2">
+                                    <div className="text-xs text-muted-foreground mt-0.5 flex gap-2">
                                         <span>
                                             {item.paused
                                                 ? 'Paused'

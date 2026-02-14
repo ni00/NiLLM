@@ -35,7 +35,7 @@ export const ArenaInput = ({
                         variant="ghost"
                         size="sm"
                         onClick={clearActiveSession}
-                        className="h-7 px-2 text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all opacity-0 group-hover:opacity-100"
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all opacity-0 group-hover:opacity-100"
                     >
                         <Eraser className="w-3 h-3 mr-1.5" /> Clear Context
                     </Button>

@@ -14,7 +14,7 @@ export const ArenaSystemPrompt = React.memo(
                     <h4 className="text-sm font-semibold">
                         Global System Prompt
                     </h4>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                         Define the base behavior for all models in this session.
                     </p>
                 </div>

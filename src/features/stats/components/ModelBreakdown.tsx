@@ -79,7 +79,7 @@ export function ModelBreakdown({
                                     </div>
                                     <div className="font-mono font-bold">
                                         {stat.avgTPS.toFixed(1)}{' '}
-                                        <span className="text-[10px] font-normal text-muted-foreground">
+                                        <span className="text-xs font-normal text-muted-foreground">
                                             t/s
                                         </span>
                                     </div>
@@ -92,7 +92,7 @@ export function ModelBreakdown({
                                     </div>
                                     <div className="font-mono font-bold">
                                         {stat.avgTTFT.toFixed(0)}{' '}
-                                        <span className="text-[10px] font-normal text-muted-foreground">
+                                        <span className="text-xs font-normal text-muted-foreground">
                                             ms
                                         </span>
                                     </div>

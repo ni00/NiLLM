@@ -55,7 +55,7 @@ export function ModelCard({
                             >
                                 <GripVertical className="h-3 w-3 text-muted-foreground/40" />
                             </div>
-                            <span className="text-[10px] font-bold tracking-wider text-primary uppercase">
+                            <span className="text-xs font-bold tracking-wider text-primary uppercase">
                                 {model.providerName || model.provider}
                             </span>
                         </div>
@@ -75,37 +75,37 @@ export function ModelCard({
 
                 <div className="grid grid-cols-3 gap-2 py-3 border-y border-border/10">
                     <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
-                            <Zap className="h-2.5 w-2.5 text-yellow-500" />{' '}
+                        <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
+                            <Zap className="h-3.5 w-3.5 text-yellow-500" />{' '}
                             Speed
                         </span>
-                        <span className="text-xs font-mono font-bold text-foreground">
+                        <span className="text-sm font-mono font-bold text-foreground">
                             {avgTPS}
-                            <span className="text-[9px] ml-0.5 font-normal opacity-50">
+                            <span className="text-xs ml-0.5 font-normal opacity-50">
                                 t/s
                             </span>
                         </span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
-                            <Clock className="h-2.5 w-2.5 text-blue-500" />{' '}
+                        <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-blue-500" />{' '}
                             Latency
                         </span>
-                        <span className="text-xs font-mono font-bold text-foreground">
+                        <span className="text-sm font-mono font-bold text-foreground">
                             {avgTTFT}
-                            <span className="text-[9px] ml-0.5 font-normal opacity-50">
+                            <span className="text-xs ml-0.5 font-normal opacity-50">
                                 ms
                             </span>
                         </span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
-                            <BarChart3 className="h-2.5 w-2.5 text-green-500" />{' '}
+                        <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
+                            <BarChart3 className="h-3.5 w-3.5 text-green-500" />{' '}
                             Tokens
                         </span>
-                        <span className="text-xs font-mono font-bold text-foreground">
+                        <span className="text-sm font-mono font-bold text-foreground">
                             {(totalTokens / 1000).toFixed(1)}
-                            <span className="text-[9px] ml-0.5 font-normal opacity-50">
+                            <span className="text-xs ml-0.5 font-normal opacity-50">
                                 k
                             </span>
                         </span>

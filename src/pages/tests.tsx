@@ -66,7 +66,7 @@ export function TestsPage() {
                         variant="outline"
                         onClick={handleImportClick}
                         disabled={isImporting}
-                        className="h-10 px-4 group gap-2 shadow-sm transition-all active:scale-95"
+                        className="h-9 px-4 group gap-2 shadow-sm transition-all active:scale-95"
                     >
                         <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="text-xs font-medium">
@@ -76,7 +76,7 @@ export function TestsPage() {
                     <Button
                         variant="outline"
                         onClick={openCreateModal}
-                        className="h-10 px-4 group gap-2 transition-all active:scale-95"
+                        className="h-9 px-4 group gap-2 transition-all active:scale-95"
                     >
                         <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="text-xs font-medium">Create</span>

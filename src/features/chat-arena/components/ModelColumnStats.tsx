@@ -50,7 +50,7 @@ export const ModelColumnStats = React.memo(
         )
 
         return (
-            <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-muted-foreground tabular-nums">
+            <div className="flex flex-wrap gap-1.5 text-xs font-mono text-muted-foreground tabular-nums">
                 <div
                     title="Average TTFT"
                     className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[85px] justify-center"

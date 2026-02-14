@@ -107,7 +107,7 @@ export function SelectDropdown({
                                             {option.label}
                                         </span>
                                         {option.description && (
-                                            <span className="text-[10px] text-muted-foreground truncate">
+                                            <span className="text-xs text-muted-foreground truncate">
                                                 {option.description}
                                             </span>
                                         )}

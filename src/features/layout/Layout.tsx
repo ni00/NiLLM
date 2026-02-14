@@ -40,7 +40,7 @@ export function Layout() {
                                 title={item.label}
                             >
                                 <item.icon className="w-5 h-5" />
-                                <span className="text-[10px] font-medium text-center leading-tight">
+                                <span className="text-xs font-medium text-center leading-tight">
                                     {item.label}
                                 </span>
                             </Link>

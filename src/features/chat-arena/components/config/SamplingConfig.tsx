@@ -33,7 +33,7 @@ export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2.5">
-                        <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                        <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
                             Top K
                         </Label>
                         <Input
@@ -51,7 +51,7 @@ export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
                         />
                     </div>
                     <div className="space-y-2.5">
-                        <Label className="text-[11px] font-bold opacity-60 uppercase tracking-tight">
+                        <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
                             Min P
                         </Label>
                         <Input

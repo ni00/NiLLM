@@ -52,7 +52,7 @@ export function PromptsPage() {
                         />
                         <Button
                             variant="outline"
-                            className="h-10 px-4 group gap-2"
+                            className="h-9 px-4 group gap-2"
                         >
                             <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                             <span className="text-xs font-medium">Import</span>
@@ -61,7 +61,7 @@ export function PromptsPage() {
                     <Button
                         variant="outline"
                         onClick={handleCreate}
-                        className="h-10 px-4 group gap-2"
+                        className="h-9 px-4 group gap-2"
                     >
                         <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="text-xs font-medium">Create</span>

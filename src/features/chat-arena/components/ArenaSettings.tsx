@@ -55,7 +55,7 @@ export const ArenaSettings = ({
                         key={tab.id}
                         onClick={() => setArenaSettingsTab(tab.id)}
                         className={cn(
-                            'flex-1 py-3 text-[11px] font-bold uppercase tracking-widest transition-all border-b-2',
+                            'flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-all border-b-2',
                             arenaSettingsTab === tab.id
                                 ? 'border-primary text-primary bg-primary/5'
                                 : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30'

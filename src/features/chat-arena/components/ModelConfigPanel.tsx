@@ -27,14 +27,14 @@ export const ModelConfigPanel = React.memo(
                                 <h4 className="text-sm font-bold tracking-tight">
                                     Parameters
                                 </h4>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                <p className="text-xs text-muted-foreground mt-0.5">
                                     Override global generation settings.
                                 </p>
                             </div>
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 text-[11px] font-medium"
+                                className="h-7 text-xs font-medium"
                                 onClick={() =>
                                     onUpdateModel(model.id, {
                                         config: undefined

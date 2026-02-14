@@ -81,7 +81,7 @@ export function VariableFiller({
                                 <Label className="font-mono text-xs">
                                     {v.name}
                                 </Label>
-                                <span className="text-[10px] text-muted-foreground">
+                                <span className="text-xs text-muted-foreground">
                                     {v.description}
                                 </span>
                             </div>
