@@ -266,6 +266,27 @@ jobs:
                   echo "keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> keystore.properties
                   echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $RUNNER_TEMP/nillm-keystore.jks
 
+            - name: Configure Gradle signing
+              run: |
+                  cd src-tauri/gen/android/app
+                  cat >> build.gradle.kts << 'EOF'
+
+                  android.signingConfigs.create("release") {
+                      val keystorePropertiesFile = rootProject.file("keystore.properties")
+                      val keystoreProperties = java.util.Properties()
+                      if (keystorePropertiesFile.exists()) {
+                          keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+                      }
+                      keyAlias = keystoreProperties["keyAlias"] as String
+                      keyPassword = keystoreProperties["storePassword"] as String
+                      storeFile = file(keystoreProperties["storeFile"] as String)
+                      storePassword = keystoreProperties["storePassword"] as String
+                  }
+                  android.buildTypes.getByName("release") {
+                      signingConfig = android.signingConfigs.getByName("release")
+                  }
+                  EOF
+
             - name: Build Android AAB
               run: pnpm tauri android build --aab
 
