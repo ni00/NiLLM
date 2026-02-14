@@ -34,8 +34,9 @@ export function ModelEditor({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-2xl bg-card border border-border/50 shadow-2xl rounded-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6 space-y-6">
+            <div className="w-full max-w-2xl max-h-[calc(100vh-2rem)] bg-card border border-border/50 shadow-2xl rounded-xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+                {/* Fixed Header */}
+                <div className="p-6 pb-4 flex-shrink-0">
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <h2 className="text-2xl font-bold tracking-tight">
@@ -50,7 +51,10 @@ export function ModelEditor({
                             <Cpu className="h-5 w-5" />
                         </div>
                     </div>
+                </div>
 
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto px-6">
                     <div className="grid gap-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -157,22 +161,23 @@ export function ModelEditor({
                             />
                         </div>
                     </div>
+                </div>
 
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button
-                            variant="ghost"
-                            onClick={onClose}
-                            className="h-11 px-6 text-muted-foreground border border-transparent hover:border-border"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={onSave}
-                            className="h-11 px-10 shadow-lg shadow-primary/20 transition-all active:scale-95"
-                        >
-                            {editingId ? 'Update Configuration' : 'Save Model'}
-                        </Button>
-                    </div>
+                {/* Fixed Footer */}
+                <div className="p-6 pt-4 flex justify-end gap-3 flex-shrink-0 border-t border-border/30">
+                    <Button
+                        variant="ghost"
+                        onClick={onClose}
+                        className="h-11 px-6 text-muted-foreground border border-transparent hover:border-border"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={onSave}
+                        className="h-11 px-10 shadow-lg shadow-primary/20 transition-all active:scale-95"
+                    >
+                        {editingId ? 'Update Configuration' : 'Save Model'}
+                    </Button>
                 </div>
             </div>
         </div>

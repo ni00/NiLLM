@@ -6,7 +6,7 @@ import {
     CardDescription
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Play, Pencil, Trash2, FolderOutput } from 'lucide-react'
+import { Play, Pencil, Trash2, FolderOutput, GripVertical } from 'lucide-react'
 import { PromptTemplate } from '@/lib/types'
 
 interface PromptCardProps {
@@ -15,6 +15,7 @@ interface PromptCardProps {
     onExport: (template: PromptTemplate) => void
     onDelete: (id: string) => void
     onUse: (template: PromptTemplate) => void
+    dragHandleProps?: any
 }
 
 export function PromptCard({
@@ -22,25 +23,36 @@ export function PromptCard({
     onEdit,
     onExport,
     onDelete,
-    onUse
+    onUse,
+    dragHandleProps
 }: PromptCardProps) {
     return (
-        <Card className="group relative hover:shadow-lg transition-all">
+        <Card className="group relative py-4 gap-2">
             <CardHeader>
                 <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                        <CardTitle
-                            className="text-lg line-clamp-1"
-                            title={template.title}
+                    <div className="flex items-center gap-3 space-y-0 text-left min-w-0">
+                        <div
+                            {...dragHandleProps}
+                            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded-md transition-colors -ml-1.5"
                         >
-                            {template.title}
-                        </CardTitle>
-                        <CardDescription className="text-xs">
-                            {template.variables.length} variables •{' '}
-                            {new Date(template.updatedAt).toLocaleDateString()}
-                        </CardDescription>
+                            <GripVertical className="h-4 w-4 text-muted-foreground/40" />
+                        </div>
+                        <div className="space-y-1 min-w-0">
+                            <CardTitle
+                                className="text-lg font-semibold line-clamp-1"
+                                title={template.title}
+                            >
+                                {template.title}
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                                {template.variables.length} variables •{' '}
+                                {new Date(
+                                    template.updatedAt
+                                ).toLocaleDateString()}
+                            </CardDescription>
+                        </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 shrink-0 ml-2">
                         <Button
                             variant="ghost"
                             size="icon"

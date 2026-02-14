@@ -133,18 +133,22 @@ export function ModelsPage() {
                         onClick={() =>
                             document.getElementById('import-models')?.click()
                         }
-                        className="h-9 px-4 group gap-2 shadow-sm transition-all active:scale-95"
+                        className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 shadow-sm transition-all active:scale-95"
                     >
                         <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        <span className="text-xs font-medium">Import</span>
+                        <span className="hidden md:inline text-xs font-medium">
+                            Import
+                        </span>
                     </Button>
                     <Button
                         variant="outline"
                         onClick={handleExport}
-                        className="h-9 px-4 group gap-2 shadow-sm transition-all active:scale-95"
+                        className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 shadow-sm transition-all active:scale-95"
                     >
                         <FolderOutput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        <span className="text-xs font-medium">Export</span>
+                        <span className="hidden md:inline text-xs font-medium">
+                            Export
+                        </span>
                     </Button>
                     {!isAdding && (
                         <Button
@@ -157,10 +161,12 @@ export function ModelsPage() {
                                     enabled: true
                                 })
                             }}
-                            className="h-9 px-4 group gap-2 shadow-sm transition-all active:scale-95"
+                            className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 shadow-sm transition-all active:scale-95"
                         >
                             <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                            <span className="text-xs font-medium">Add</span>
+                            <span className="hidden md:inline text-xs font-medium">
+                                Add
+                            </span>
                         </Button>
                     )}
                 </div>

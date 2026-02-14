@@ -13,12 +13,15 @@ export function useTestSets() {
         addTestSet,
         deleteTestSet,
         updateTestSet,
+
+        setTestSetOrder,
         createSession,
         activeModelIds,
         addToQueue,
         language,
         setLanguage,
-        testSets: storedSets
+        testSets: storedSets,
+        testSetOrder
     } = useAppStore()
     const navigate = useNavigate()
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -243,6 +246,8 @@ export function useTestSets() {
         handleRunSingle,
         deleteTestSet,
         setIsEditing,
-        setEditForm
+        setEditForm,
+        testSetOrder,
+        setTestSetOrder
     }
 }

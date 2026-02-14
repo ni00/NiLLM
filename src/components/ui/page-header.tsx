@@ -19,14 +19,14 @@ export function PageHeader({
     return (
         <header className={cn('flex flex-col gap-1', className)}>
             <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-col gap-1 overflow-hidden">
+                <div className="hidden md:flex flex-col gap-1 overflow-hidden">
                     <div className="flex items-center gap-2.5">
                         {Icon && (
                             <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
                                 <Icon className="h-5 w-5" />
                             </div>
                         )}
-                        <h1 className="text-3xl font-extrabold tracking-tight truncate">
+                        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight truncate md:whitespace-nowrap">
                             {title}
                         </h1>
                     </div>
@@ -37,7 +37,7 @@ export function PageHeader({
                     )}
                 </div>
                 {children && (
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 ml-auto">
                         {children}
                     </div>
                 )}

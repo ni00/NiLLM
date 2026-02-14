@@ -45,7 +45,7 @@ export function PageLayout({
                 title={title}
                 description={description}
                 icon={icon}
-                className="p-6 pb-4 border-b flex-shrink-0"
+                className="p-4 md:p-6 pb-4 border-b flex-shrink-0"
             >
                 {actions}
             </PageHeader>
@@ -55,7 +55,7 @@ export function PageLayout({
                     <div
                         className={cn(
                             'flex flex-col gap-6',
-                            contentClassName || 'p-6'
+                            contentClassName || 'p-4 md:p-6'
                         )}
                     >
                         {children}

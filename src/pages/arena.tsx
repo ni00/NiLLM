@@ -103,7 +103,7 @@ export function ArenaPage() {
 
     const gridColsClass =
         arenaColumns === 0
-            ? 'grid-cols-[repeat(auto-fit,minmax(350px,1fr))]'
+            ? 'grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(350px,1fr))]'
             : arenaColumns === 1
               ? 'grid-cols-1'
               : arenaColumns === 2

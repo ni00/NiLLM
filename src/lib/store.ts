@@ -62,8 +62,11 @@ interface AppState {
     clearActiveSession: () => void
 
     testSets: TestSet[]
+    testSetOrder: string[]
     addTestSet: (testSet: TestSet) => void
+
     deleteTestSet: (id: string) => void
+    setTestSetOrder: (order: string[]) => void
 
     globalConfig: GenerationConfig
     updateGlobalConfig: (updates: Partial<GenerationConfig>) => void
@@ -73,7 +76,9 @@ interface AppState {
     setPromptTemplates: (templates: PromptTemplate[]) => void
     addPromptTemplate: (template: PromptTemplate) => void
     updatePromptTemplate: (id: string, updates: Partial<PromptTemplate>) => void
+
     deletePromptTemplate: (id: string) => void
+    reorderPromptTemplates: (fromIndex: number, toIndex: number) => void
 
     // Arena Integration
     pendingPrompt: string | null
@@ -227,11 +232,19 @@ export const useAppStore = create<AppState>()(
                 })),
 
             testSets: [] as TestSet[],
+            testSetOrder: [] as string[],
             addTestSet: (testSet) =>
-                set((state) => ({ testSets: [...state.testSets, testSet] })),
+                set((state) => ({
+                    testSets: [testSet, ...state.testSets],
+                    testSetOrder:
+                        state.testSetOrder.length > 0
+                            ? [testSet.id, ...state.testSetOrder] // Add to top if order exists
+                            : [] // Leave empty to trigger default sort
+                })),
             deleteTestSet: (id) =>
                 set((state) => ({
-                    testSets: state.testSets.filter((ts) => ts.id !== id)
+                    testSets: state.testSets.filter((ts) => ts.id !== id),
+                    testSetOrder: state.testSetOrder.filter((o) => o !== id)
                 })),
 
             globalConfig: {
@@ -360,6 +373,13 @@ export const useAppStore = create<AppState>()(
                 })),
             setPromptTemplates: (templates) =>
                 set({ promptTemplates: templates }),
+            reorderPromptTemplates: (fromIndex, toIndex) =>
+                set((state) => {
+                    const newTemplates = [...state.promptTemplates]
+                    const [moved] = newTemplates.splice(fromIndex, 1)
+                    newTemplates.splice(toIndex, 0, moved)
+                    return { promptTemplates: newTemplates }
+                }),
 
             pendingPrompt: null,
             setPendingPrompt: (content) => set({ pendingPrompt: content }),
@@ -371,6 +391,7 @@ export const useAppStore = create<AppState>()(
                         ts.id === id ? { ...ts, ...updates } : ts
                     )
                 })),
+            setTestSetOrder: (order) => set({ testSetOrder: order }),
 
             exportData: (): string => {
                 const state = get()

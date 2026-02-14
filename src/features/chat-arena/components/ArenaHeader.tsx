@@ -47,7 +47,7 @@ export const ArenaHeader = ({
     ]
 
     return (
-        <div className="flex gap-2">
+        <div className="flex gap-1 md:gap-2">
             <QueuePopover />
 
             <div className="h-10 w-px bg-border/50 mx-1" />
@@ -57,10 +57,12 @@ export const ArenaHeader = ({
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-9 px-4 group gap-2"
+                        className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
                     >
                         <LayoutGrid className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        <span className="text-xs font-medium">Layout</span>
+                        <span className="hidden md:inline text-xs font-medium">
+                            Layout
+                        </span>
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-40 p-1" align="end">
@@ -91,10 +93,12 @@ export const ArenaHeader = ({
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-9 px-4 group gap-2"
+                        className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
                     >
                         <ArrowUpDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        <span className="text-xs font-medium">Sort</span>
+                        <span className="hidden md:inline text-xs font-medium">
+                            Sort
+                        </span>
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-48 p-1" align="end">
@@ -126,30 +130,36 @@ export const ArenaHeader = ({
                 variant="outline"
                 size="sm"
                 onClick={onExportAll}
-                className="h-9 px-4 group gap-2"
+                className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
             >
                 <FolderOutput className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span className="text-xs font-medium">Export</span>
+                <span className="hidden md:inline text-xs font-medium">
+                    Export
+                </span>
             </Button>
 
             <Button
                 variant="outline"
                 size="sm"
                 onClick={onShowJudgePanel}
-                className="h-9 px-4 group gap-2"
+                className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
             >
                 <Sparkles className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span className="text-xs font-medium">Judge</span>
+                <span className="hidden md:inline text-xs font-medium">
+                    Judge
+                </span>
             </Button>
 
             <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onShowArenaSettings()}
-                className="h-9 px-4 group gap-2"
+                className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
             >
                 <Settings2 className="w-4 h-4 text-muted-foreground group-hover:rotate-90 transition-all duration-300" />
-                <span className="text-xs font-medium">Configure</span>
+                <span className="hidden md:inline text-xs font-medium">
+                    Configure
+                </span>
             </Button>
         </div>
     )

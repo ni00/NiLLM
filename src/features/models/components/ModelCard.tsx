@@ -38,33 +38,29 @@ export function ModelCard({
     dragHandleProps
 }: ModelCardProps) {
     return (
-        <Card
-            className={`group relative overflow-hidden h-full transition-all duration-300 bg-gradient-to-br from-card/80 via-card/50 to-muted/5 backdrop-blur-xl border-border/30 hover:shadow-lg`}
-        >
-            <div
-                className={`absolute top-0 left-0 w-[2px] h-full transition-all duration-500 ${isActive ? 'bg-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]' : 'bg-transparent opacity-0'}`}
-            />
-
+        <Card className="group relative h-full p-0">
             <div className="p-4 flex flex-col gap-3 h-full">
                 <div className="flex items-start justify-between">
                     <div className="space-y-1 flex-1 min-w-0 mr-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="flex items-center gap-2">
                             <div
                                 {...dragHandleProps}
-                                className="cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-muted/50 rounded transition-colors"
+                                className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded-md transition-colors -ml-1"
                             >
-                                <GripVertical className="h-3 w-3 text-muted-foreground/40" />
+                                <GripVertical className="h-4 w-4 text-muted-foreground/40" />
                             </div>
-                            <span className="text-xs font-bold tracking-wider text-primary uppercase">
+                            <h3
+                                className="text-lg font-semibold tracking-tight text-foreground truncate"
+                                title={model.name}
+                            >
+                                {model.name}
+                            </h3>
+                        </div>
+                        <div className="pl-6">
+                            <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                                 {model.providerName || model.provider}
                             </span>
                         </div>
-                        <h3
-                            className="text-sm font-bold tracking-tight text-foreground truncate"
-                            title={model.name}
-                        >
-                            {model.name}
-                        </h3>
                     </div>
                     <Switch
                         checked={isActive}

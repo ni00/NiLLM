@@ -18,7 +18,8 @@ export function usePrompts() {
         updatePromptTemplate,
         deletePromptTemplate,
         setPendingPrompt,
-        models
+        models,
+        reorderPromptTemplates
     } = useAppStore()
 
     const navigate = useNavigate()
@@ -207,6 +208,17 @@ export function usePrompts() {
         }
     }
 
+    const handleDragEnd = (event: any) => {
+        const { active, over } = event
+        if (over && active.id !== over.id) {
+            const oldIndex = promptTemplates.findIndex(
+                (t) => t.id === active.id
+            )
+            const newIndex = promptTemplates.findIndex((t) => t.id === over.id)
+            reorderPromptTemplates(oldIndex, newIndex)
+        }
+    }
+
     return {
         promptTemplates,
         isEditing,
@@ -232,6 +244,7 @@ export function usePrompts() {
         handleImport,
         handleUse,
         handleFillAndUse,
-        handleAutoFill
+        handleAutoFill,
+        handleDragEnd
     }
 }
