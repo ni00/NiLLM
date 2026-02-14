@@ -14,9 +14,9 @@ export function Layout() {
     ]
 
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden">
+        <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden pt-[var(--safe-area-inset-top)]">
             {/* Sidebar / Bottom Nav */}
-            <aside className="fixed bottom-0 left-0 right-0 z-50 h-16 border-t bg-background md:border-t-0 md:relative md:h-full md:w-16 md:border-r flex md:flex-col items-center justify-around md:justify-start md:py-4 md:gap-4 flex-shrink-0">
+            <aside className="fixed bottom-0 left-0 right-0 z-50 h-16 border-t bg-background md:border-t-0 md:relative md:h-full md:w-16 md:border-r flex md:flex-col items-center justify-around md:justify-start md:py-4 md:gap-4 flex-shrink-0 pb-[var(--safe-area-inset-bottom)]">
                 <div className="hidden md:block mb-4">
                     {/* Logo or Brand */}
                     <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-sm">

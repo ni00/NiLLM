@@ -35,6 +35,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@saurl/tauri-plugin-safe-area-insets-css-api':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@tailwindcss/vite':
         specifier: ^4.1.17
         version: 4.1.18(vite@7.3.0(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.2))
@@ -1408,6 +1411,9 @@ packages:
     resolution: {integrity: sha512-hYT5d3YNdSh3mbCU1gwQyPgQd3T2ne0A3KG8KSBdav5TiBg6eInVmV+TeR5uHufiIgSFg0XsOWGW5/RhNcSvPg==}
     cpu: [x64]
     os: [win32]
+
+  '@saurl/tauri-plugin-safe-area-insets-css-api@0.1.0':
+    resolution: {integrity: sha512-cZbOexV7OSBvgGECrqInA7daoCRLG5wGcUy/zrRIDaqXVKP6THdLWwsC5Ho6UD0lsxr8O4+zd1PPFJwrlHxTYg==}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -4676,6 +4682,10 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.54.0':
     optional: true
+
+  '@saurl/tauri-plugin-safe-area-insets-css-api@0.1.0':
+    dependencies:
+      '@tauri-apps/api': 2.10.1
 
   '@standard-schema/spec@1.1.0': {}
 

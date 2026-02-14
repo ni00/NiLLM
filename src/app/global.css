@@ -116,6 +116,14 @@
         scrollbar-color: var(--muted-foreground) transparent;
     }
 
+    /* Safe area defaults for desktop/non-mobile environments */
+    :root {
+        --safe-area-inset-top: 0px;
+        --safe-area-inset-bottom: 0px;
+        --safe-area-inset-left: 0px;
+        --safe-area-inset-right: 0px;
+    }
+
     /* WebKit/Blink browsers */
     *::-webkit-scrollbar {
         width: 8px;

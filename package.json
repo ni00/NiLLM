@@ -27,6 +27,7 @@
         "@radix-ui/react-slot": "^1.2.4",
         "@radix-ui/react-switch": "^1.2.6",
         "@radix-ui/react-tooltip": "^1.2.8",
+        "@saurl/tauri-plugin-safe-area-insets-css-api": "^0.1.0",
         "@tailwindcss/vite": "^4.1.17",
         "@tauri-apps/api": "2.10.1",
         "@tauri-apps/plugin-dialog": "~2.6.0",

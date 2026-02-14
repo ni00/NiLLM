@@ -1796,7 +1796,7 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
 name = "nillm"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "serde",
  "serde_json",
@@ -1805,6 +1805,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
  "tauri-plugin-process",
+ "tauri-plugin-safe-area-insets-css",
  "tauri-plugin-shell",
 ]
 
@@ -3475,6 +3476,18 @@ checksum = "d55511a7bf6cd70c8767b02c97bf8134fa434daf3926cfc1be0a0f94132d165a"
 dependencies = [
  "tauri",
  "tauri-plugin",
+]
+
+[[package]]
+name = "tauri-plugin-safe-area-insets-css"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "245c374d1f8b4f68b4b14596a8d4252c3410eb0591685cc21d2d34158aab3949"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
