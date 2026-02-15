@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Cpu, Plus, FolderInput, FolderOutput } from 'lucide-react'
+import { Cpu, Plus, FolderInput, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
     DndContext,
@@ -145,7 +145,7 @@ export function ModelsPage() {
                         onClick={handleExport}
                         className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 shadow-sm transition-all active:scale-95"
                     >
-                        <FolderOutput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
                             Export
                         </span>

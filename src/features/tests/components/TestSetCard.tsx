@@ -13,7 +13,7 @@ import {
     CheckCircle2,
     FileJson,
     Pencil,
-    FolderOutput,
+    Download,
     Trash2,
     RotateCcw,
     Play,
@@ -100,7 +100,7 @@ export function TestSetCard({
                             onClick={() => onExport(testSet)}
                             title="Export to JSON"
                         >
-                            <FolderOutput className="h-4 w-4" />
+                            <Download className="h-4 w-4" />
                         </Button>
                         {!isBuiltIn ? (
                             <Button

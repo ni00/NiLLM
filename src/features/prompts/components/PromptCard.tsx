@@ -6,7 +6,7 @@ import {
     CardDescription
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Play, Pencil, Trash2, FolderOutput, GripVertical } from 'lucide-react'
+import { Play, Pencil, Trash2, Download, GripVertical } from 'lucide-react'
 import { PromptTemplate } from '@/lib/types'
 
 interface PromptCardProps {
@@ -67,7 +67,7 @@ export function PromptCard({
                             onClick={() => onExport(template)}
                             className="h-8 w-8 text-muted-foreground hover:text-primary"
                         >
-                            <FolderOutput className="h-4 w-4" />
+                            <Download className="h-4 w-4" />
                         </Button>
                         <Button
                             variant="ghost"

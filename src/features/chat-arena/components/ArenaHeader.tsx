@@ -1,5 +1,5 @@
 import {
-    FolderOutput,
+    Download,
     Sparkles,
     Settings2,
     LayoutGrid,
@@ -133,7 +133,7 @@ export const ArenaHeader = ({
                 onClick={onExportAll}
                 className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
             >
-                <FolderOutput className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <Download className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="hidden md:inline text-xs font-medium">
                     Export
                 </span>
