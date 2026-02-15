@@ -1,4 +1,15 @@
-import { BarChart3, Clock, Cpu, Star, Trash2, Zap } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import {
+    BarChart3,
+    Clock,
+    Cpu,
+    Star,
+    Trash2,
+    Zap,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown
+} from 'lucide-react'
 import type { ModelStat } from '../hooks/useStats'
 
 // Fallback table components if not available in project
@@ -44,13 +55,16 @@ const SimpleTableRow = ({
 )
 const SimpleTableHead = ({
     children,
-    className
+    className,
+    onClick
 }: {
     children: React.ReactNode
     className?: string
+    onClick?: () => void
 }) => (
     <th
         className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${className}`}
+        onClick={onClick}
     >
         {children}
     </th>
@@ -87,6 +101,68 @@ export function EvaluationModels({
 
     // Using the local SimpleTable components defined above.
 
+    const [sortConfig, setSortConfig] = useState<{
+        key: keyof ModelStat
+        direction: 'asc' | 'desc'
+    }>({
+        key: 'avgTPS',
+        direction: 'desc'
+    })
+
+    const sortedStats = useMemo(() => {
+        const sorted = [...modelStats]
+        sorted.sort((a, b) => {
+            const aValue = a[sortConfig.key]
+            const bValue = b[sortConfig.key]
+
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+            return 0
+        })
+        return sorted
+    }, [modelStats, sortConfig])
+
+    const handleSort = (key: keyof ModelStat) => {
+        setSortConfig((current) => ({
+            key,
+            direction:
+                current.key === key && current.direction === 'desc'
+                    ? 'asc'
+                    : 'desc'
+        }))
+    }
+
+    const SortHeader = ({
+        column,
+        children,
+        className
+    }: {
+        column: keyof ModelStat
+        children: React.ReactNode
+        className?: string
+    }) => {
+        const isSorted = sortConfig.key === column
+        return (
+            <SimpleTableHead
+                className={`cursor-pointer select-none hover:bg-muted/50 transition-colors ${className}`}
+                onClick={() => handleSort(column)}
+            >
+                <div className="flex items-center gap-1">
+                    {children}
+                    {isSorted ? (
+                        sortConfig.direction === 'asc' ? (
+                            <ArrowUp className="h-3.5 w-3.5 ml-1" />
+                        ) : (
+                            <ArrowDown className="h-3.5 w-3.5 ml-1" />
+                        )
+                    ) : (
+                        <ArrowUpDown className="h-3.5 w-3.5 ml-1 opacity-20" />
+                    )}
+                </div>
+            </SimpleTableHead>
+        )
+    }
+
     if (modelStats.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 bg-muted/10 border-2 border-dashed rounded-xl">
@@ -116,7 +192,7 @@ export function EvaluationModels({
                     <Cpu className="h-5 w-5 text-primary" /> Evaluation Models
                 </h2>
                 <span className="text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                    {modelStats.length} Models tracked
+                    {sortedStats.length} Models tracked
                 </span>
             </div>
 
@@ -124,41 +200,33 @@ export function EvaluationModels({
                 <SimpleTable>
                     <SimpleTableHeader>
                         <SimpleTableRow>
-                            <SimpleTableHead className="w-[200px]">
+                            <SortHeader column="name" className="w-[200px]">
                                 Model
-                            </SimpleTableHead>
-                            <SimpleTableHead>Provider</SimpleTableHead>
-                            <SimpleTableHead>
-                                <div className="flex items-center gap-1">
-                                    <Zap className="h-3.5 w-3.5 text-yellow-500" />{' '}
-                                    Speed
-                                </div>
-                            </SimpleTableHead>
-                            <SimpleTableHead>
-                                <div className="flex items-center gap-1">
-                                    <Clock className="h-3.5 w-3.5 text-blue-400" />{' '}
-                                    Latency
-                                </div>
-                            </SimpleTableHead>
-                            <SimpleTableHead>
-                                <div className="flex items-center gap-1">
-                                    <Star className="h-3.5 w-3.5 text-amber-500" />{' '}
-                                    Quality
-                                </div>
-                            </SimpleTableHead>
-                            <SimpleTableHead>
-                                <div className="flex items-center gap-1">
-                                    <BarChart3 className="h-3.5 w-3.5 text-green-400" />{' '}
-                                    Samples
-                                </div>
-                            </SimpleTableHead>
+                            </SortHeader>
+                            <SortHeader column="provider">Provider</SortHeader>
+                            <SortHeader column="avgTPS">
+                                <Zap className="h-3.5 w-3.5 text-yellow-500 mr-1" />{' '}
+                                Speed
+                            </SortHeader>
+                            <SortHeader column="avgTTFT">
+                                <Clock className="h-3.5 w-3.5 text-blue-400 mr-1" />{' '}
+                                Latency
+                            </SortHeader>
+                            <SortHeader column="avgRating">
+                                <Star className="h-3.5 w-3.5 text-amber-500 mr-1" />{' '}
+                                Quality
+                            </SortHeader>
+                            <SortHeader column="completedCount">
+                                <BarChart3 className="h-3.5 w-3.5 text-green-400 mr-1" />{' '}
+                                Samples
+                            </SortHeader>
                             <SimpleTableHead className="text-right">
                                 Actions
                             </SimpleTableHead>
                         </SimpleTableRow>
                     </SimpleTableHeader>
                     <SimpleTableBody>
-                        {modelStats.map((stat) => (
+                        {sortedStats.map((stat) => (
                             <SimpleTableRow key={stat.id}>
                                 <SimpleTableCell className="font-medium">
                                     <div className="flex flex-col">
