@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import {
     LLMModel,
     ChatSession,
@@ -472,7 +472,99 @@ export const useAppStore = create<AppState>()(
         }),
         {
             name: 'nillm-storage',
-            partialize: (state) =>
+            storage: createJSONStorage(() => ({
+                getItem: async (name: string): Promise<string | null> => {
+                    return new Promise((resolve) => {
+                        try {
+                            const request = indexedDB.open('nillm-db', 1)
+                            request.onupgradeneeded = (e) => {
+                                const db = (e.target as IDBOpenDBRequest).result
+                                if (!db.objectStoreNames.contains('store')) {
+                                    db.createObjectStore('store')
+                                }
+                            }
+                            request.onsuccess = () => {
+                                const db = request.result
+                                try {
+                                    const tx = db.transaction(
+                                        'store',
+                                        'readonly'
+                                    )
+                                    const store = tx.objectStore('store')
+                                    const req = store.get(name)
+                                    req.onsuccess = () =>
+                                        resolve(req.result || null)
+                                    req.onerror = () => resolve(null)
+                                } catch (e) {
+                                    resolve(null)
+                                }
+                            }
+                            request.onerror = () => resolve(null)
+                        } catch (e) {
+                            console.error('IDB Error:', e)
+                            resolve(null)
+                        }
+                    })
+                },
+                setItem: async (name: string, value: string): Promise<void> => {
+                    return new Promise((resolve) => {
+                        try {
+                            const request = indexedDB.open('nillm-db', 1)
+                            request.onupgradeneeded = (e) => {
+                                const db = (e.target as IDBOpenDBRequest).result
+                                if (!db.objectStoreNames.contains('store')) {
+                                    db.createObjectStore('store')
+                                }
+                            }
+                            request.onsuccess = () => {
+                                const db = request.result
+                                try {
+                                    const tx = db.transaction(
+                                        'store',
+                                        'readwrite'
+                                    )
+                                    const store = tx.objectStore('store')
+                                    store.put(value, name)
+                                    tx.oncomplete = () => resolve()
+                                    tx.onerror = () => resolve()
+                                } catch (e) {
+                                    console.error('IDB Write Error:', e)
+                                    resolve()
+                                }
+                            }
+                            request.onerror = () => resolve()
+                        } catch (e) {
+                            console.error('IDB Open Error:', e)
+                            resolve()
+                        }
+                    })
+                },
+                removeItem: async (name: string): Promise<void> => {
+                    return new Promise((resolve) => {
+                        try {
+                            const request = indexedDB.open('nillm-db', 1)
+                            request.onsuccess = () => {
+                                const db = request.result
+                                try {
+                                    const tx = db.transaction(
+                                        'store',
+                                        'readwrite'
+                                    )
+                                    const store = tx.objectStore('store')
+                                    store.delete(name)
+                                    tx.oncomplete = () => resolve()
+                                } catch (e) {
+                                    resolve()
+                                }
+                            }
+                            request.onerror = () => resolve()
+                        } catch (e) {
+                            resolve()
+                        }
+                    })
+                }
+            })),
+            partialize: (state: AppState) =>
                 Object.fromEntries(
                     Object.entries(state).filter(
                         ([key]) => !['streamingData'].includes(key)

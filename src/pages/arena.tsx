@@ -49,7 +49,9 @@ export function ArenaPage() {
         setModelToEdit,
         editForm,
         setEditForm,
-        startEditingDetails
+        startEditingDetails,
+        attachments,
+        setAttachments
     } = useArenaState()
 
     const activeModels = models.filter((m: LLMModel) =>
@@ -83,10 +85,51 @@ export function ArenaPage() {
         activeSession
     )
 
-    const handleSend = () => {
-        if (!input.trim()) return
-        addToQueue(input)
+    const handleSend = async () => {
+        if (!input.trim() && attachments.length === 0) return
+
+        let prompt = input
+
+        if (attachments.length > 0) {
+            // Process text files
+            const textFiles = attachments.filter(
+                (f) => !f.type.startsWith('image/')
+            )
+            for (const file of textFiles) {
+                try {
+                    const text = await file.text()
+                    prompt += `\n\n---\nFile: ${file.name}\nContent:\n${text}\n---`
+                } catch (e) {
+                    console.error('Failed to read file:', file.name, e)
+                }
+            }
+
+            // Process images
+            const imageFiles = attachments.filter((f) =>
+                f.type.startsWith('image/')
+            )
+            for (const file of imageFiles) {
+                try {
+                    const base64 = await new Promise<string>(
+                        (resolve, reject) => {
+                            const reader = new FileReader()
+                            reader.onloadend = () =>
+                                resolve(reader.result as string)
+                            reader.onerror = reject
+                            reader.readAsDataURL(file)
+                        }
+                    )
+                    // Use a special marker that the worker can parse
+                    prompt += `\n<<<<IMAGE_START>>>>${base64}<<<<IMAGE_END>>>>`
+                } catch (e) {
+                    console.error('Failed to read image:', file.name, e)
+                }
+            }
+        }
+
+        addToQueue(prompt)
         setInput('')
+        setAttachments([])
     }
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -227,6 +270,8 @@ export function ArenaPage() {
                 onSend={handleSend}
                 onKeyDown={handleKeyDown}
                 isProcessing={isProcessing}
+                attachments={attachments}
+                setAttachments={setAttachments}
             />
 
             {modelToEdit && (

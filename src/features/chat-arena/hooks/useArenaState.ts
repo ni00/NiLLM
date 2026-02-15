@@ -16,6 +16,7 @@ export const useArenaState = () => {
     >({})
     const [modelToEdit, setModelToEdit] = useState<LLMModel | null>(null)
     const [editForm, setEditForm] = useState<Partial<LLMModel>>({})
+    const [attachments, setAttachments] = useState<File[]>([])
 
     useEffect(() => {
         if (pendingPrompt) {
@@ -62,6 +63,8 @@ export const useArenaState = () => {
         setModelToEdit,
         editForm,
         setEditForm,
-        startEditingDetails
+        startEditingDetails,
+        attachments,
+        setAttachments
     }
 }

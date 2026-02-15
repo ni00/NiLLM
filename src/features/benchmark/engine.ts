@@ -59,7 +59,10 @@ function runWorkerStream(
         }
 
         const handleError = (errorMsg: string) => {
-            console.error(`Error with model ${model.name}:`, errorMsg)
+            console.error(
+                `Error with model ${model.name}:`,
+                errorMsg.slice(0, 500)
+            )
             store.updateResult(sessionId, model.id, resultId, {
                 error: errorMsg
             })
@@ -165,13 +168,49 @@ export async function broadcastMessage(
         throw new Error('No active models selected')
     }
 
+    // Helper to escape regex special characters
+    const escapeRegExp = (string: string) => {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    }
+
+    // Check for @ mentions
+    const mentionedModels = activeModels.filter((m) => {
+        // Match @ModelName followed by end of string or whitespace/punctuation
+        // Case insensitive matching
+        const pattern = new RegExp(
+            `@${escapeRegExp(m.name)}($|\\s|\\.|,|\\?|!)`,
+            'i'
+        )
+        return pattern.test(prompt)
+    })
+
+    const targetModels =
+        mentionedModels.length > 0 ? mentionedModels : activeModels
+
+    // Strip mentions from prompt if any were found
+    let processedPrompt = prompt
+    if (mentionedModels.length > 0) {
+        mentionedModels.forEach((m) => {
+            const pattern = new RegExp(
+                `@${escapeRegExp(m.name)}(?=$|\\s|\\.|,|\\?|!)`,
+                'gi'
+            )
+            processedPrompt = processedPrompt.replace(pattern, '')
+        })
+        // Clean up accumulation of spaces
+        processedPrompt = processedPrompt.replace(/\s+/g, ' ').trim()
+    }
+
     const sessionId =
         existingSessionId ||
         store.activeSessionId ||
-        store.createSession(prompt.slice(0, 30) + '...', store.activeModelIds)
+        store.createSession(
+            processedPrompt.slice(0, 30) + '...',
+            store.activeModelIds
+        )
     const session = store.sessions.find((s) => s.id === sessionId)
 
-    const promises = activeModels.map(async (model) => {
+    const promises = targetModels.map(async (model) => {
         const resultId = crypto.randomUUID()
 
         // Merge config: Global < Model Override
@@ -205,13 +244,23 @@ export async function broadcastMessage(
             })
         }
 
-        messages.push(...history, { role: 'user', content: prompt })
+        messages.push(...history, { role: 'user', content: processedPrompt })
 
         // Initial empty result
+        const displayPrompt = processedPrompt.replace(
+            /<<<<IMAGE_START>>>>.*?<<<<IMAGE_END>>>>/gs,
+            '[Image]'
+        )
+        console.log(
+            'Adding result with prompt:',
+            displayPrompt.slice(0, 100) +
+                (displayPrompt.length > 100 ? '...' : '')
+        )
+
         const initialResult: BenchmarkResult = {
             id: resultId,
             modelId: model.id,
-            prompt,
+            prompt: processedPrompt,
             response: '',
             metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
             timestamp: Date.now()

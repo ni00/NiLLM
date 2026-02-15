@@ -25,7 +25,12 @@ export function PromptHeader({
             <span
                 className={`text-sm break-words leading-relaxed ${showContent ? '' : 'line-clamp-2'}`}
             >
-                "{prompt}"
+                "
+                {prompt.replace(
+                    /<<<<IMAGE_START>>>>.*?<<<<IMAGE_END>>>>/g,
+                    '[Image]'
+                )}
+                "
             </span>
             {!isLast && (
                 <div className="flex-none">

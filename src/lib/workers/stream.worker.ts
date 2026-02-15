@@ -61,6 +61,60 @@ self.onmessage = async (e: MessageEvent) => {
             model.providerId || model.id
         )
 
+        // Pre-process messages to handle image markers
+        const processedMessages = messages.map((msg: any) => {
+            if (
+                msg.role === 'user' &&
+                typeof msg.content === 'string' &&
+                msg.content.includes('<<<<IMAGE_START>>>>')
+            ) {
+                console.log('Worker: Found image marker, processing...')
+                const parts: any[] = []
+                const regex = /<<<<IMAGE_START>>>>(.*?)<<<<IMAGE_END>>>>/gs
+                let lastIndex = 0
+                let match
+
+                while ((match = regex.exec(msg.content)) !== null) {
+                    // Add preceding text
+                    if (match.index > lastIndex) {
+                        const text = msg.content.substring(
+                            lastIndex,
+                            match.index
+                        )
+                        if (text.trim()) {
+                            parts.push({ type: 'text', text })
+                        }
+                    }
+                    // Add image
+                    console.log(
+                        'Worker: Extracted image data length:',
+                        match[1].length
+                    )
+                    parts.push({ type: 'image', image: match[1] })
+                    lastIndex = regex.lastIndex
+                }
+
+                // Add remaining text
+                if (lastIndex < msg.content.length) {
+                    const text = msg.content.substring(lastIndex)
+                    if (text.trim()) {
+                        parts.push({ type: 'text', text })
+                    }
+                }
+
+                if (parts.length > 0) {
+                    console.log(
+                        'Worker: Finished processing image message. Parts:',
+                        parts.length
+                    )
+                    return { ...msg, content: parts }
+                }
+            }
+            return msg
+        })
+
+        console.log('Worker: Starting streamText request...')
+
         const start = performance.now()
         let firstTokenTime: number | undefined
         let tokenCount = 0
@@ -81,7 +135,7 @@ self.onmessage = async (e: MessageEvent) => {
 
         const result = streamText({
             model: languageModel,
-            messages,
+            messages: processedMessages,
             headers: model.apiKey
                 ? {
                       Authorization: `Bearer ${model.apiKey}`

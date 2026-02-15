@@ -92,7 +92,10 @@ export const QueuePopover = () => {
                                                 : ''
                                         }`}
                                     >
-                                        {item.prompt}
+                                        {item.prompt.replace(
+                                            /<<<<IMAGE_START>>>>.*?<<<<IMAGE_END>>>>/g,
+                                            '[Image]'
+                                        )}
                                     </div>
                                     <div className="text-xs text-muted-foreground mt-0.5 flex gap-2">
                                         <span>
