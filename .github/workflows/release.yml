@@ -152,6 +152,14 @@ jobs:
               with:
                   targets: ${{ matrix.rust_target }}
 
+            - name: Rust cache
+              uses: swatinem/rust-cache@v2
+              with:
+                  workspaces: './src-tauri -> target'
+
+            - name: Setup Gradle
+              uses: gradle/actions/setup-gradle@v3
+
             - name: Install frontend dependencies
               run: pnpm install
 
@@ -229,6 +237,14 @@ jobs:
               uses: dtolnay/rust-toolchain@stable
               with:
                   targets: aarch64-linux-android,armv7-linux-androideabi
+
+            - name: Rust cache
+              uses: swatinem/rust-cache@v2
+              with:
+                  workspaces: './src-tauri -> target'
+
+            - name: Setup Gradle
+              uses: gradle/actions/setup-gradle@v3
 
             - name: Install frontend dependencies
               run: pnpm install
