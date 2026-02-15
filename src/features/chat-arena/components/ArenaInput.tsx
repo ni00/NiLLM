@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAppStore } from '@/lib/store'
 import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { abortAllTasks } from '@/features/benchmark/engine'
 
 interface ArenaInputProps {
     input: string
@@ -24,7 +25,8 @@ export const ArenaInput = ({
     attachments,
     setAttachments
 }: ArenaInputProps) => {
-    const { clearActiveSession, models, activeModelIds } = useAppStore()
+    const { clearActiveSession, stopAll, models, activeModelIds } =
+        useAppStore()
     const activeModels = models.filter((m) => activeModelIds.includes(m.id))
 
     // Mention state
@@ -218,6 +220,12 @@ export const ArenaInput = ({
         setAttachments(newAttachments)
     }
 
+    const handleClearContext = () => {
+        stopAll()
+        clearActiveSession()
+        abortAllTasks()
+    }
+
     return (
         <div className="flex-none p-4 pt-2 bg-background border-t z-20">
             <div className="relative w-full group">
@@ -339,7 +347,7 @@ export const ArenaInput = ({
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={clearActiveSession}
+                            onClick={handleClearContext}
                             className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 rounded-full"
                         >
                             <Eraser className="w-3 h-3 mr-1.5" /> Clear Context

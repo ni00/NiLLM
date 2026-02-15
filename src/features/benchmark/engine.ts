@@ -4,6 +4,7 @@ import { BenchmarkResult, LLMModel } from '../../lib/types'
 // --- RAF Batching Logic ---
 let pendingUpdates: Record<string, Partial<BenchmarkResult>> = {}
 let rafId: number | null = null
+const activeTasks = new Map<Worker, () => void>()
 
 function flushUpdates() {
     const store = useAppStore.getState()
@@ -44,6 +45,7 @@ function runWorkerStream(
                 type: 'module'
             }
         )
+        activeTasks.set(worker, resolve)
 
         let currentText = ''
         let currentReasoning = ''
@@ -54,6 +56,7 @@ function runWorkerStream(
             if (connectTimeout) clearTimeout(connectTimeout)
             if (readTimeout) clearTimeout(readTimeout)
             worker.terminate()
+            activeTasks.delete(worker)
             // Clean up pending updates for this result to avoid zombie updates
             delete pendingUpdates[resultId]
         }
@@ -278,6 +281,14 @@ export async function broadcastMessage(
 
     await Promise.all(promises)
     return sessionId
+}
+
+export function abortAllTasks() {
+    activeTasks.forEach((resolve, worker) => {
+        worker.terminate()
+        resolve()
+    })
+    activeTasks.clear()
 }
 
 export async function retryResult(

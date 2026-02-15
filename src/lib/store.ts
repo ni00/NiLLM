@@ -61,6 +61,7 @@ interface AppState {
         updates: Partial<BenchmarkResult>
     ) => void
     clearActiveSession: () => void
+    stopAll: () => void
 
     testSets: TestSet[]
     testSetOrder: string[]
@@ -232,6 +233,13 @@ export const useAppStore = create<AppState>()(
                 })),
 
             clearActiveSession: () => set({ activeSessionId: null }),
+
+            stopAll: () =>
+                set({
+                    messageQueue: [],
+                    isProcessing: false,
+                    streamingData: {}
+                }),
 
             testSets: [] as TestSet[],
             testSetOrder: [] as string[],
