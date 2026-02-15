@@ -65,9 +65,11 @@ self.onmessage = async (e: MessageEvent) => {
         let firstTokenTime: number | undefined
         let tokenCount = 0
         let currentText = ''
+        let currentReasoning = ''
 
         // Batching state
         let pendingTextDelta = ''
+        let pendingReasoningDelta = ''
         let lastUpdateTime = 0
         const BATCH_INTERVAL = 50 // ms
 
@@ -114,9 +116,22 @@ self.onmessage = async (e: MessageEvent) => {
 
             const now = performance.now()
 
-            if (!firstTokenReceived && value.type === 'text-delta') {
+            if (
+                !firstTokenReceived &&
+                (value.type === 'text-delta' ||
+                    value.type === 'reasoning-delta')
+            ) {
                 firstTokenReceived = true
                 firstTokenTime = now
+            }
+
+            if (value.type === 'reasoning-delta') {
+                const delta =
+                    (value as any).text || (value as any).textDelta || ''
+                if (delta) {
+                    pendingReasoningDelta += delta
+                    currentReasoning += delta
+                }
             }
 
             if (value.type === 'text-delta') {
@@ -157,11 +172,13 @@ self.onmessage = async (e: MessageEvent) => {
                     type: 'update',
                     resultId,
                     textDelta: pendingTextDelta,
+                    reasoningDelta: pendingReasoningDelta || undefined,
                     metrics,
                     isFinal: false
                 })
 
                 pendingTextDelta = ''
+                pendingReasoningDelta = ''
                 lastUpdateTime = now
             }
 
@@ -189,10 +206,12 @@ self.onmessage = async (e: MessageEvent) => {
                     type: 'update',
                     resultId,
                     textDelta: pendingTextDelta,
+                    reasoningDelta: pendingReasoningDelta || undefined,
                     metrics: finalMetrics,
                     isFinal: true
                 })
                 pendingTextDelta = '' // clear
+                pendingReasoningDelta = '' // clear
             }
         }
 

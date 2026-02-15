@@ -171,3 +171,110 @@
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
+
+/* ===== ThinkingBlock / Chain-of-Thought ===== */
+.thinking-block {
+    border-radius: 8px;
+    border: 1px solid oklch(0.7 0.15 280 / 20%);
+    background: oklch(0.7 0.15 280 / 5%);
+    overflow: hidden;
+}
+
+.dark .thinking-block {
+    border-color: oklch(0.6 0.2 280 / 25%);
+    background: oklch(0.6 0.2 280 / 8%);
+}
+
+.thinking-block-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: oklch(0.5 0.12 280);
+    background: transparent;
+    border: none;
+    text-align: left;
+    transition: background 0.15s ease;
+}
+
+.dark .thinking-block-header {
+    color: oklch(0.75 0.15 280);
+}
+
+.thinking-block-header:hover {
+    background: oklch(0.7 0.15 280 / 8%);
+}
+
+.dark .thinking-block-header:hover {
+    background: oklch(0.6 0.2 280 / 12%);
+}
+
+.thinking-block-indicator {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.thinking-block-pulse {
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: oklch(0.7 0.15 280 / 25%);
+    animation: thinking-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes thinking-pulse {
+    0%,
+    100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0;
+        transform: scale(1.6);
+    }
+}
+
+.thinking-block-label {
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.thinking-block-count {
+    font-size: 0.65rem;
+    font-weight: 400;
+    opacity: 0.6;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: oklch(0.7 0.15 280 / 10%);
+}
+
+.dark .thinking-block-count {
+    background: oklch(0.6 0.2 280 / 15%);
+}
+
+.thinking-block-content-wrapper {
+    will-change: height, opacity;
+}
+
+.thinking-block-content {
+    padding: 0 12px 10px 12px;
+    border-top: 1px solid oklch(0.7 0.15 280 / 12%);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--muted-foreground);
+}
+
+.dark .thinking-block-content {
+    border-top-color: oklch(0.6 0.2 280 / 15%);
+}
+
+.thinking-block-content .markdown-body {
+    opacity: 0.85;
+}

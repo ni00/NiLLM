@@ -46,6 +46,7 @@ function runWorkerStream(
         )
 
         let currentText = ''
+        let currentReasoning = ''
         let connectTimeout: NodeJS.Timeout | null = null
         let readTimeout: NodeJS.Timeout | null = null
 
@@ -75,7 +76,8 @@ function runWorkerStream(
         }, connectTimeoutMs)
 
         worker.onmessage = (e) => {
-            const { type, textDelta, metrics, isFinal, error } = e.data
+            const { type, textDelta, reasoningDelta, metrics, isFinal, error } =
+                e.data
 
             // Reset read timeout on any activity
             if (readTimeout) clearTimeout(readTimeout)
@@ -107,9 +109,14 @@ function runWorkerStream(
                     currentText += textDelta
                 }
 
+                if (reasoningDelta) {
+                    currentReasoning += reasoningDelta
+                }
+
                 // RAF Batching: Queue update instead of setting immediately
                 pendingUpdates[resultId] = {
                     response: currentText,
+                    reasoning: currentReasoning || undefined,
                     metrics
                 }
 
@@ -117,6 +124,7 @@ function runWorkerStream(
                     // Update persistent store with final result immediately to ensure consistency
                     store.updateResult(sessionId, model.id, resultId, {
                         response: currentText,
+                        reasoning: currentReasoning || undefined,
                         metrics
                     })
                     // No need to clear from pendingUpdates, the next generic flush will handle the transient state,

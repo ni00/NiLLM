@@ -36,6 +36,11 @@ export const ResultBlock = React.memo(
                 ? streaming.response
                 : res.response
 
+        const effectiveReasoning =
+            streaming?.reasoning !== undefined
+                ? streaming.reasoning
+                : res.reasoning
+
         const effectiveMetrics = streaming?.metrics
             ? { ...res.metrics, ...streaming.metrics }
             : res.metrics
@@ -55,6 +60,7 @@ export const ResultBlock = React.memo(
                     <>
                         <ResponseBody
                             response={effectiveResponse}
+                            reasoning={effectiveReasoning}
                             isStreaming={!!streaming}
                             error={res.error}
                             onRetry={() => onRetry(res.id)}

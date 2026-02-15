@@ -1,9 +1,11 @@
 import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { StreamingMarkdown } from '../StreamingMarkdown'
+import { ThinkingBlock } from './ThinkingBlock'
 
 interface ResponseBodyProps {
     response: string
+    reasoning?: string
     isStreaming: boolean
     error?: string
     onRetry: () => void
@@ -11,6 +13,7 @@ interface ResponseBodyProps {
 
 export function ResponseBody({
     response,
+    reasoning,
     isStreaming,
     error,
     onRetry
@@ -23,6 +26,12 @@ export function ResponseBody({
                 willChange: isStreaming ? 'height' : 'auto'
             }}
         >
+            {reasoning && (
+                <ThinkingBlock
+                    reasoning={reasoning}
+                    isStreaming={isStreaming && !response}
+                />
+            )}
             {response ? (
                 <StreamingMarkdown
                     content={response}
@@ -31,7 +40,9 @@ export function ResponseBody({
             ) : (
                 <div className="flex items-center gap-2 text-primary font-medium animate-pulse px-1">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Generating response...</span>
+                    <span>
+                        {reasoning ? 'Thinking...' : 'Generating response...'}
+                    </span>
                 </div>
             )}
             {error && (

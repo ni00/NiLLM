@@ -51,6 +51,7 @@ export interface BenchmarkResult {
     modelId: string
     prompt: string
     response: string
+    reasoning?: string // Chain-of-thought / thinking content
     metrics: BenchmarkMetrics
     timestamp: number
     error?: string
