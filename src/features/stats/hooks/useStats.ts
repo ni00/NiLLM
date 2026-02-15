@@ -134,7 +134,7 @@ export function useStats() {
         return modelStats.map((s) => ({
             name: s.name,
             speed: parseFloat(s.avgTPS.toFixed(2)),
-            latency: parseFloat(s.avgTTFT.toFixed(0)),
+            latency: parseFloat(s.avgTTFT.toFixed(2)),
             rating: parseFloat(s.avgRating.toFixed(1)),
             tokens: s.totalTokens
         }))

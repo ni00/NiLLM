@@ -100,7 +100,7 @@ export function useModels() {
 
         return {
             avgTPS: tpsCount > 0 ? (totalTPS / tpsCount).toFixed(1) : '-',
-            avgTTFT: ttftCount > 0 ? (totalTTFT / ttftCount).toFixed(0) : '-',
+            avgTTFT: ttftCount > 0 ? (totalTTFT / ttftCount).toFixed(2) : '-',
             totalTokens
         }
     }

@@ -34,7 +34,7 @@ export function MetricCard({ metrics, modelName }: MetricCardProps) {
                             <Clock className="h-3 w-3" /> Latency (TTFT)
                         </span>
                         <span className="text-2xl font-bold">
-                            {metrics.ttft}{' '}
+                            {Number(metrics.ttft.toFixed(2))}{' '}
                             <span className="text-xs font-normal text-muted-foreground">
                                 ms
                             </span>

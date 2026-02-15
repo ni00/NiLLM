@@ -291,7 +291,7 @@ export function EvaluationModels({
                                 </SimpleTableCell>
                                 <SimpleTableCell>
                                     <div className="font-mono">
-                                        {stat.avgTTFT.toFixed(0)}{' '}
+                                        {stat.avgTTFT.toFixed(2)}{' '}
                                         <span className="text-xs text-muted-foreground">
                                             ms
                                         </span>

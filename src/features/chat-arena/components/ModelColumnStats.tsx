@@ -59,7 +59,7 @@ export const ModelColumnStats = React.memo(
                     <span
                         className={`font-bold ${getMetricColor(avgTtft, fTtftRange.min, fTtftRange.max, 'min-best')}`}
                     >
-                        {Math.round(avgTtft)}
+                        {Number(avgTtft.toFixed(2))}
                     </span>
                     <span className="opacity-40 text-[8px]">ms</span>
                 </div>

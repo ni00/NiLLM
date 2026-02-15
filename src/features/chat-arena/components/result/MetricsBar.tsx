@@ -29,7 +29,7 @@ export function MetricsBar({ metrics, ranges }: MetricsBarProps) {
                 <span
                     className={`font-bold ${getMetricColor(metrics.ttft, ttftRange.min, ttftRange.max, 'min-best')}`}
                 >
-                    {metrics.ttft}
+                    {Number(metrics.ttft.toFixed(2))}
                 </span>
                 <span className="opacity-40 text-[8px]">ms</span>
             </div>
