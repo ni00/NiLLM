@@ -153,7 +153,7 @@ export const ModelColumn = React.memo(
                 {/* Card Content */}
                 <div className="flex-1 relative overflow-hidden min-h-0">
                     {!isEditing && results.length > 0 && (
-                        <div className="absolute right-4 bottom-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 translate-y-4 group-hover:translate-y-0">
+                        <div className="scroll-nav-buttons absolute right-4 bottom-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 translate-y-4 group-hover:translate-y-0">
                             <Button
                                 size="icon"
                                 variant="outline"

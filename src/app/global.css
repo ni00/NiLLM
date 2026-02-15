@@ -235,6 +235,7 @@
         opacity: 0.4;
         transform: scale(1);
     }
+
     50% {
         opacity: 0;
         transform: scale(1.6);
@@ -277,4 +278,12 @@
 
 .thinking-block-content .markdown-body {
     opacity: 0.85;
+}
+
+/* ===== Scroll Navigation Buttons (mobile/touch) ===== */
+@media (hover: none) {
+    .scroll-nav-buttons {
+        opacity: 0.7 !important;
+        transform: translateY(0) !important;
+    }
 }
