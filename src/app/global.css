@@ -160,6 +160,10 @@
 }
 
 /* Custom Markdown Styles */
+.markdown-body {
+    @apply select-text;
+}
+
 .markdown-body pre {
     white-space: pre-wrap;
     word-wrap: break-word;
