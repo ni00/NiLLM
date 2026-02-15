@@ -9,11 +9,7 @@ import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle
+    AlertDialogContent
 } from '@/components/ui/alert-dialog'
 import {
     Trash2,
@@ -23,7 +19,8 @@ import {
     ChevronDown,
     History,
     Database,
-    FileBarChart
+    FileBarChart,
+    X
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { downloadJson, downloadFile } from '@/lib/utils'
@@ -246,35 +243,51 @@ export function ExportMenu({
                         Clear
                     </span>
                 </Button>
-                <AlertDialogContent className="border-destructive/20 shadow-destructive/5 max-w-md">
-                    <AlertDialogHeader>
-                        <div className="flex items-center gap-3 text-destructive mb-1">
-                            <div className="p-2 bg-destructive/10 rounded-full">
-                                <AlertCircle className="h-5 w-5" />
-                            </div>
-                            <AlertDialogTitle>Danger Zone</AlertDialogTitle>
+                <AlertDialogContent className="p-0 overflow-hidden max-w-md border shadow-2xl rounded-2xl">
+                    {/* Header - Segmented like Arena Settings */}
+                    <div className="px-5 py-4 border-b flex items-center justify-between bg-muted/30">
+                        <h3 className="font-semibold text-base flex items-center gap-2 text-destructive">
+                            <AlertCircle className="w-4 h-4" /> Danger Zone
+                        </h3>
+                        <AlertDialogCancel className="h-8 w-8 p-0 border-none bg-transparent hover:bg-muted/50 rounded-full mt-0 transition-colors">
+                            <X className="h-4 w-4 text-muted-foreground" />
+                        </AlertDialogCancel>
+                    </div>
+
+                    {/* Content - Clean and focused */}
+                    <div className="p-8 space-y-4">
+                        <div className="space-y-2">
+                            <p className="text-sm font-medium text-foreground/90 leading-relaxed">
+                                This action will{' '}
+                                <span className="text-destructive font-bold underline decoration-destructive/20 underline-offset-4">
+                                    permanently delete
+                                </span>{' '}
+                                all session history, chat records, and benchmark
+                                performance results.
+                            </p>
+                            <p className="text-xs text-muted-foreground/70 leading-relaxed">
+                                Once confirmed, this data cannot be recovered.
+                                Please ensure you have backed up any critical
+                                reports.
+                            </p>
                         </div>
-                        <AlertDialogDescription>
-                            This will{' '}
-                            <span className="font-bold text-foreground">
-                                permanently delete ALL
-                            </span>{' '}
-                            session history and benchmark results. This action
-                            cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    </div>
+
+                    {/* Footer - Solid background like Arena Settings */}
+                    <div className="px-6 py-4 border-t bg-muted/20 flex gap-3">
+                        <AlertDialogCancel className="flex-1 h-10 font-semibold border-muted-foreground/10 hover:bg-muted-foreground/5 mt-0">
+                            Cancel
+                        </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => {
                                 onClearAll()
                                 setConfirmClearAll(false)
                             }}
-                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm"
+                            className="flex-1 h-10 font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm active:scale-95 transition-all"
                         >
                             Confirm Clear
                         </AlertDialogAction>
-                    </AlertDialogFooter>
+                    </div>
                 </AlertDialogContent>
             </AlertDialog>
         </div>
