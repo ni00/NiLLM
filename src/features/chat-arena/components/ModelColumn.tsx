@@ -103,7 +103,7 @@ export const ModelColumn = React.memo(
         return (
             <div
                 className={cn(
-                    'flex flex-col h-[600px] border rounded-xl bg-card shadow-sm overflow-hidden group relative transition-all duration-300 hover:shadow-md hover:border-primary/30',
+                    'flex flex-col h-full min-h-[400px] border rounded-xl bg-card shadow-sm overflow-hidden group relative transition-all duration-300 hover:shadow-md hover:border-primary/30',
                     className
                 )}
                 style={{ contain: 'layout style' }}

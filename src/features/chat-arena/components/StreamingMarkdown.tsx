@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, Download, ZoomIn, X } from 'lucide-react'
 
 interface StreamingMarkdownProps {
     content: string
@@ -25,6 +25,13 @@ export const StreamingMarkdown = React.memo(
         const [menuOpen, setMenuOpen] = useState(false)
         const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
         const [copied, setCopied] = useState(false)
+        // Track if context menu was triggered on an image
+        const [contextImageSrc, setContextImageSrc] = useState<string | null>(
+            null
+        )
+
+        // Lightbox State
+        const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
         // Update ref whenever content changes
         useEffect(() => {
@@ -73,9 +80,28 @@ export const StreamingMarkdown = React.memo(
             return () => window.removeEventListener('click', closeMenu)
         }, [menuOpen])
 
+        // Close lightbox on Escape
+        useEffect(() => {
+            if (!lightboxSrc) return
+            const handleKey = (e: KeyboardEvent) => {
+                if (e.key === 'Escape') setLightboxSrc(null)
+            }
+            window.addEventListener('keydown', handleKey)
+            return () => window.removeEventListener('keydown', handleKey)
+        }, [lightboxSrc])
+
         const handleContextMenu = (e: React.MouseEvent) => {
             e.preventDefault()
-            e.stopPropagation() // Prevent bubbling
+            e.stopPropagation()
+
+            // Check if right-click was on an image
+            const target = e.target as HTMLElement
+            const imgSrc =
+                target.tagName === 'IMG'
+                    ? (target as HTMLImageElement).src
+                    : null
+
+            setContextImageSrc(imgSrc)
             setMenuPosition({ x: e.clientX, y: e.clientY })
             setMenuOpen(true)
             setCopied(false)
@@ -89,6 +115,36 @@ export const StreamingMarkdown = React.memo(
             setCopied(true)
             setTimeout(() => setMenuOpen(false), 800)
         }
+
+        const handleDownloadImage = useCallback(
+            (e: React.MouseEvent) => {
+                e.stopPropagation()
+                if (!contextImageSrc) return
+
+                // Create a temporary link to download the image
+                const link = document.createElement('a')
+                link.href = contextImageSrc
+
+                // Determine file extension from data URL or default to png
+                let ext = 'png'
+                const mimeMatch = contextImageSrc.match(/^data:image\/(\w+);/)
+                if (mimeMatch) {
+                    ext = mimeMatch[1] === 'jpeg' ? 'jpg' : mimeMatch[1]
+                }
+
+                link.download = `generated-image-${Date.now()}.${ext}`
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+
+                setMenuOpen(false)
+            },
+            [contextImageSrc]
+        )
+
+        // Calculate context menu bounds
+        const menuHeight = contextImageSrc ? 90 : 40
+        const menuWidth = 160
 
         return (
             <div
@@ -105,39 +161,195 @@ export const StreamingMarkdown = React.memo(
                     overflowWrap: 'anywhere'
                 }}
             >
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    urlTransform={(url) => {
+                        // Allow data: URLs for images (base64 image generation)
+                        if (url.startsWith('data:image/')) return url
+                        // Default behavior for other URLs
+                        if (
+                            url.startsWith('http://') ||
+                            url.startsWith('https://')
+                        )
+                            return url
+                        return url
+                    }}
+                    components={{
+                        img: ({ src, alt, ...props }) => {
+                            if (!src) return null
+                            return (
+                                <img
+                                    src={src}
+                                    alt={alt || 'Generated Image'}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setLightboxSrc(src)
+                                    }}
+                                    style={{
+                                        maxWidth: '100%',
+                                        borderRadius: '8px',
+                                        marginTop: '8px',
+                                        marginBottom: '8px',
+                                        cursor: 'zoom-in',
+                                        transition:
+                                            'opacity 0.2s, transform 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        ;(
+                                            e.target as HTMLElement
+                                        ).style.opacity = '0.9'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        ;(
+                                            e.target as HTMLElement
+                                        ).style.opacity = '1'
+                                    }}
+                                    loading="lazy"
+                                    {...props}
+                                />
+                            )
+                        }
+                    }}
+                >
                     {displayContent}
                 </ReactMarkdown>
 
+                {/* Context Menu */}
                 {menuOpen &&
                     createPortal(
                         <div
-                            className="fixed z-50 min-w-[120px] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+                            className="fixed z-[100] min-w-[160px] overflow-hidden rounded-lg border border-border/50 bg-popover/95 backdrop-blur-sm p-1 text-popover-foreground shadow-xl"
                             style={{
                                 top: Math.min(
                                     menuPosition.y,
-                                    window.innerHeight - 50
-                                ), // Simple bounds check (bottom)
+                                    window.innerHeight - menuHeight
+                                ),
                                 left: Math.min(
                                     menuPosition.x,
-                                    window.innerWidth - 120
-                                ) // Simple bounds check (right)
+                                    window.innerWidth - menuWidth
+                                ),
+                                animation: 'fadeInScale 0.15s ease-out'
                             }}
                         >
+                            {/* Show image-specific options when right-clicking on an image */}
+                            {contextImageSrc && (
+                                <>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setLightboxSrc(contextImageSrc)
+                                            setMenuOpen(false)
+                                        }}
+                                        className="relative flex w-full cursor-default select-none items-center rounded-md px-2.5 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
+                                    >
+                                        <ZoomIn className="mr-2.5 h-4 w-4 opacity-60" />
+                                        <span>View Full Size</span>
+                                    </button>
+                                    <button
+                                        onClick={handleDownloadImage}
+                                        className="relative flex w-full cursor-default select-none items-center rounded-md px-2.5 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
+                                    >
+                                        <Download className="mr-2.5 h-4 w-4 opacity-60" />
+                                        <span>Download Image</span>
+                                    </button>
+                                    <div className="my-1 h-px bg-border/50" />
+                                </>
+                            )}
                             <button
                                 onClick={handleCopy}
-                                className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                className="relative flex w-full cursor-default select-none items-center rounded-md px-2.5 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
                             >
                                 {copied ? (
-                                    <Check className="mr-2 h-4 w-4 text-green-500" />
+                                    <Check className="mr-2.5 h-4 w-4 text-green-500" />
                                 ) : (
-                                    <Copy className="mr-2 h-4 w-4" />
+                                    <Copy className="mr-2.5 h-4 w-4 opacity-60" />
                                 )}
-                                <span>{copied ? 'Copied' : 'Copy'}</span>
+                                <span>{copied ? 'Copied' : 'Copy Text'}</span>
                             </button>
                         </div>,
                         document.body
                     )}
+
+                {/* Image Lightbox */}
+                {lightboxSrc &&
+                    createPortal(
+                        <div
+                            className="fixed inset-0 z-[200] flex items-center justify-center"
+                            style={{
+                                animation: 'fadeIn 0.2s ease-out'
+                            }}
+                            onClick={() => setLightboxSrc(null)}
+                        >
+                            {/* Backdrop */}
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+                            {/* Close button */}
+                            <button
+                                onClick={() => setLightboxSrc(null)}
+                                className="absolute top-4 right-4 z-10 rounded-full bg-white/10 hover:bg-white/20 p-2 text-white transition-colors"
+                            >
+                                <X className="h-6 w-6" />
+                            </button>
+
+                            {/* Download button */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    const link = document.createElement('a')
+                                    link.href = lightboxSrc
+                                    let ext = 'png'
+                                    const mimeMatch =
+                                        lightboxSrc.match(/^data:image\/(\w+);/)
+                                    if (mimeMatch)
+                                        ext =
+                                            mimeMatch[1] === 'jpeg'
+                                                ? 'jpg'
+                                                : mimeMatch[1]
+                                    link.download = `generated-image-${Date.now()}.${ext}`
+                                    document.body.appendChild(link)
+                                    link.click()
+                                    document.body.removeChild(link)
+                                }}
+                                className="absolute top-4 right-16 z-10 rounded-full bg-white/10 hover:bg-white/20 p-2 text-white transition-colors"
+                            >
+                                <Download className="h-6 w-6" />
+                            </button>
+
+                            {/* Image */}
+                            <img
+                                src={lightboxSrc}
+                                alt="Full size image"
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                    position: 'relative',
+                                    maxWidth: '90vw',
+                                    maxHeight: '90vh',
+                                    objectFit: 'contain',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+                                    animation: 'scaleIn 0.25s ease-out',
+                                    cursor: 'default'
+                                }}
+                            />
+                        </div>,
+                        document.body
+                    )}
+
+                {/* Animation styles */}
+                <style>{`
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes fadeInScale {
+                        from { opacity: 0; transform: scale(0.95); }
+                        to { opacity: 1; transform: scale(1); }
+                    }
+                    @keyframes scaleIn {
+                        from { opacity: 0; transform: scale(0.9); }
+                        to { opacity: 1; transform: scale(1); }
+                    }
+                `}</style>
             </div>
         )
     }

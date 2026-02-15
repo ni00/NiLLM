@@ -23,6 +23,7 @@ export interface LLMModel {
     apiKey?: string // Optional override
     baseURL?: string // Optional override
     enabled: boolean
+    mode?: 'chat' | 'image'
     config?: Partial<GenerationConfig> // Individual override
 }
 

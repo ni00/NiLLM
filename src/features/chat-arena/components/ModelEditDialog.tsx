@@ -73,6 +73,25 @@ export const ModelEditDialog = ({
                             />
                         </div>
                         <div className="space-y-2">
+                            <Label>Model Mode</Label>
+                            <SelectDropdown
+                                value={editForm.mode || 'chat'}
+                                onChange={(val) =>
+                                    setEditForm((prev: any) => ({
+                                        ...prev,
+                                        mode: val as any
+                                    }))
+                                }
+                                options={[
+                                    { label: 'Chat Completion', value: 'chat' },
+                                    {
+                                        label: 'Image Generation',
+                                        value: 'image'
+                                    }
+                                ]}
+                            />
+                        </div>
+                        <div className="space-y-2">
                             <Label>Provider Tag (Optional)</Label>
                             <Input
                                 placeholder="Display name on card"

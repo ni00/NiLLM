@@ -89,6 +89,31 @@ export function ModelEditor({
                                     options={providerOptions}
                                 />
                             </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+                                    Mode
+                                </Label>
+                                <SelectDropdown
+                                    value={modelData.mode || 'chat'}
+                                    onChange={(val) =>
+                                        onChange({
+                                            ...modelData,
+                                            mode: val as any
+                                        })
+                                    }
+                                    className="h-10 border-border/50 bg-muted/20 transition-all justify-between"
+                                    options={[
+                                        {
+                                            label: 'Chat Completion',
+                                            value: 'chat'
+                                        },
+                                        {
+                                            label: 'Image Generation',
+                                            value: 'image'
+                                        }
+                                    ]}
+                                />
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

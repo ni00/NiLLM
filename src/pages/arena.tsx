@@ -13,7 +13,6 @@ import { useArenaState } from '@/features/chat-arena/hooks/useArenaState'
 import { useArenaMetrics } from '@/features/chat-arena/hooks/useArenaMetrics'
 import { useArenaExport } from '@/features/chat-arena/hooks/useArenaExport'
 import { PageLayout } from '@/features/layout/PageLayout'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Layers } from 'lucide-react'
 import { ArenaCarousel } from '@/features/chat-arena/components/ArenaCarousel'
 
@@ -233,35 +232,35 @@ export function ArenaPage() {
                     />
                 </div>
             ) : (
-                <ScrollArea className="flex-1 min-h-0">
-                    <div className={`grid gap-4 p-4 ${gridColsClass}`}>
-                        {displayModels.map((model: LLMModel) => (
-                            <ModelColumn
-                                key={model.id}
-                                model={model}
-                                results={activeSession?.results[model.id] || []}
-                                isEditing={editingModelId === model.id}
-                                onToggleEditing={() =>
-                                    setEditingModelId(
-                                        editingModelId === model.id
-                                            ? null
-                                            : model.id
-                                    )
-                                }
-                                onExportHistory={handleExportHistory}
-                                expandedModelIds={expandedModelIds}
-                                onToggleExpandAll={toggleExpandAll}
-                                manuallyExpandedBlocks={manuallyExpandedBlocks}
-                                onToggleBlock={toggleBlock}
-                                onStartEditingDetails={startEditingDetails}
-                                globalConfig={globalConfig}
-                                streamingData={streamingData}
-                                metricsRanges={metricsRanges}
-                                footerRanges={footerRanges}
-                            />
-                        ))}
-                    </div>
-                </ScrollArea>
+                <div
+                    className={`flex-1 min-h-0 overflow-y-auto grid gap-4 p-4 ${gridColsClass} auto-rows-[1fr]`}
+                >
+                    {displayModels.map((model: LLMModel) => (
+                        <ModelColumn
+                            key={model.id}
+                            model={model}
+                            results={activeSession?.results[model.id] || []}
+                            isEditing={editingModelId === model.id}
+                            onToggleEditing={() =>
+                                setEditingModelId(
+                                    editingModelId === model.id
+                                        ? null
+                                        : model.id
+                                )
+                            }
+                            onExportHistory={handleExportHistory}
+                            expandedModelIds={expandedModelIds}
+                            onToggleExpandAll={toggleExpandAll}
+                            manuallyExpandedBlocks={manuallyExpandedBlocks}
+                            onToggleBlock={toggleBlock}
+                            onStartEditingDetails={startEditingDetails}
+                            globalConfig={globalConfig}
+                            streamingData={streamingData}
+                            metricsRanges={metricsRanges}
+                            footerRanges={footerRanges}
+                        />
+                    ))}
+                </div>
             )}
 
             <ArenaInput

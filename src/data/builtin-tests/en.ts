@@ -108,5 +108,44 @@ export const BUILTIN_TESTS_EN: TestSet[] = [
                 prompt: 'As a travel agent, plan a 3-day "hidden gems" itinerary for Tokyo.'
             }
         ]
+    },
+    {
+        id: 'builtin-image-gen',
+        name: 'Image Generation',
+        createdAt: 0,
+        cases: [
+            {
+                id: 'ig1',
+                prompt: 'A golden retriever puppy sitting in a field of sunflowers, soft afternoon sunlight, shallow depth of field, professional photography.'
+            },
+            {
+                id: 'ig2',
+                prompt: 'A cozy Japanese ramen shop on a rainy night, warm lantern glow reflecting on wet cobblestone streets, Studio Ghibli inspired anime style.'
+            },
+            {
+                id: 'ig3',
+                prompt: 'A futuristic cyberpunk cityscape at sunset, neon signs with readable text "OPEN 24/7" and "RAMEN", flying cars, dramatic clouds.'
+            },
+            {
+                id: 'ig4',
+                prompt: 'An astronaut riding a horse on the surface of Mars, Earth visible in the background sky, hyper-realistic digital art.'
+            },
+            {
+                id: 'ig5',
+                prompt: 'A cute robot making coffee in a kitchen, watercolor painting style, pastel colors, whimsical and charming atmosphere.'
+            },
+            {
+                id: 'ig6',
+                prompt: 'An ancient Chinese ink wash painting of misty mountains with a lone fisherman on a bamboo raft, minimalist composition.'
+            },
+            {
+                id: 'ig7',
+                prompt: 'A glass sphere on a wooden table reflecting an entire fantasy landscape with castles and dragons, macro photography, crystal clear details.'
+            },
+            {
+                id: 'ig8',
+                prompt: 'A photorealistic portrait of a cat wearing a tiny crown and royal cape, sitting on a velvet throne, Renaissance oil painting style.'
+            }
+        ]
     }
 ]

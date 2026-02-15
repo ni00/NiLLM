@@ -52,11 +52,175 @@ function getProvider(model: LLMModel) {
     throw new Error(`Provider ${model.provider} not supported yet`)
 }
 
+// Resolve the base URL for a model's provider
+function getBaseURL(model: LLMModel): string {
+    if (model.baseURL) return model.baseURL
+    const providerType = model.provider as string
+    if (providerType === 'openrouter') return 'https://openrouter.ai/api/v1'
+    if (providerType === 'openai') return 'https://api.openai.com/v1'
+    throw new Error(`BaseURL is required for ${providerType} provider`)
+}
+
+// Direct fetch for image generation models.
+// OpenRouter image models (flux, seedream, etc.) use the chat completions
+// endpoint and return images in the response content as base64 data URLs.
+// The AI SDK's generateText/streamText doesn't parse the image response
+// format correctly, so we need to handle the raw API response ourselves.
+async function generateImageViaFetch(
+    model: LLMModel,
+    prompt: string
+): Promise<{ text: string; imageUrls: string[] }> {
+    const baseURL = getBaseURL(model)
+    const url = `${baseURL}/chat/completions`
+
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+    }
+
+    if (model.apiKey) {
+        headers['Authorization'] = `Bearer ${model.apiKey}`
+    }
+
+    if (model.provider === 'openrouter') {
+        headers['HTTP-Referer'] = 'https://github.com/ni00/nillm'
+        headers['X-Title'] = 'NiLLM'
+    }
+
+    const body: any = {
+        model: model.providerId || model.id,
+        messages: [{ role: 'user', content: prompt }]
+    }
+
+    const resp = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+    })
+
+    if (!resp.ok) {
+        const errText = await resp.text()
+        throw new Error(`Image generation failed (${resp.status}): ${errText}`)
+    }
+
+    const data = await resp.json()
+
+    // Extract image data from response — OpenRouter returns images
+    // in various locations depending on the model
+    const imageUrls: string[] = []
+    let text = ''
+
+    if (data.choices && data.choices.length > 0) {
+        const message = data.choices[0].message || data.choices[0].delta || {}
+
+        // Case 1: content is a string (may contain markdown image or data URL)
+        if (typeof message.content === 'string') {
+            text = message.content
+        }
+
+        // Case 2: content is an array of parts (multimodal response)
+        if (Array.isArray(message.content)) {
+            for (const part of message.content) {
+                if (part.type === 'text') {
+                    text += part.text || ''
+                } else if (part.type === 'image_url') {
+                    const imgUrl = part.image_url?.url || ''
+                    if (imgUrl) imageUrls.push(imgUrl)
+                }
+            }
+        }
+
+        // Case 3: images array on the message (some OpenRouter models)
+        if (Array.isArray(message.images)) {
+            for (const img of message.images) {
+                const imgUrl =
+                    img?.imageUrl?.url || img?.url || img?.image_url?.url || ''
+                if (imgUrl) imageUrls.push(imgUrl)
+            }
+        }
+    }
+
+    // Also check top-level data field for images
+    if (data.data && Array.isArray(data.data)) {
+        for (const item of data.data) {
+            if (item.b64_json) {
+                imageUrls.push(`data:image/png;base64,${item.b64_json}`)
+            } else if (item.url) {
+                imageUrls.push(item.url)
+            }
+        }
+    }
+
+    return { text, imageUrls }
+}
+
 self.onmessage = async (e: MessageEvent) => {
     const { model, messages, resultId } = e.data
 
     try {
+        if (model.mode === 'image') {
+            self.postMessage({ type: 'start', resultId })
+
+            // For image models, extract only the last user message as the prompt
+            const lastMessage = messages[messages.length - 1]
+            let prompt =
+                typeof lastMessage.content === 'string'
+                    ? lastMessage.content
+                    : ''
+            prompt = prompt
+                .replace(/<<<<IMAGE_START>>>>.*?<<<<IMAGE_END>>>>/gs, '')
+                .trim()
+
+            if (!prompt) {
+                prompt = 'Generate an image'
+            }
+
+            const start = performance.now()
+            const { text, imageUrls } = await generateImageViaFetch(
+                model,
+                prompt
+            )
+            const duration = performance.now() - start
+
+            // Build response content
+            let responseContent = text || ''
+
+            // Append images as markdown
+            for (const url of imageUrls) {
+                responseContent += `\n\n![Generated Image](${url})`
+            }
+
+            // If text already contains image markdown (data:image), don't append fallback
+            const hasImageData =
+                responseContent.includes('data:image') ||
+                responseContent.includes('![')
+
+            if (
+                !responseContent.trim() ||
+                (!hasImageData && !responseContent.trim())
+            ) {
+                responseContent =
+                    responseContent || '[No image data returned by model]'
+            }
+
+            self.postMessage({
+                type: 'update',
+                resultId,
+                textDelta: responseContent.trim(),
+                metrics: {
+                    ttft: duration,
+                    tokenCount: 0,
+                    totalDuration: duration,
+                    tps: 0
+                },
+                isFinal: true
+            })
+
+            self.postMessage({ type: 'done', resultId })
+            return
+        }
+
         const providerFactory = getProvider(model)
+
         const languageModel: LanguageModel = providerFactory(
             model.providerId || model.id
         )
@@ -138,7 +302,7 @@ self.onmessage = async (e: MessageEvent) => {
             messages: processedMessages,
             headers: model.apiKey
                 ? {
-                      Authorization: `Bearer ${model.apiKey}`
+                      Authorization: `Bearer ${model.apiKey} `
                   }
                 : undefined,
             temperature: model.config?.temperature,
