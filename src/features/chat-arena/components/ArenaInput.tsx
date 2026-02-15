@@ -327,7 +327,7 @@ export const ArenaInput = ({
                                 : 'Send a message to all models... (Use @ to mention models)'
                         }
                         className={cn(
-                            'min-h-[64px] max-h-[160px] pr-12 resize-none shadow-sm pb-10 pl-10 rounded-xl',
+                            'min-h-[64px] max-h-[160px] pr-12 resize-none shadow-sm pb-10 pl-4 rounded-xl',
                             'focus-visible:ring-primary/20',
                             // Ensure font matches measure div
                             'font-sans text-sm leading-relaxed'

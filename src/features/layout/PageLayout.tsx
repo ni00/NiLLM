@@ -32,8 +32,9 @@ export function PageLayout({
     children,
     className,
     isScrollable = true,
-    contentClassName
-}: PageLayoutProps) {
+    contentClassName,
+    headerClassName
+}: PageLayoutProps & { headerClassName?: string }) {
     return (
         <div
             className={cn(
@@ -45,7 +46,10 @@ export function PageLayout({
                 title={title}
                 description={description}
                 icon={icon}
-                className="p-4 md:p-6 pb-4 border-b flex-shrink-0"
+                className={cn(
+                    'p-4 md:p-6 pb-4 border-b flex-shrink-0',
+                    headerClassName
+                )}
             >
                 {actions}
             </PageHeader>

@@ -170,6 +170,7 @@ export function ArenaPage() {
             }
             isScrollable={false}
             className="w-full max-h-screen"
+            headerClassName="p-2 pt-3 md:p-6 md:pb-4"
         >
             {(showArenaSettings || showJudgePanel) && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">

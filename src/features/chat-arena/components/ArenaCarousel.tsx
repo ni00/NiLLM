@@ -15,6 +15,8 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
     // Touch state
     const touchStartX = useRef<number | null>(null)
     const touchEndX = useRef<number | null>(null)
+    const touchStartY = useRef<number | null>(null)
+    const touchEndY = useRef<number | null>(null)
 
     // Mouse state
     const isDragging = useRef(false)
@@ -33,22 +35,44 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
     // Touch Handlers
     const onTouchStart = (e: TouchEvent) => {
         touchEndX.current = null
+        touchStartY.current = e.targetTouches[0].clientY
+        touchEndY.current = null
         touchStartX.current = e.targetTouches[0].clientX
     }
 
     const onTouchMove = (e: TouchEvent) => {
         touchEndX.current = e.targetTouches[0].clientX
+        touchEndY.current = e.targetTouches[0].clientY
     }
 
     const onTouchEnd = () => {
-        if (!touchStartX.current || !touchEndX.current) return
+        if (
+            !touchStartX.current ||
+            !touchEndX.current ||
+            !touchStartY.current ||
+            !touchEndY.current
+        )
+            return
 
-        const distance = touchStartX.current - touchEndX.current
-        handleSwipe(distance)
+        const xDistance = touchStartX.current - touchEndX.current
+        const yDistance = touchStartY.current - touchEndY.current
+
+        // If vertical scroll is significant, don't swipe horizontally
+        if (Math.abs(yDistance) > Math.abs(xDistance)) {
+            touchStartX.current = null
+            touchEndX.current = null
+            touchStartY.current = null
+            touchEndY.current = null
+            return
+        }
+
+        handleSwipe(xDistance)
 
         // Reset
         touchStartX.current = null
         touchEndX.current = null
+        touchStartY.current = null
+        touchEndY.current = null
     }
 
     // Mouse Handlers
@@ -122,6 +146,8 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
             onTouchCancelCapture={() => {
                 touchStartX.current = null
                 touchEndX.current = null
+                touchStartY.current = null
+                touchEndY.current = null
             }}
             onMouseDownCapture={onMouseDown}
             onMouseMoveCapture={onMouseMove}
