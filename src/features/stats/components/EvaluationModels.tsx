@@ -8,7 +8,10 @@ import {
     Zap,
     ArrowUpDown,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    MessageSquare,
+    Image as ImageIcon,
+    Tag
 } from 'lucide-react'
 import type { ModelStat } from '../hooks/useStats'
 
@@ -112,8 +115,8 @@ export function EvaluationModels({
     const sortedStats = useMemo(() => {
         const sorted = [...modelStats]
         sorted.sort((a, b) => {
-            const aValue = a[sortConfig.key]
-            const bValue = b[sortConfig.key]
+            const aValue = a[sortConfig.key] ?? ''
+            const bValue = b[sortConfig.key] ?? ''
 
             if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
             if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
@@ -200,8 +203,12 @@ export function EvaluationModels({
                 <SimpleTable>
                     <SimpleTableHeader>
                         <SimpleTableRow>
-                            <SortHeader column="name" className="w-[200px]">
+                            <SortHeader column="name" className="w-[180px]">
                                 Model
+                            </SortHeader>
+                            <SortHeader column="mode" className="w-[100px]">
+                                <Tag className="h-3.5 w-3.5 text-orange-400 mr-1" />{' '}
+                                Category
                             </SortHeader>
                             <SortHeader column="provider">Provider</SortHeader>
                             <SortHeader column="avgTPS">
@@ -236,6 +243,25 @@ export function EvaluationModels({
                                         >
                                             {stat.name}
                                         </span>
+                                    </div>
+                                </SimpleTableCell>
+                                <SimpleTableCell>
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary/50 border border-secondary w-fit">
+                                        {stat.mode === 'image' ? (
+                                            <>
+                                                <ImageIcon className="h-3 w-3 text-purple-500" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">
+                                                    Image
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <MessageSquare className="h-3 w-3 text-blue-500" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">
+                                                    Chat
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                 </SimpleTableCell>
                                 <SimpleTableCell>

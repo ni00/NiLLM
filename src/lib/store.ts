@@ -45,6 +45,7 @@ interface AppState {
     updateModel: (id: string, updates: Partial<LLMModel>) => void
     deleteModel: (id: string) => void
     toggleModelActivation: (id: string) => void
+    toggleAllModels: () => void
     reorderModels: (fromIndex: number, toIndex: number) => void
 
     createSession: (title: string, modelIds: string[]) => string
@@ -157,6 +158,17 @@ export const useAppStore = create<AppState>()(
                             : [...state.activeModelIds, id]
                     }
                 }),
+            toggleAllModels: () =>
+                set((state) => {
+                    const allModelIds = state.models
+                        .filter((m) => m.enabled)
+                        .map((m) => m.id)
+                    const isAllSelected =
+                        state.activeModelIds.length === allModelIds.length
+                    return {
+                        activeModelIds: isAllSelected ? [] : allModelIds
+                    }
+                }),
             reorderModels: (fromIndex, toIndex) =>
                 set((state) => {
                     const newModels = [...state.models]
@@ -219,17 +231,7 @@ export const useAppStore = create<AppState>()(
                     })
                 })),
 
-            clearActiveSession: () =>
-                set((state) => ({
-                    sessions: state.sessions.map((session) => {
-                        if (session.id !== state.activeSessionId) return session
-                        return {
-                            ...session,
-                            messages: [],
-                            results: {}
-                        }
-                    })
-                })),
+            clearActiveSession: () => set({ activeSessionId: null }),
 
             testSets: [] as TestSet[],
             testSetOrder: [] as string[],

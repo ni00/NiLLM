@@ -5,6 +5,7 @@ export interface ModelStat {
     id: string
     name: string
     provider: string
+    mode?: 'chat' | 'image'
     avgTPS: number
     avgTTFT: number
     avgRating: number
@@ -80,6 +81,7 @@ export function useStats() {
                     id: model.id,
                     name: model.name,
                     provider: model.providerName || model.provider,
+                    mode: model.mode || 'chat',
                     avgTPS,
                     avgTTFT,
                     avgRating,

@@ -23,6 +23,8 @@ export const ArenaSettings = ({
         models,
         activeModelIds,
         toggleModelActivation,
+        toggleAllModels,
+        reorderModels,
         globalConfig,
         updateGlobalConfig
     } = useAppStore()
@@ -72,6 +74,8 @@ export const ArenaSettings = ({
                         models={models}
                         activeModelIds={activeModelIds}
                         onToggleModel={toggleModelActivation}
+                        onToggleAll={toggleAllModels}
+                        onReorder={reorderModels}
                     />
                 )}
 
