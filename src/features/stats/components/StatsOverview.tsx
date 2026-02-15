@@ -15,7 +15,7 @@ export function StatsOverview({
     topTPSModel
 }: StatsOverviewProps) {
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 w-full max-w-full min-w-0">
             <Card className="relative overflow-hidden border-none bg-primary/5 shadow-none">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">

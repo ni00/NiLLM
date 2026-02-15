@@ -8,10 +8,8 @@ interface RatingBarProps {
 }
 
 export function RatingBar({ rating, ratingSource, onRate }: RatingBarProps) {
-    if (!rating) return null
-
     return (
-        <div className="flex items-center gap-3 pt-4 border-t border-border/30 mt-4 group/rating">
+        <div className="flex items-center gap-3 pt-4 border-t border-border/30 mt-4 group/rating flex-wrap">
             <div className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
                 Score
             </div>

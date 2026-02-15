@@ -30,7 +30,7 @@ export function PerformanceCharts({
     if (!mounted) return null
 
     return (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 w-full max-w-full min-w-0">
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">

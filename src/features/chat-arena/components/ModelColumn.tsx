@@ -184,7 +184,7 @@ export const ModelColumn = React.memo(
                         />
                     ) : (
                         <ScrollArea className="h-full" ref={scrollRef}>
-                            <div className="p-4 flex flex-col min-h-full">
+                            <div className="p-4 flex flex-col min-h-full overflow-hidden">
                                 {results.length > 0 ? (
                                     <div className="flex-1 space-y-6 pb-4">
                                         {results.map((res, idx) => (

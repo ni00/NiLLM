@@ -36,7 +36,7 @@ export function CapabilityRadar({
     if (!mounted) return null
 
     return (
-        <div className="grid gap-6 md:grid-cols-7">
+        <div className="grid gap-6 md:grid-cols-7 w-full max-w-full min-w-0">
             <Card className="md:col-span-4 transition-all hover:shadow-md">
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">

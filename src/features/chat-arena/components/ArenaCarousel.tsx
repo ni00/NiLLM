@@ -152,7 +152,7 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 min-h-0 relative px-8 md:px-12">
+            <div className="flex-1 min-h-0 relative px-2 md:px-12">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -168,7 +168,7 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
 
                 <div
                     key={currentModel.id}
-                    className="absolute inset-x-0 inset-y-0 md:inset-x-12 animate-in fade-in slide-in-from-bottom-2 duration-300"
+                    className="absolute inset-x-0 inset-y-0 md:inset-x-12 animate-in fade-in slide-in-from-bottom-2 duration-300 overflow-hidden"
                 >
                     {renderModel(currentModel)}
                 </div>

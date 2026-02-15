@@ -54,7 +54,7 @@ export function PageLayout({
                 <ScrollArea className="flex-1 w-full min-h-0">
                     <div
                         className={cn(
-                            'flex flex-col gap-6',
+                            'flex flex-col gap-6 overflow-x-hidden',
                             contentClassName || 'p-4 md:p-6'
                         )}
                     >

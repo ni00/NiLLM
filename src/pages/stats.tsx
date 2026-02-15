@@ -5,7 +5,7 @@ import { useStats } from '@/features/stats/hooks/useStats'
 import { StatsOverview } from '@/features/stats/components/StatsOverview'
 import { PerformanceCharts } from '@/features/stats/components/PerformanceCharts'
 import { CapabilityRadar } from '@/features/stats/components/CapabilityRadar'
-import { ModelBreakdown } from '@/features/stats/components/ModelBreakdown'
+import { EvaluationModels } from '@/features/stats/components/EvaluationModels'
 import { ExportMenu } from '@/features/stats/components/ExportMenu'
 import { ConfirmClearDialog } from '@/features/stats/components/ConfirmClearDialog'
 
@@ -61,7 +61,7 @@ export function StatsPage() {
                 />
             }
         >
-            <div className="flex flex-col gap-8 pb-8">
+            <div className="flex flex-col gap-8 pb-8 w-full max-w-full min-w-0">
                 <StatsOverview
                     totalSessions={totalSessions}
                     totalTokensAcrossModels={totalTokensAcrossModels}
@@ -79,7 +79,7 @@ export function StatsPage() {
                     totalMessages={totalMessages}
                 />
 
-                <ModelBreakdown
+                <EvaluationModels
                     modelStats={modelStats}
                     maxTPS={maxTPS}
                     onClearModel={setConfirmClearModel}

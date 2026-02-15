@@ -50,10 +50,10 @@ export const ModelColumnStats = React.memo(
         )
 
         return (
-            <div className="flex flex-wrap gap-1.5 text-xs font-mono text-muted-foreground tabular-nums">
+            <div className="flex flex-wrap gap-1.5 text-xs font-mono text-muted-foreground tabular-nums overflow-hidden">
                 <div
                     title="Average TTFT"
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[85px] justify-center"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
                 >
                     <span className="opacity-50">TTFT</span>
                     <span
@@ -66,7 +66,7 @@ export const ModelColumnStats = React.memo(
 
                 <div
                     title="Average Tokens/sec"
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[85px] justify-center"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
                 >
                     <span className="opacity-50">SPD</span>
                     <span
@@ -79,7 +79,7 @@ export const ModelColumnStats = React.memo(
 
                 <div
                     title="Total Duration"
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[85px] justify-center"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
                 >
                     <span className="opacity-50">TIME</span>
                     <span
@@ -92,7 +92,7 @@ export const ModelColumnStats = React.memo(
 
                 <div
                     title="Total Tokens"
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[85px] justify-center"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
                 >
                     <span className="opacity-50">TOKS</span>
                     <span
