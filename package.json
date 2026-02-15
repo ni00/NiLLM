@@ -1,6 +1,6 @@
 {
     "name": "nillm",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "description": "NiLLM Arena App",
     "type": "module",
     "scripts": {
