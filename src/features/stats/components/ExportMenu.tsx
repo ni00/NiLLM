@@ -6,6 +6,16 @@ import {
     PopoverTrigger
 } from '@/components/ui/popover'
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle
+} from '@/components/ui/alert-dialog'
+import {
     Trash2,
     AlertCircle,
     FileJson,
@@ -222,50 +232,51 @@ export function ExportMenu({
                 </PopoverContent>
             </Popover>
 
-            <Popover open={confirmClearAll} onOpenChange={setConfirmClearAll}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant="outline"
-                        className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 active:scale-95 transition-all hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                    >
-                        <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
-                        <span className="hidden md:inline text-xs font-medium">
-                            Clear
-                        </span>
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-4 border-destructive/50">
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-destructive font-semibold">
-                            <AlertCircle className="h-5 w-5" />
-                            <span>Danger Zone</span>
+            <AlertDialog
+                open={confirmClearAll}
+                onOpenChange={setConfirmClearAll}
+            >
+                <Button
+                    variant="outline"
+                    onClick={() => setConfirmClearAll(true)}
+                    className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 active:scale-95 transition-all hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                >
+                    <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
+                    <span className="hidden md:inline text-xs font-medium">
+                        Clear
+                    </span>
+                </Button>
+                <AlertDialogContent className="border-destructive/20 shadow-destructive/5 max-w-md">
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-3 text-destructive mb-1">
+                            <div className="p-2 bg-destructive/10 rounded-full">
+                                <AlertCircle className="h-5 w-5" />
+                            </div>
+                            <AlertDialogTitle>Danger Zone</AlertDialogTitle>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            This will permanently delete ALL session history and
-                            benchmark results.
-                        </p>
-                        <div className="flex justify-end gap-2">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setConfirmClearAll(false)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => {
-                                    onClearAll()
-                                    setConfirmClearAll(false)
-                                }}
-                            >
-                                Confirm
-                            </Button>
-                        </div>
-                    </div>
-                </PopoverContent>
-            </Popover>
+                        <AlertDialogDescription>
+                            This will{' '}
+                            <span className="font-bold text-foreground">
+                                permanently delete ALL
+                            </span>{' '}
+                            session history and benchmark results. This action
+                            cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                onClearAll()
+                                setConfirmClearAll(false)
+                            }}
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm"
+                        >
+                            Confirm Clear
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }
