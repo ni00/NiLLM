@@ -22,58 +22,96 @@ const openDB = (): Promise<IDBDatabase> => {
 
 export const indexedDBStorage: StateStorage = {
     getItem: async (name: string): Promise<string | null> => {
+        let db: IDBDatabase | null = null
         try {
-            const db = await openDB()
+            db = await openDB()
             return new Promise((resolve) => {
+                if (!db) {
+                    resolve(null)
+                    return
+                }
                 try {
                     const tx = db.transaction(STORE_NAME, 'readonly')
                     const store = tx.objectStore(STORE_NAME)
                     const req = store.get(name)
-                    req.onsuccess = () => resolve(req.result || null)
-                    req.onerror = () => resolve(null)
+                    req.onsuccess = () => {
+                        db?.close()
+                        resolve(req.result || null)
+                    }
+                    req.onerror = () => {
+                        db?.close()
+                        resolve(null)
+                    }
                 } catch {
+                    db?.close()
                     resolve(null)
                 }
             })
         } catch {
+            db?.close()
             return null
         }
     },
 
     setItem: async (name: string, value: string): Promise<void> => {
+        let db: IDBDatabase | null = null
         try {
-            const db = await openDB()
+            db = await openDB()
             return new Promise((resolve) => {
+                if (!db) {
+                    resolve()
+                    return
+                }
                 try {
                     const tx = db.transaction(STORE_NAME, 'readwrite')
                     const store = tx.objectStore(STORE_NAME)
                     store.put(value, name)
-                    tx.oncomplete = () => resolve()
-                    tx.onerror = () => resolve()
+                    tx.oncomplete = () => {
+                        db?.close()
+                        resolve()
+                    }
+                    tx.onerror = () => {
+                        db?.close()
+                        resolve()
+                    }
                 } catch {
+                    db?.close()
                     resolve()
                 }
             })
         } catch {
-            void 0
+            db?.close()
         }
     },
 
     removeItem: async (name: string): Promise<void> => {
+        let db: IDBDatabase | null = null
         try {
-            const db = await openDB()
+            db = await openDB()
             return new Promise((resolve) => {
+                if (!db) {
+                    resolve()
+                    return
+                }
                 try {
                     const tx = db.transaction(STORE_NAME, 'readwrite')
                     const store = tx.objectStore(STORE_NAME)
                     store.delete(name)
-                    tx.oncomplete = () => resolve()
+                    tx.oncomplete = () => {
+                        db?.close()
+                        resolve()
+                    }
+                    tx.onerror = () => {
+                        db?.close()
+                        resolve()
+                    }
                 } catch {
+                    db?.close()
                     resolve()
                 }
             })
         } catch {
-            void 0
+            db?.close()
         }
     }
 }

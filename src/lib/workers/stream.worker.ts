@@ -2,15 +2,19 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { streamText, type LanguageModel } from 'ai'
 import { LLMModel } from '../types'
 
-// Re-implementing simplified getProvider to avoid importing the whole ai-provider which might have side effects
-// or we can just import it if we are sure. Let's try to be self-contained in worker to be safe and clean.
-
 const providerRegistry: Record<string, any> = {}
+const providerKeys: string[] = []
+const MAX_PROVIDERS = 20
 
 function getProvider(model: LLMModel) {
     const providerKey = `${model.provider}:${model.providerId || 'default'}`
 
     if (providerRegistry[providerKey]) {
+        const idx = providerKeys.indexOf(providerKey)
+        if (idx > 0) {
+            providerKeys.splice(idx, 1)
+            providerKeys.unshift(providerKey)
+        }
         return providerRegistry[providerKey]
     }
 
@@ -45,6 +49,13 @@ function getProvider(model: LLMModel) {
                     : undefined
         })
 
+        if (providerKeys.length >= MAX_PROVIDERS) {
+            const oldestKey = providerKeys.pop()
+            if (oldestKey) {
+                delete providerRegistry[oldestKey]
+            }
+        }
+        providerKeys.unshift(providerKey)
         providerRegistry[providerKey] = provider
         return provider
     }

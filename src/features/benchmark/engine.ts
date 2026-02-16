@@ -170,8 +170,10 @@ function runWorkerStream(
             }
         }
 
-        worker.onerror = () => {
+        worker.onerror = (err) => {
+            console.error('Worker error:', err)
             handleError('Worker initialization failed')
+            cleanup() // Ensure cleanup on worker error
         }
 
         // Start the worker
