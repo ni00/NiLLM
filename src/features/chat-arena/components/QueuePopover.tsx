@@ -40,7 +40,12 @@ export const QueuePopover = () => {
                     <span className="text-xs font-medium">Queue</span>
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-4" align="end">
+            <PopoverContent
+                className="w-80 p-4"
+                align="center"
+                collisionPadding={16}
+                sideOffset={8}
+            >
                 <div className="flex items-center justify-between border-b pb-2 mb-3">
                     <h3 className="font-semibold text-sm">Processing Queue</h3>
                     <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">
