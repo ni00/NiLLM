@@ -84,6 +84,7 @@ export const ModelColumn = React.memo(
         })
 
         const lastScrollTop = useRef(0)
+        const lastScrollHeight = useRef(0)
         const isAutoScrolling = useRef(false)
 
         // Update map when state changes
@@ -150,8 +151,13 @@ export const ModelColumn = React.memo(
             const viewport = scrollRef.current
             if (!viewport) return
 
-            const { scrollTop } = viewport
+            const { scrollTop, scrollHeight } = viewport
             const scrollDiff = scrollTop - lastScrollTop.current
+            const heightDiff = scrollHeight - lastScrollHeight.current
+
+            // Detect content-height change (collapse/expand)
+            const isContentHeightChanging = Math.abs(heightDiff) > 5
+
             const isScrollingUp = scrollDiff < 0
 
             // Only disable following if:
@@ -159,11 +165,13 @@ export const ModelColumn = React.memo(
             // 2. We are scrolling UP
             // 3. It's NOT an auto-scroll event
             // 4. We are not at the very top (bounce effect on some OS)
+            // 5. Content height is NOT changing (collapse/expand)
             if (
                 isFollowing &&
                 isScrollingUp &&
                 !isAutoScrolling.current &&
-                scrollTop > 0
+                scrollTop > 0 &&
+                !isContentHeightChanging
             ) {
                 // Use a small threshold to avoid jitter
                 if (Math.abs(scrollDiff) > 5) {
@@ -172,6 +180,7 @@ export const ModelColumn = React.memo(
             }
 
             lastScrollTop.current = scrollTop
+            lastScrollHeight.current = scrollHeight
         }
 
         return (
