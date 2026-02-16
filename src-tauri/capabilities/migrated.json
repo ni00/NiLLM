@@ -11,6 +11,9 @@
     "shell:default",
     "fs:default",
     "fs:allow-read-file",
-    "dialog:default"
+    "fs:allow-write-file",
+    "fs:allow-mkdir",
+    "dialog:default",
+    "dialog:allow-save"
   ]
 }

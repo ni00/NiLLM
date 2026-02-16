@@ -116,30 +116,106 @@ export const StreamingMarkdown = React.memo(
             setTimeout(() => setMenuOpen(false), 800)
         }
 
-        const handleDownloadImage = useCallback(
-            (e: React.MouseEvent) => {
-                e.stopPropagation()
-                if (!contextImageSrc) return
+        const downloadImage = useCallback(async (src: string) => {
+            if (!src) return
 
-                // Create a temporary link to download the image
-                const link = document.createElement('a')
-                link.href = contextImageSrc
+            let ext = 'png'
+            const mimeMatch = src.match(/^data:image\/(\w+);/)
+            if (mimeMatch) {
+                ext = mimeMatch[1] === 'jpeg' ? 'jpg' : mimeMatch[1]
+            }
+            const fileName = `generated-image-${Date.now()}.${ext}`
 
-                // Determine file extension from data URL or default to png
-                let ext = 'png'
-                const mimeMatch = contextImageSrc.match(/^data:image\/(\w+);/)
-                if (mimeMatch) {
-                    ext = mimeMatch[1] === 'jpeg' ? 'jpg' : mimeMatch[1]
+            try {
+                let blob: Blob
+
+                if (src.startsWith('data:')) {
+                    const base64Match = src.match(
+                        /^data:image\/\w+;base64,(.+)$/
+                    )
+                    if (!base64Match) {
+                        console.error('Invalid data URL format')
+                        return
+                    }
+                    const byteCharacters = atob(base64Match[1])
+                    const byteNumbers = new Array(byteCharacters.length)
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i)
+                    }
+                    const byteArray = new Uint8Array(byteNumbers)
+                    const mimeType =
+                        src.match(/^data:(image\/\w+);/)?.[1] || 'image/png'
+                    blob = new Blob([byteArray], { type: mimeType })
+                } else {
+                    const response = await fetch(src)
+                    blob = await response.blob()
                 }
 
-                link.download = `generated-image-${Date.now()}.${ext}`
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
+                const isTauri =
+                    typeof window !== 'undefined' &&
+                    !!(
+                        (window as any).__TAURI_INTERNALS__ ||
+                        (window as any).__TAURI__
+                    )
 
+                let savedViaTauri = false
+
+                if (isTauri) {
+                    try {
+                        const { save } =
+                            await import('@tauri-apps/plugin-dialog')
+                        const { writeFile } =
+                            await import('@tauri-apps/plugin-fs')
+
+                        const filePath = await save({
+                            defaultPath: fileName,
+                            filters: [
+                                {
+                                    name: ext.toUpperCase(),
+                                    extensions: [ext]
+                                }
+                            ]
+                        })
+
+                        if (filePath) {
+                            const arrayBuffer = await blob.arrayBuffer()
+                            await writeFile(
+                                filePath,
+                                new Uint8Array(arrayBuffer)
+                            )
+                            savedViaTauri = true
+                        }
+                    } catch (tauriError) {
+                        console.warn(
+                            'Tauri save failed, trying browser fallback:',
+                            tauriError
+                        )
+                    }
+                }
+
+                if (!savedViaTauri) {
+                    const url = URL.createObjectURL(blob)
+                    const link = document.createElement('a')
+                    link.href = url
+                    link.download = fileName
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                    URL.revokeObjectURL(url)
+                }
+            } catch (error) {
+                console.error('Failed to download image:', error)
+            }
+        }, [])
+
+        const handleDownloadImage = useCallback(
+            async (e: React.MouseEvent) => {
+                e.stopPropagation()
+                if (!contextImageSrc) return
+                await downloadImage(contextImageSrc)
                 setMenuOpen(false)
             },
-            [contextImageSrc]
+            [contextImageSrc, downloadImage]
         )
 
         // Calculate context menu bounds
@@ -286,31 +362,26 @@ export const StreamingMarkdown = React.memo(
                             {/* Close button */}
                             <button
                                 onClick={() => setLightboxSrc(null)}
-                                className="absolute top-4 right-4 z-10 rounded-full bg-white/10 hover:bg-white/20 p-2 text-white transition-colors"
+                                className="absolute z-10 rounded-full bg-white/10 hover:bg-white/20 p-2 text-white transition-colors"
+                                style={{
+                                    top: 'calc(1rem + var(--safe-area-inset-top, 0px))',
+                                    right: '1rem'
+                                }}
                             >
                                 <X className="h-6 w-6" />
                             </button>
 
                             {/* Download button */}
                             <button
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                     e.stopPropagation()
-                                    const link = document.createElement('a')
-                                    link.href = lightboxSrc
-                                    let ext = 'png'
-                                    const mimeMatch =
-                                        lightboxSrc.match(/^data:image\/(\w+);/)
-                                    if (mimeMatch)
-                                        ext =
-                                            mimeMatch[1] === 'jpeg'
-                                                ? 'jpg'
-                                                : mimeMatch[1]
-                                    link.download = `generated-image-${Date.now()}.${ext}`
-                                    document.body.appendChild(link)
-                                    link.click()
-                                    document.body.removeChild(link)
+                                    await downloadImage(lightboxSrc)
                                 }}
-                                className="absolute top-4 right-16 z-10 rounded-full bg-white/10 hover:bg-white/20 p-2 text-white transition-colors"
+                                className="absolute z-10 rounded-full bg-white/10 hover:bg-white/20 p-2 text-white transition-colors"
+                                style={{
+                                    top: 'calc(1rem + var(--safe-area-inset-top, 0px))',
+                                    right: '4rem'
+                                }}
                             >
                                 <Download className="h-6 w-6" />
                             </button>
