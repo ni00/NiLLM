@@ -1,7 +1,12 @@
 import { Play, Send, Eraser, Paperclip, X, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { useAppStore } from '@/lib/store'
+import {
+    useClearActiveSession,
+    useStopAll,
+    useModels,
+    useActiveModelIds
+} from '@/lib/hooks/useStoreSelectors'
 import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { abortAllTasks } from '@/features/benchmark/engine'
@@ -25,8 +30,10 @@ export const ArenaInput = ({
     attachments,
     setAttachments
 }: ArenaInputProps) => {
-    const { clearActiveSession, stopAll, models, activeModelIds } =
-        useAppStore()
+    const clearActiveSession = useClearActiveSession()
+    const stopAll = useStopAll()
+    const models = useModels()
+    const activeModelIds = useActiveModelIds()
     const activeModels = models.filter((m) => activeModelIds.includes(m.id))
 
     // Mention state

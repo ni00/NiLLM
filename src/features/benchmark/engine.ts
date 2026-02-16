@@ -6,20 +6,23 @@ let pendingUpdates: Record<string, Partial<BenchmarkResult>> = {}
 let rafId: number | null = null
 const activeTasks = new Map<Worker, () => void>()
 
+function scheduleFlush() {
+    if (rafId === null) {
+        rafId = requestAnimationFrame(flushUpdates)
+    }
+}
+
 function flushUpdates() {
+    rafId = null // Clear ID since we're executing
     const store = useAppStore.getState()
     if (Object.keys(pendingUpdates).length > 0) {
         store.setBatchedStreamingData(pendingUpdates)
         pendingUpdates = {}
     }
-    rafId = requestAnimationFrame(flushUpdates)
-}
-
-// Start the loop globally once (idempotent check inside module usually fine,
-// strictly speaking we might want to start/stop based on activity,
-// but for a lightweight loop checking empty object, it's negligible overhead)
-if (typeof window !== 'undefined' && !rafId) {
-    rafId = requestAnimationFrame(flushUpdates)
+    // Only schedule next frame if there are still updates after this flush
+    if (Object.keys(pendingUpdates).length > 0) {
+        rafId = requestAnimationFrame(flushUpdates)
+    }
 }
 
 // Constants for timeouts (Defaults)
@@ -125,6 +128,7 @@ function runWorkerStream(
                     reasoning: currentReasoning || undefined,
                     metrics
                 }
+                scheduleFlush()
 
                 if (isFinal) {
                     // Update persistent store with final result immediately to ensure consistency

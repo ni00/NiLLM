@@ -1,5 +1,11 @@
-import { useAppStore } from '@/lib/store'
 import { useState, useEffect, useMemo } from 'react'
+import type { BenchmarkResult } from '@/lib/types'
+import {
+    useSessions,
+    useModels,
+    useClearModelResults,
+    useClearSessions
+} from '@/lib/hooks/useStoreSelectors'
 
 export interface ModelStat {
     id: string
@@ -30,7 +36,10 @@ export interface RadarDataPoint {
 }
 
 export function useStats() {
-    const { sessions, models, clearModelResults, clearSessions } = useAppStore()
+    const sessions = useSessions()
+    const models = useModels()
+    const clearModelResults = useClearModelResults()
+    const clearSessions = useClearSessions()
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
@@ -38,44 +47,64 @@ export function useStats() {
         return () => clearTimeout(timer)
     }, [])
 
+    // Pre-aggregate results by model ID to avoid O(n²) nested loops
+    const resultsByModel = useMemo(() => {
+        const map = new Map<string, BenchmarkResult[]>()
+        sessions.forEach((session) => {
+            Object.entries(session.results).forEach(([modelId, results]) => {
+                if (!map.has(modelId)) map.set(modelId, [])
+                map.get(modelId)!.push(...results)
+            })
+        })
+        return map
+    }, [sessions])
+
     const modelStats: ModelStat[] = useMemo(() => {
         return models
             .map((model) => {
-                let totalTPS = 0
-                let tpsCount = 0
-                let totalTTFT = 0
-                let ttftCount = 0
-                let totalCount = 0
-                let totalRating = 0
-                let ratingCount = 0
-                let totalTokens = 0
+                const results = resultsByModel.get(model.id) || []
 
-                sessions.forEach((session) => {
-                    const results = session.results[model.id] || []
-                    results.forEach((r) => {
-                        totalCount++
+                // Single-pass aggregation
+                const stats = results.reduce(
+                    (acc, r) => {
+                        acc.totalCount++
                         if (r.metrics?.tps > 0) {
-                            totalTPS += r.metrics.tps
-                            tpsCount++
+                            acc.totalTPS += r.metrics.tps
+                            acc.tpsCount++
                         }
                         if (r.metrics?.ttft > 0) {
-                            totalTTFT += r.metrics.ttft
-                            ttftCount++
+                            acc.totalTTFT += r.metrics.ttft
+                            acc.ttftCount++
                         }
                         if (r.metrics?.tokenCount > 0) {
-                            totalTokens += r.metrics.tokenCount
+                            acc.totalTokens += r.metrics.tokenCount
                         }
                         if (r.rating) {
-                            totalRating += r.rating
-                            ratingCount++
+                            acc.totalRating += r.rating
+                            acc.ratingCount++
                         }
-                    })
-                })
+                        return acc
+                    },
+                    {
+                        totalTPS: 0,
+                        tpsCount: 0,
+                        totalTTFT: 0,
+                        ttftCount: 0,
+                        totalCount: 0,
+                        totalRating: 0,
+                        ratingCount: 0,
+                        totalTokens: 0
+                    }
+                )
 
-                const avgTPS = tpsCount > 0 ? totalTPS / tpsCount : 0
-                const avgTTFT = ttftCount > 0 ? totalTTFT / ttftCount : 0
+                const avgTPS =
+                    stats.tpsCount > 0 ? stats.totalTPS / stats.tpsCount : 0
+                const avgTTFT =
+                    stats.ttftCount > 0 ? stats.totalTTFT / stats.ttftCount : 0
                 const avgRating =
-                    ratingCount > 0 ? totalRating / ratingCount : 0
+                    stats.ratingCount > 0
+                        ? stats.totalRating / stats.ratingCount
+                        : 0
 
                 return {
                     id: model.id,
@@ -85,13 +114,13 @@ export function useStats() {
                     avgTPS,
                     avgTTFT,
                     avgRating,
-                    totalTokens,
-                    totalCount,
-                    completedCount: tpsCount
+                    totalTokens: stats.totalTokens,
+                    totalCount: stats.totalCount,
+                    completedCount: stats.tpsCount
                 }
             })
             .filter((s) => s.totalCount > 0)
-    }, [models, sessions])
+    }, [models, resultsByModel])
 
     const aggregatedStats = useMemo(() => {
         const totalSessions = sessions.length

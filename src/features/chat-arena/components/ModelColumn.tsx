@@ -10,8 +10,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { LLMModel, BenchmarkResult } from '@/lib/types'
-import { useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
+import {
+    useUpdateModel,
+    useActiveSessionId,
+    useUpdateResult
+} from '@/lib/hooks/useStoreSelectors'
 import { ResultBlock } from './ResultBlock'
 import { ModelColumnStats } from './ModelColumnStats'
 import { ModelConfigPanel } from './ModelConfigPanel'
@@ -62,7 +66,9 @@ export const ModelColumn = React.memo(
         footerRanges,
         className
     }: ModelColumnProps) => {
-        const { updateModel, activeSessionId, updateResult } = useAppStore()
+        const updateModel = useUpdateModel()
+        const activeSessionId = useActiveSessionId()
+        const updateResult = useUpdateResult()
         const scrollRef = useRef<HTMLDivElement>(null)
 
         const handleRetry = React.useCallback(

@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useAppStore } from '@/lib/store'
 import { LLMModel } from '@/lib/types'
+import {
+    usePendingPrompt,
+    useSetPendingPrompt
+} from '@/lib/hooks/useStoreSelectors'
 
 export const useArenaState = () => {
-    const { pendingPrompt, setPendingPrompt } = useAppStore()
+    const pendingPrompt = usePendingPrompt()
+    const setPendingPrompt = useSetPendingPrompt()
     const [input, setInput] = useState('')
     const [editingModelId, setEditingModelId] = useState<string | null>(null)
     const [showArenaSettings, setShowArenaSettings] = useState(false)

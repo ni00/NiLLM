@@ -137,6 +137,8 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
 
     const currentModel = models[currentIndex]
 
+    if (!currentModel) return null
+
     return (
         <div
             className="flex flex-col h-full w-full overflow-hidden select-none touch-pan-y relative group"

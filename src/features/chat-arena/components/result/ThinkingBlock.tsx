@@ -9,18 +9,18 @@ interface ThinkingBlockProps {
 
 export const ThinkingBlock = React.memo(
     ({ reasoning, isStreaming }: ThinkingBlockProps) => {
-        const [isExpanded, setIsExpanded] = useState(true)
+        const [isExpanded, setIsExpanded] = useState(isStreaming)
         const contentRef = useRef<HTMLDivElement>(null)
         const [contentHeight, setContentHeight] = useState<number | undefined>(
             undefined
         )
 
-        // Auto-collapse when streaming ends
         const wasStreaming = useRef(isStreaming)
         useEffect(() => {
             if (wasStreaming.current && !isStreaming) {
-                // Streaming just ended — collapse
                 setIsExpanded(false)
+            } else if (!wasStreaming.current && isStreaming) {
+                setIsExpanded(true)
             }
             wasStreaming.current = isStreaming
         }, [isStreaming])

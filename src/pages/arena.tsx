@@ -1,5 +1,4 @@
-import { KeyboardEvent } from 'react'
-import { useAppStore } from '@/lib/store'
+import { KeyboardEvent, useCallback } from 'react'
 import { LLMModel } from '@/lib/types'
 import { ArenaHeader } from '@/features/chat-arena/components/ArenaHeader'
 import { ArenaInput } from '@/features/chat-arena/components/ArenaInput'
@@ -15,21 +14,32 @@ import { useArenaExport } from '@/features/chat-arena/hooks/useArenaExport'
 import { PageLayout } from '@/features/layout/PageLayout'
 import { Layers } from 'lucide-react'
 import { ArenaCarousel } from '@/features/chat-arena/components/ArenaCarousel'
+import {
+    useModels,
+    useActiveModelIds,
+    useSessions,
+    useActiveSessionId,
+    useUpdateModel,
+    useGlobalConfig,
+    useIsProcessing,
+    useAddToQueue,
+    useStreamingData,
+    useArenaColumns,
+    useArenaSortBy
+} from '@/lib/hooks/useStoreSelectors'
 
 export function ArenaPage() {
-    const {
-        models,
-        activeModelIds,
-        sessions,
-        activeSessionId,
-        updateModel,
-        globalConfig,
-        isProcessing,
-        addToQueue,
-        streamingData,
-        arenaColumns,
-        arenaSortBy
-    } = useAppStore()
+    const models = useModels()
+    const activeModelIds = useActiveModelIds()
+    const sessions = useSessions()
+    const activeSessionId = useActiveSessionId()
+    const updateModel = useUpdateModel()
+    const globalConfig = useGlobalConfig()
+    const isProcessing = useIsProcessing()
+    const addToQueue = useAddToQueue()
+    const streamingData = useStreamingData()
+    const arenaColumns = useArenaColumns()
+    const arenaSortBy = useArenaSortBy()
 
     const {
         input,
@@ -84,7 +94,7 @@ export function ArenaPage() {
         activeSession
     )
 
-    const handleSend = async () => {
+    const handleSend = useCallback(async () => {
         if (!input.trim() && attachments.length === 0) return
 
         let prompt = input
@@ -129,21 +139,24 @@ export function ArenaPage() {
         addToQueue(prompt)
         setInput('')
         setAttachments([])
-    }
+    }, [input, attachments, addToQueue, setInput, setAttachments])
 
-    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            handleSend()
-        }
-    }
+    const handleKeyDown = useCallback(
+        (e: KeyboardEvent<HTMLTextAreaElement>) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+            }
+        },
+        [handleSend]
+    )
 
-    const saveDetails = () => {
+    const saveDetails = useCallback(() => {
         if (modelToEdit && editForm.name) {
             updateModel(modelToEdit.id, editForm)
             setModelToEdit(null)
         }
-    }
+    }, [modelToEdit, editForm, updateModel, setModelToEdit])
 
     const gridColsClass =
         arenaColumns === 0
