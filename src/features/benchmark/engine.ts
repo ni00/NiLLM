@@ -1,28 +1,49 @@
 import { useAppStore } from '../../lib/store'
 import { BenchmarkResult, LLMModel } from '../../lib/types'
 
-// --- RAF Batching Logic ---
 let pendingUpdates: Record<string, Partial<BenchmarkResult>> = {}
 let rafId: number | null = null
 const activeTasks = new Map<Worker, () => void>()
+let isPaused = false
 
 function scheduleFlush() {
-    if (rafId === null) {
+    if (rafId === null && !isPaused) {
         rafId = requestAnimationFrame(flushUpdates)
     }
 }
 
 function flushUpdates() {
-    rafId = null // Clear ID since we're executing
+    rafId = null
+    if (isPaused) return
+
     const store = useAppStore.getState()
     if (Object.keys(pendingUpdates).length > 0) {
         store.setBatchedStreamingData(pendingUpdates)
         pendingUpdates = {}
     }
-    // Only schedule next frame if there are still updates after this flush
-    if (Object.keys(pendingUpdates).length > 0) {
+    if (Object.keys(pendingUpdates).length > 0 && !isPaused) {
         rafId = requestAnimationFrame(flushUpdates)
     }
+}
+
+export function pauseStreamingUI() {
+    isPaused = true
+    if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+    }
+}
+
+export function resumeStreamingUI() {
+    const wasPaused = isPaused
+    isPaused = false
+    if (wasPaused && Object.keys(pendingUpdates).length > 0) {
+        scheduleFlush()
+    }
+}
+
+export function getPendingUpdatesCount(): number {
+    return Object.keys(pendingUpdates).length
 }
 
 // Constants for timeouts (Defaults)

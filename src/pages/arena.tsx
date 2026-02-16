@@ -34,6 +34,11 @@ import {
     useArenaColumns,
     useArenaSortBy
 } from '@/lib/hooks/useStoreSelectors'
+import { useStreamingActive } from '@/lib/hooks/usePageVisibility'
+import {
+    pauseStreamingUI,
+    resumeStreamingUI
+} from '@/features/benchmark/engine'
 
 export function ArenaPage() {
     const models = useModels()
@@ -154,6 +159,15 @@ export function ArenaPage() {
     const activeSession = sessions.find((s) => s.id === activeSessionId)
 
     useQueueProcessor()
+
+    const { isStreamingActive } = useStreamingActive('/')
+    useEffect(() => {
+        if (isStreamingActive) {
+            resumeStreamingUI()
+        } else {
+            pauseStreamingUI()
+        }
+    }, [isStreamingActive])
 
     const {
         isJudging,
