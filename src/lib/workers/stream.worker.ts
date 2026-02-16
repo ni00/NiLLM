@@ -302,7 +302,7 @@ self.onmessage = async (e: MessageEvent) => {
             messages: processedMessages,
             headers: model.apiKey
                 ? {
-                      Authorization: `Bearer ${model.apiKey} `
+                      Authorization: `Bearer ${model.apiKey}`
                   }
                 : undefined,
             temperature: model.config?.temperature,
