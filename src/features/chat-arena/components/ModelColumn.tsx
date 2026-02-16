@@ -5,7 +5,9 @@ import {
     Check,
     MessageSquareText,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    Pin,
+    PinOff
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -48,6 +50,9 @@ interface ModelColumnProps {
     className?: string
 }
 
+// Keep track of follow state across remounts
+const followStateMap = new Map<string, boolean>()
+
 export const ModelColumn = React.memo(
     ({
         model,
@@ -70,6 +75,21 @@ export const ModelColumn = React.memo(
         const activeSessionId = useActiveSessionId()
         const updateResult = useUpdateResult()
         const scrollRef = useRef<HTMLDivElement>(null)
+
+        // Initialize from map or default to true
+        const [isFollowing, setIsFollowing] = React.useState(() => {
+            return followStateMap.has(model.id)
+                ? followStateMap.get(model.id)!
+                : true
+        })
+
+        const lastScrollTop = useRef(0)
+        const isAutoScrolling = useRef(false)
+
+        // Update map when state changes
+        React.useEffect(() => {
+            followStateMap.set(model.id, isFollowing)
+        }, [isFollowing, model.id])
 
         const handleRetry = React.useCallback(
             (resultId: string) => {
@@ -99,11 +119,59 @@ export const ModelColumn = React.memo(
 
         const scrollToBottom = () => {
             if (scrollRef.current) {
+                isAutoScrolling.current = true
                 scrollRef.current.scrollTo({
                     top: scrollRef.current.scrollHeight,
                     behavior: 'smooth'
                 })
+                // Reset auto-scrolling flag after animation (approximate)
+                setTimeout(() => {
+                    isAutoScrolling.current = false
+                }, 500)
             }
+        }
+
+        // Auto-scroll when new content arrives
+        React.useEffect(() => {
+            if (isFollowing && !isEditing) {
+                scrollToBottom()
+            }
+        }, [results, streamingData, isFollowing, isEditing])
+
+        // Handle scroll events to detect manual scroll up
+        const lastScrollTime = useRef(0)
+        const handleScroll = () => {
+            // Throttle scroll events (run max once every 50ms)
+            const now = Date.now()
+            if (now - lastScrollTime.current < 50) return
+            lastScrollTime.current = now
+
+            // Use the ref to get the viewport element, as e.currentTarget is the Root wrapper
+            const viewport = scrollRef.current
+            if (!viewport) return
+
+            const { scrollTop } = viewport
+            const scrollDiff = scrollTop - lastScrollTop.current
+            const isScrollingUp = scrollDiff < 0
+
+            // Only disable following if:
+            // 1. We are currently following
+            // 2. We are scrolling UP
+            // 3. It's NOT an auto-scroll event
+            // 4. We are not at the very top (bounce effect on some OS)
+            if (
+                isFollowing &&
+                isScrollingUp &&
+                !isAutoScrolling.current &&
+                scrollTop > 0
+            ) {
+                // Use a small threshold to avoid jitter
+                if (Math.abs(scrollDiff) > 5) {
+                    setIsFollowing(false)
+                }
+            }
+
+            lastScrollTop.current = scrollTop
         }
 
         return (
@@ -169,6 +237,36 @@ export const ModelColumn = React.memo(
                             >
                                 <ArrowUp className="w-4.5 h-4.5 text-foreground/50 group-hover/btn:text-primary-foreground transition-colors" />
                             </Button>
+
+                            <Button
+                                size="icon"
+                                variant="outline"
+                                className={cn(
+                                    'h-9 w-9 rounded-full shadow-2xl border-border/40 bg-background/95 hover:bg-primary hover:border-primary hover:shadow-primary/20 transition-all duration-300 group/btn hover:scale-110 active:scale-95',
+                                    isFollowing
+                                        ? 'text-primary hover:text-primary-foreground'
+                                        : 'text-foreground/50 hover:text-primary-foreground'
+                                )}
+                                onClick={() => {
+                                    setIsFollowing(!isFollowing)
+                                    if (!isFollowing) {
+                                        // When enabling follow, scroll to bottom immediately
+                                        setTimeout(scrollToBottom, 0)
+                                    }
+                                }}
+                                title={
+                                    isFollowing
+                                        ? 'Following (Click to stop)'
+                                        : 'Follow output'
+                                }
+                            >
+                                {isFollowing ? (
+                                    <PinOff className="w-4 h-4 transition-colors" />
+                                ) : (
+                                    <Pin className="w-4 h-4 transition-colors" />
+                                )}
+                            </Button>
+
                             <Button
                                 size="icon"
                                 variant="outline"
@@ -189,7 +287,11 @@ export const ModelColumn = React.memo(
                             onStartEditingDetails={onStartEditingDetails}
                         />
                     ) : (
-                        <ScrollArea className="h-full" ref={scrollRef}>
+                        <ScrollArea
+                            className="h-full"
+                            ref={scrollRef}
+                            onScrollCapture={handleScroll}
+                        >
                             <div className="p-4 flex flex-col min-h-full overflow-hidden">
                                 {results.length > 0 ? (
                                     <div className="flex-1 space-y-6 pb-4">
