@@ -1,4 +1,13 @@
-import { Play, Send, Eraser, Paperclip, X, FileText } from 'lucide-react'
+import {
+    Play,
+    Send,
+    Eraser,
+    Paperclip,
+    X,
+    FileText,
+    Maximize2,
+    Trash2
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -18,7 +27,10 @@ interface ArenaInputProps {
     onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
     isProcessing: boolean
     attachments: File[]
-    setAttachments: (files: File[]) => void
+    setAttachments: React.Dispatch<React.SetStateAction<File[]>>
+    onExpand?: () => void
+    className?: string
+    textareaClassName?: string
 }
 
 export const ArenaInput = ({
@@ -28,7 +40,10 @@ export const ArenaInput = ({
     onKeyDown,
     isProcessing,
     attachments,
-    setAttachments
+    setAttachments,
+    onExpand,
+    className,
+    textareaClassName
 }: ArenaInputProps) => {
     const clearActiveSession = useClearActiveSession()
     const stopAll = useStopAll()
@@ -57,12 +72,48 @@ export const ArenaInput = ({
     // Let's assume Textarea component forwards ref correctly to the HTMLTextAreaElement.
 
     const [previews, setPreviews] = useState<Record<string, string>>({})
+    const [isDragging, setIsDragging] = useState(false)
 
     useEffect(() => {
         if (mentionQuery !== null) {
             setMentionIndex(0)
         }
     }, [mentionQuery])
+
+    // HTML5 drag and drop fallback (for browser)
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(true)
+    }
+
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+
+        // Check if we're actually leaving the container
+        if (e.currentTarget.contains(e.relatedTarget as Node)) {
+            return
+        }
+        setIsDragging(false)
+    }
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(false)
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const files = Array.from(e.dataTransfer.files)
+            setAttachments((prev) => [...prev, ...files])
+        }
+    }
 
     // Update measure div to match textarea styles
     const updateMeasurePosition = (textarea: HTMLTextAreaElement) => {
@@ -213,8 +264,9 @@ export const ArenaInput = ({
     }, [attachments])
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setAttachments([...attachments, ...Array.from(e.target.files)])
+        if (e.target.files && e.target.files.length > 0) {
+            const files = Array.from(e.target.files)
+            setAttachments((prev) => [...prev, ...files])
         }
         if (fileInputRef.current) {
             fileInputRef.current.value = ''
@@ -234,8 +286,22 @@ export const ArenaInput = ({
     }
 
     return (
-        <div className="flex-none p-4 pt-2 bg-background border-t z-20">
-            <div className="relative w-full group">
+        <div
+            className={cn(
+                'flex-none p-4 pt-2 bg-background border-t z-20 transition-all duration-200',
+                className
+            )}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            <div
+                className={cn(
+                    'relative w-full group flex flex-col gap-2',
+                    className?.includes('h-full') ? 'h-full' : ''
+                )}
+            >
                 {/* Hidden measure div for caret positioning */}
                 <div
                     ref={measureRef}
@@ -289,40 +355,56 @@ export const ArenaInput = ({
                 />
 
                 {attachments.length > 0 && (
-                    <div className="flex gap-3 mb-3 overflow-x-auto py-1 px-1 scrollbar-thin scrollbar-thumb-muted-foreground/20">
-                        {attachments.map((file, idx) => (
-                            <div
-                                key={idx + file.name}
-                                className="relative flex-none group/attachment"
-                            >
-                                <div className="border rounded-lg overflow-hidden bg-muted relative w-16 h-16 flex items-center justify-center shadow-sm">
-                                    {file.type.startsWith('image/') &&
-                                    previews[file.name] ? (
-                                        <img
-                                            src={previews[file.name]}
-                                            alt={file.name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <FileText className="w-8 h-8 text-muted-foreground/50" />
-                                    )}
-                                    <div className="absolute inset-0 bg-black/0 group-hover/attachment:bg-black/10 transition-colors" />
-                                </div>
-                                <button
-                                    onClick={() => removeAttachment(idx)}
-                                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md opacity-0 group-hover/attachment:opacity-100 transition-all scale-90 group-hover/attachment:scale-100 z-10"
+                    <div className="flex items-start gap-2">
+                        <div className="flex gap-3 overflow-x-auto py-1 px-1 flex-1 scrollbar-thin scrollbar-thumb-muted-foreground/20">
+                            {attachments.map((file, idx) => (
+                                <div
+                                    key={idx + file.name}
+                                    className="relative flex-none group/attachment"
                                 >
-                                    <X className="w-3 h-3" />
-                                </button>
-                                <div className="text-[10px] text-muted-foreground truncate w-16 mt-1.5 text-center font-medium">
-                                    {file.name}
+                                    <div className="border rounded-lg overflow-hidden bg-muted relative w-16 h-16 flex items-center justify-center shadow-sm">
+                                        {file.type.startsWith('image/') &&
+                                        previews[file.name] ? (
+                                            <img
+                                                src={previews[file.name]}
+                                                alt={file.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <FileText className="w-8 h-8 text-muted-foreground/50" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/0 group-hover/attachment:bg-black/10 transition-colors" />
+                                    </div>
+                                    <button
+                                        onClick={() => removeAttachment(idx)}
+                                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md opacity-0 group-hover/attachment:opacity-100 transition-all scale-90 group-hover/attachment:scale-100 z-10"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                    <div className="text-[10px] text-muted-foreground truncate w-16 mt-1.5 text-center font-medium">
+                                        {file.name}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setAttachments([])}
+                            className="h-7 px-2 mt-1 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full flex-shrink-0"
+                            title="Clear all attachments"
+                        >
+                            <Trash2 className="w-3 h-3 mr-1" /> Clear
+                        </Button>
                     </div>
                 )}
 
-                <div className="relative">
+                <div
+                    className={cn(
+                        'relative',
+                        className?.includes('h-full') ? 'flex-1' : ''
+                    )}
+                >
                     <Textarea
                         ref={textareaRef}
                         value={input}
@@ -334,14 +416,33 @@ export const ArenaInput = ({
                                 : 'Send a message to all models... (Use @ to mention models)'
                         }
                         className={cn(
-                            'min-h-[64px] max-h-[160px] pr-12 resize-none shadow-sm pb-10 pl-4 rounded-xl',
+                            'min-h-[80px] max-h-[200px] resize-none shadow-sm rounded-xl p-3',
                             'focus-visible:ring-primary/20',
                             // Ensure font matches measure div
-                            'font-sans text-sm leading-relaxed'
+                            'font-sans text-sm leading-relaxed',
+                            textareaClassName
                         )}
+                        onDragOver={handleDragOver}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
                     />
 
-                    <div className="absolute bottom-2 left-2 flex items-center gap-2">
+                    {/* Drag and Drop Overlay */}
+                    {isDragging && (
+                        <div className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary rounded-xl flex items-center justify-center backdrop-blur-[2px] pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+                            <div className="bg-background/90 px-4 py-2 rounded-full shadow-lg border flex items-center gap-2">
+                                <Paperclip className="w-4 h-4 text-primary" />
+                                <span className="text-sm font-medium">
+                                    Drop files to attach
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -355,27 +456,43 @@ export const ArenaInput = ({
                             variant="ghost"
                             size="sm"
                             onClick={handleClearContext}
-                            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 rounded-full"
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all rounded-full"
                         >
                             <Eraser className="w-3 h-3 mr-1.5" /> Clear Context
                         </Button>
+                        {onExpand && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onExpand}
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
+                                title="Expand to full screen"
+                            >
+                                <Maximize2 className="w-4 h-4" />
+                            </Button>
+                        )}
                     </div>
 
-                    <Button
-                        onClick={onSend}
-                        disabled={
-                            isProcessing ||
-                            (!input.trim() && attachments.length === 0)
-                        }
-                        className="absolute bottom-3 right-3 h-8 w-8 p-0 rounded-full shadow-md"
-                        size="icon"
-                    >
-                        {isProcessing ? (
-                            <Play className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Send className="h-4 w-4" />
-                        )}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground hidden sm:inline-block">
+                            Enter for new line, Shift+Enter to send
+                        </span>
+                        <Button
+                            onClick={onSend}
+                            disabled={
+                                isProcessing ||
+                                (!input.trim() && attachments.length === 0)
+                            }
+                            className="h-8 w-8 p-0 rounded-full shadow-md"
+                            size="icon"
+                        >
+                            {isProcessing ? (
+                                <Play className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Send className="h-4 w-4" />
+                            )}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

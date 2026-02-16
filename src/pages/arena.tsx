@@ -1,4 +1,4 @@
-import { KeyboardEvent, useCallback } from 'react'
+import { KeyboardEvent, useCallback, useEffect, useState } from 'react'
 import { LLMModel } from '@/lib/types'
 import { ArenaHeader } from '@/features/chat-arena/components/ArenaHeader'
 import { ArenaInput } from '@/features/chat-arena/components/ArenaInput'
@@ -14,6 +14,13 @@ import { useArenaExport } from '@/features/chat-arena/hooks/useArenaExport'
 import { PageLayout } from '@/features/layout/PageLayout'
 import { Layers } from 'lucide-react'
 import { ArenaCarousel } from '@/features/chat-arena/components/ArenaCarousel'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription
+} from '@/components/ui/dialog'
 import {
     useModels,
     useActiveModelIds,
@@ -62,6 +69,84 @@ export function ArenaPage() {
         attachments,
         setAttachments
     } = useArenaState()
+
+    const [showFullScreenInput, setShowFullScreenInput] = useState(false)
+
+    // Tauri v2 drag and drop support (registered once at page level)
+    useEffect(() => {
+        let unlisten: (() => void) | undefined
+
+        const setupTauriDragDrop = async () => {
+            try {
+                const { getCurrentWebview } =
+                    await import('@tauri-apps/api/webview')
+                const { readFile } = await import('@tauri-apps/plugin-fs')
+
+                const webview = getCurrentWebview()
+                unlisten = await webview.onDragDropEvent(async (event) => {
+                    if (event.payload.type === 'drop') {
+                        const paths = event.payload.paths
+                        if (paths && paths.length > 0) {
+                            const newFiles: File[] = []
+                            for (const filePath of paths) {
+                                try {
+                                    const fileName =
+                                        filePath.split('/').pop() ||
+                                        filePath.split('\\').pop() ||
+                                        'file'
+                                    const contents = await readFile(filePath)
+                                    const ext =
+                                        fileName
+                                            .split('.')
+                                            .pop()
+                                            ?.toLowerCase() || ''
+                                    const mimeMap: Record<string, string> = {
+                                        png: 'image/png',
+                                        jpg: 'image/jpeg',
+                                        jpeg: 'image/jpeg',
+                                        gif: 'image/gif',
+                                        webp: 'image/webp',
+                                        svg: 'image/svg+xml',
+                                        bmp: 'image/bmp',
+                                        pdf: 'application/pdf',
+                                        txt: 'text/plain',
+                                        md: 'text/markdown',
+                                        json: 'application/json',
+                                        csv: 'text/csv'
+                                    }
+                                    const mimeType =
+                                        mimeMap[ext] ||
+                                        'application/octet-stream'
+                                    const file = new File(
+                                        [contents],
+                                        fileName,
+                                        { type: mimeType }
+                                    )
+                                    newFiles.push(file)
+                                } catch (err) {
+                                    console.error(
+                                        'Failed to read dropped file:',
+                                        filePath,
+                                        err
+                                    )
+                                }
+                            }
+                            if (newFiles.length > 0) {
+                                setAttachments((prev) => [...prev, ...newFiles])
+                            }
+                        }
+                    }
+                })
+            } catch {
+                // Not in Tauri environment
+            }
+        }
+
+        setupTauriDragDrop()
+        return () => {
+            unlisten?.()
+        }
+    }, [setAttachments])
 
     const activeModels = models.filter((m: LLMModel) =>
         activeModelIds.includes(m.id)
@@ -143,7 +228,7 @@ export function ArenaPage() {
 
     const handleKeyDown = useCallback(
         (e: KeyboardEvent<HTMLTextAreaElement>) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault()
                 handleSend()
             }
@@ -214,7 +299,10 @@ export function ArenaPage() {
             )}
 
             {arenaColumns === 5 ? (
-                <div className="flex-1 min-h-0 bg-muted/5 p-4">
+                <div
+                    className="flex-1 min-h-0 bg-muted/5 p-4"
+                    onContextMenu={(e) => e.preventDefault()}
+                >
                     <ArenaCarousel
                         models={displayModels}
                         renderModel={(model) => (
@@ -248,6 +336,7 @@ export function ArenaPage() {
             ) : (
                 <div
                     className={`flex-1 min-h-0 overflow-y-auto grid gap-4 p-4 ${gridColsClass} auto-rows-[1fr]`}
+                    onContextMenu={(e) => e.preventDefault()}
                 >
                     {displayModels.map((model: LLMModel) => (
                         <ModelColumn
@@ -285,7 +374,45 @@ export function ArenaPage() {
                 isProcessing={isProcessing}
                 attachments={attachments}
                 setAttachments={setAttachments}
+                onExpand={() => setShowFullScreenInput(true)}
             />
+
+            <Dialog
+                open={showFullScreenInput}
+                onOpenChange={setShowFullScreenInput}
+            >
+                <DialogContent className="max-w-4xl w-[90vw] h-[80vh] flex flex-col p-6 gap-0">
+                    <DialogHeader className="px-0 pt-0 pb-4 border-b-0">
+                        <DialogTitle>Full Screen Input</DialogTitle>
+                        <DialogDescription>
+                            Type your message with more space. Supports Markdown
+                            and drag & drop.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 min-h-0 flex flex-col">
+                        <ArenaInput
+                            input={input}
+                            setInput={setInput}
+                            onSend={() => {
+                                handleSend()
+                                setShowFullScreenInput(false)
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.shiftKey) {
+                                    e.preventDefault()
+                                    handleSend()
+                                    setShowFullScreenInput(false)
+                                }
+                            }}
+                            isProcessing={isProcessing}
+                            attachments={attachments}
+                            setAttachments={setAttachments}
+                            className="flex-1 h-full border-t-0 p-0"
+                            textareaClassName="min-h-0 max-h-none h-full border-0 shadow-none rounded-none focus-visible:ring-0 p-4 text-base"
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {modelToEdit && (
                 <ModelEditDialog

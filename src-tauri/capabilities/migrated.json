@@ -10,6 +10,7 @@
     "process:default",
     "shell:default",
     "fs:default",
+    "fs:allow-read-file",
     "dialog:default"
   ]
 }
