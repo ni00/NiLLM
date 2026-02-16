@@ -95,6 +95,7 @@ interface AppState {
     }[]
     isProcessing: boolean
     addToQueue: (prompt: string, sessionId?: string) => void
+    addBatchToQueue: (items: { prompt: string; sessionId?: string }[]) => void
     removeFromQueue: (id: string) => void
     toggleQueuePause: (id: string) => void
     reorderQueue: (fromIndex: number, toIndex: number) => void
@@ -290,6 +291,18 @@ export const useAppStore = create<AppState>()(
                             sessionId,
                             paused: false
                         }
+                    ]
+                })),
+            addBatchToQueue: (items) =>
+                set((state) => ({
+                    messageQueue: [
+                        ...state.messageQueue,
+                        ...items.map((item) => ({
+                            id: crypto.randomUUID() as string,
+                            prompt: item.prompt,
+                            sessionId: item.sessionId,
+                            paused: false
+                        }))
                     ]
                 })),
             removeFromQueue: (id) =>

@@ -27,6 +27,8 @@ export const useArenaSortBy = () => useAppStore((state) => state.arenaSortBy)
 export const useSetPendingPrompt = () =>
     useAppStore((state) => state.setPendingPrompt)
 export const useAddToQueue = () => useAppStore((state) => state.addToQueue)
+export const useAddBatchToQueue = () =>
+    useAppStore((state) => state.addBatchToQueue)
 export const useRemoveFromQueue = () =>
     useAppStore((state) => state.removeFromQueue)
 export const useSetProcessing = () =>

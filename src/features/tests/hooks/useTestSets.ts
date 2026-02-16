@@ -3,6 +3,8 @@ import { useAppStore } from '@/lib/store'
 import { useNavigate } from 'react-router'
 import { TestSet } from '@/lib/types'
 
+const getStoreState = () => useAppStore.getState()
+
 export interface TestSetForm {
     name: string
     cases: { id: string; prompt: string }[]
@@ -18,6 +20,7 @@ export function useTestSets() {
         createSession,
         activeModelIds,
         addToQueue,
+        addBatchToQueue,
         language,
         setLanguage,
         testSets: storedSets,
@@ -191,14 +194,27 @@ export function useTestSets() {
         setRunningSetId(testSet.id)
 
         try {
-            const sessionId = createSession(
-                `Batch Run: ${testSet.name}`,
-                activeModelIds
+            const store = getStoreState()
+            const currentSessionId = store.activeSessionId
+            const currentSession = store.sessions.find(
+                (s) => s.id === currentSessionId
             )
 
-            testSet.cases.forEach((testCase) => {
-                addToQueue(testCase.prompt, sessionId)
-            })
+            const sessionId =
+                currentSessionId &&
+                currentSession?.title?.startsWith('Batch Run:')
+                    ? currentSessionId
+                    : createSession(
+                          `Batch Run: ${testSet.name}`,
+                          activeModelIds
+                      )
+
+            addBatchToQueue(
+                testSet.cases.map((testCase) => ({
+                    prompt: testCase.prompt,
+                    sessionId
+                }))
+            )
 
             navigate('/')
         } finally {

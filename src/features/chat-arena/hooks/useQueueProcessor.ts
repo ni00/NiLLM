@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { broadcastMessage } from '@/features/benchmark/engine'
+import { useAppStore } from '@/lib/store'
 import {
     useMessageQueue,
     useIsProcessing,
@@ -12,37 +13,28 @@ export const useQueueProcessor = () => {
     const isProcessing = useIsProcessing()
     const setProcessing = useSetProcessing()
     const removeFromQueue = useRemoveFromQueue()
-    const isProcessingRef = useRef(isProcessing)
-    const messageQueueRef = useRef(messageQueue)
-    const processingItemIdRef = useRef<string | null>(null)
-    const isMountedRef = useRef(true)
+
+    const processingRef = useRef(false)
 
     useEffect(() => {
-        isProcessingRef.current = isProcessing
-        messageQueueRef.current = messageQueue
-    }, [isProcessing, messageQueue])
+        if (isProcessing || processingRef.current || messageQueue.length === 0)
+            return
 
-    useEffect(() => {
-        isMountedRef.current = true
+        const hasPending = messageQueue.some((m) => !m.paused)
+        if (!hasPending) return
 
-        return () => {
-            isMountedRef.current = false
-        }
-    }, [])
+        processingRef.current = true
 
-    useEffect(() => {
-        const processQueue = async () => {
-            const nextItem = messageQueueRef.current.find(
-                (m: { paused?: boolean }) => !m.paused
-            )
+        const processNextItem = async () => {
+            const nextItem = useAppStore
+                .getState()
+                .messageQueue.find((m) => !m.paused)
 
-            if (isProcessingRef.current || !nextItem) return
+            if (!nextItem) {
+                processingRef.current = false
+                return
+            }
 
-            // StrictMode protection: check if this specific item is already being processed
-            if (processingItemIdRef.current === nextItem.id) return
-
-            // Mark item as processing BEFORE any async operations
-            processingItemIdRef.current = nextItem.id
             setProcessing(true)
 
             try {
@@ -50,15 +42,12 @@ export const useQueueProcessor = () => {
             } catch (err) {
                 console.error('Queue processing error:', err)
             } finally {
-                // Only update state if still mounted
-                if (isMountedRef.current) {
-                    removeFromQueue(nextItem.id)
-                    setProcessing(false)
-                    processingItemIdRef.current = null
-                }
+                removeFromQueue(nextItem.id)
+                setProcessing(false)
+                processingRef.current = false
             }
         }
 
-        processQueue()
+        processNextItem()
     }, [messageQueue, isProcessing, setProcessing, removeFromQueue])
 }
