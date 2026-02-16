@@ -147,6 +147,8 @@ self.onmessage = async (e: MessageEvent) => {
         const start = performance.now()
         let firstTokenTime: number | undefined
         let tokenCount = 0
+        let finalInputTokens: number | undefined
+        let finalOutputTokens: number | undefined
 
         let pendingTextDelta = ''
         let pendingReasoningDelta = ''
@@ -169,6 +171,13 @@ self.onmessage = async (e: MessageEvent) => {
             presencePenalty: model.config?.presencePenalty,
             seed: model.config?.seed,
             stopSequences: model.config?.stopSequences,
+            timeout: model.config?.timeout
+                ? {
+                      totalMs: model.config.timeout.totalMs,
+                      stepMs: model.config.timeout.stepMs,
+                      chunkMs: model.config.timeout.chunkMs
+                  }
+                : undefined,
             providerOptions: {
                 openai: {
                     ...(model.config?.minP !== undefined
@@ -178,7 +187,26 @@ self.onmessage = async (e: MessageEvent) => {
                         ? { repetition_penalty: model.config.repetitionPenalty }
                         : {})
                 }
-            }
+            },
+            onStepFinish: ({ usage }) => {
+                if (usage?.outputTokens) {
+                    tokenCount = Math.max(tokenCount, usage.outputTokens)
+                }
+            },
+            onFinish: ({ usage }) => {
+                finalInputTokens = usage?.inputTokens
+                finalOutputTokens = usage?.outputTokens
+            },
+            ...(model.config?.telemetry?.isEnabled && {
+                experimental_telemetry: {
+                    isEnabled: true,
+                    functionId:
+                        model.config.telemetry.functionId || 'nillm-stream',
+                    recordInputs: model.config.telemetry.recordInputs,
+                    recordOutputs: model.config.telemetry.recordOutputs,
+                    metadata: model.config.telemetry.metadata
+                }
+            })
         })
 
         const reader = result.fullStream.getReader()
@@ -252,8 +280,19 @@ self.onmessage = async (e: MessageEvent) => {
             }
 
             if (value.type === 'finish') {
-                const usage = (value as any).usage || (value as any).totalUsage
-                const apiTokens = usage?.completionTokens || 0
+                const finishValue = value as {
+                    usage?: { completionTokens?: number; outputTokens?: number }
+                    totalUsage?: {
+                        completionTokens?: number
+                        outputTokens?: number
+                    }
+                }
+                const usage = finishValue.usage || finishValue.totalUsage
+                const apiTokens =
+                    finalOutputTokens ||
+                    usage?.outputTokens ||
+                    usage?.completionTokens ||
+                    0
                 const finalTokens = Math.max(apiTokens, Math.round(tokenCount))
                 const duration = (now - (firstTokenTime || now)) / 1000
                 const tps = duration > 0 ? finalTokens / duration : 0
@@ -269,7 +308,9 @@ self.onmessage = async (e: MessageEvent) => {
                             : 0,
                         tokenCount: finalTokens,
                         totalDuration: now - start,
-                        tps: Math.round(tps * 100) / 100
+                        tps: Math.round(tps * 100) / 100,
+                        inputTokens: finalInputTokens,
+                        outputTokens: finalOutputTokens
                     },
                     isFinal: true
                 })

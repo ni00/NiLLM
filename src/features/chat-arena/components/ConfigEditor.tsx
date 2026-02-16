@@ -3,6 +3,7 @@ import { SamplingConfig } from './config/SamplingConfig'
 import { PenaltiesConfig } from './config/PenaltiesConfig'
 import { ConstraintsConfig } from './config/ConstraintsConfig'
 import { TimeoutsConfig } from './config/TimeoutsConfig'
+import { TelemetryConfig } from './config/TelemetryConfig'
 
 interface ConfigEditorProps {
     config: GenerationConfig
@@ -20,6 +21,7 @@ export const ConfigEditor = ({ config, onChange }: ConfigEditorProps) => {
             <PenaltiesConfig config={config} onChange={handleUpdate} />
             <ConstraintsConfig config={config} onChange={handleUpdate} />
             <TimeoutsConfig config={config} onChange={handleUpdate} />
+            <TelemetryConfig config={config} onChange={handleUpdate} />
         </div>
     )
 }

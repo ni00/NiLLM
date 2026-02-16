@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
 import { getProvider } from '@/lib/ai-provider'
-import { generateText } from 'ai'
+import { generateObject } from 'ai'
+import { z } from 'zod'
 import { LLMModel } from '@/lib/types'
 
 export const useAutoJudge = (activeModels: LLMModel[], activeSession: any) => {
@@ -10,6 +11,8 @@ export const useAutoJudge = (activeModels: LLMModel[], activeSession: any) => {
     const [judgeModelId, setJudgeModelId] = useState<string>('')
     const [judgeStatus, setJudgeStatus] = useState<string | null>(null)
     const [showJudgePanel, setShowJudgePanel] = useState(false)
+    const [abortController, setAbortController] =
+        useState<AbortController | null>(null)
     const [judgePrompt, setJudgePrompt] =
         useState(`You are an impartial AI Judge. 
 Evaluate the quality of the following AI responses based on the user's original intent.
@@ -47,6 +50,8 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
             return
         }
 
+        const controller = new AbortController()
+        setAbortController(controller)
         setIsJudging(true)
         setJudgeStatus('Gathering model responses...')
 
@@ -83,9 +88,15 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
             const userPromptContent = `[User Prompt]\n${lastPrompt}\n\n[Model Responses to Evaluate]\n${responsesToJudge.map((r) => `Model ID: ${r.modelId}\nResponse:\n${r.response}`).join('\n\n---\n\n')}`
 
             const provider = getProvider(judgeModel)
-            let text = ''
+
+            const scoresSchema = z.record(
+                z.string(),
+                z.number().int().min(1).max(5)
+            )
+
+            let scores: Record<string, number>
             try {
-                const response = await generateText({
+                const response = await generateObject({
                     model: provider(judgeModel.providerId),
                     messages: [
                         { role: 'system', content: judgePrompt },
@@ -96,35 +107,19 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                         ? {
                               Authorization: `Bearer ${judgeModel.apiKey}`
                           }
-                        : undefined
+                        : undefined,
+                    schema: scoresSchema,
+                    abortSignal: controller.signal
                 })
-                text = response.text
+
+                scores = response.object
             } catch (apiError: any) {
+                if (apiError.name === 'AbortError') {
+                    throw new Error('Judge request was cancelled')
+                }
                 console.error('Judge API Error:', apiError)
                 throw new Error(
                     `API Error: ${apiError.message || 'Request failed'}`
-                )
-            }
-
-            if (!text || !text.trim()) {
-                throw new Error(
-                    'Model returned empty result. Check API Key or Model ID.'
-                )
-            }
-
-            setJudgeStatus('Parsing scores...')
-
-            let jsonStr = text.trim()
-            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
-            if (jsonMatch) jsonStr = jsonMatch[0]
-
-            let scores: Record<string, number>
-            try {
-                scores = JSON.parse(jsonStr)
-            } catch {
-                console.error('JSON Parse Error. Content:', text)
-                throw new Error(
-                    'Failed to parse scores. Try a more capable model (like GPT-4).'
                 )
             }
 
@@ -173,6 +168,16 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
             setJudgeStatus(`Error: ${e.message || 'Failed to judge'}`)
         } finally {
             setIsJudging(false)
+            setAbortController(null)
+        }
+    }
+
+    const cancelJudge = () => {
+        if (abortController) {
+            abortController.abort()
+            setJudgeStatus('Cancelled')
+            setIsJudging(false)
+            setAbortController(null)
         }
     }
 
@@ -186,6 +191,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
         setShowJudgePanel,
         judgePrompt,
         setJudgePrompt,
-        handleAutoJudge
+        handleAutoJudge,
+        cancelJudge
     }
 }

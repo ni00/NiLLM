@@ -58,7 +58,10 @@ export async function streamResponse(
         ttft?: number
         tps?: number
         tokens?: number
-    }) => void
+        inputTokens?: number
+        outputTokens?: number
+    }) => void,
+    abortSignal?: AbortSignal
 ) {
     const providerFactory = getProvider(model)
     const languageModel: LanguageModel = providerFactory(
@@ -68,6 +71,8 @@ export async function streamResponse(
     const start = performance.now()
     let firstTokenTime: number | undefined
     let tokenCount = 0
+    let finalInputTokens: number | undefined
+    let finalOutputTokens: number | undefined
 
     const result = streamText({
         model: languageModel,
@@ -77,7 +82,6 @@ export async function streamResponse(
                   Authorization: `Bearer ${model.apiKey}`
               }
             : undefined,
-        // Generation parameters
         temperature: model.config?.temperature,
         topP: model.config?.topP,
         topK: model.config?.topK,
@@ -86,10 +90,16 @@ export async function streamResponse(
         presencePenalty: model.config?.presencePenalty,
         seed: model.config?.seed,
         stopSequences: model.config?.stopSequences,
-        // Provider specific options
+        timeout: model.config?.timeout
+            ? {
+                  totalMs: model.config.timeout.totalMs,
+                  stepMs: model.config.timeout.stepMs,
+                  chunkMs: model.config.timeout.chunkMs
+              }
+            : undefined,
+        abortSignal,
         providerOptions: {
             openai: {
-                // OpenAI compatible providers often support these via extension
                 ...(model.config?.minP !== undefined
                     ? { min_p: model.config.minP }
                     : {}),
@@ -97,7 +107,25 @@ export async function streamResponse(
                     ? { repetition_penalty: model.config.repetitionPenalty }
                     : {})
             }
-        }
+        },
+        onStepFinish: ({ usage }) => {
+            if (usage?.outputTokens) {
+                tokenCount = Math.max(tokenCount, usage.outputTokens)
+            }
+        },
+        onFinish: ({ usage }) => {
+            finalInputTokens = usage?.inputTokens
+            finalOutputTokens = usage?.outputTokens
+        },
+        ...(model.config?.telemetry?.isEnabled && {
+            experimental_telemetry: {
+                isEnabled: true,
+                functionId: model.config.telemetry.functionId || 'nillm-stream',
+                recordInputs: model.config.telemetry.recordInputs,
+                recordOutputs: model.config.telemetry.recordOutputs,
+                metadata: model.config.telemetry.metadata
+            }
+        })
     })
 
     const fullStream = result.fullStream
@@ -138,12 +166,23 @@ export async function streamResponse(
                     if (value.type === 'finish') {
                         const now = performance.now()
                         const duration = (now - (firstTokenTime || now)) / 1000
+                        const finishValue = value as {
+                            usage?: {
+                                completionTokens?: number
+                                outputTokens?: number
+                            }
+                            totalUsage?: {
+                                completionTokens?: number
+                                outputTokens?: number
+                            }
+                        }
                         const usage =
-                            (value as any).usage || (value as any).totalUsage
-
-                        // If we have real usage data from API, use it (it's most accurate),
-                        // but sometimes providers return wrong lower values, so we take the max of our estimation and their report
-                        const apiTokens = usage?.completionTokens || 0
+                            finishValue.usage || finishValue.totalUsage
+                        const apiTokens =
+                            finalOutputTokens ||
+                            usage?.outputTokens ||
+                            usage?.completionTokens ||
+                            0
                         const finalTokens = Math.max(
                             apiTokens,
                             Math.round(tokenCount)
@@ -152,7 +191,9 @@ export async function streamResponse(
 
                         onMetrics({
                             tps: Math.round(tps * 100) / 100,
-                            tokens: finalTokens
+                            tokens: finalTokens,
+                            inputTokens: finalInputTokens,
+                            outputTokens: finalOutputTokens
                         })
                     }
 

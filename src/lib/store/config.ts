@@ -14,7 +14,17 @@ const DEFAULT_CONFIG: GenerationConfig = {
     minP: undefined,
     systemPrompt: 'You are a helpful AI assistant.',
     connectTimeout: 15000,
-    readTimeout: 30000
+    readTimeout: 30000,
+    timeout: {
+        totalMs: 120000,
+        stepMs: 60000,
+        chunkMs: 10000
+    },
+    telemetry: {
+        isEnabled: false,
+        recordInputs: true,
+        recordOutputs: true
+    }
 }
 
 export interface ConfigSlice {

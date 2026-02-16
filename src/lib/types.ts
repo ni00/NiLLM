@@ -1,3 +1,23 @@
+/**
+ * AI SDK timeout configuration
+ * - totalMs: Total timeout for the entire call (all steps combined)
+ * - stepMs: Timeout for each individual LLM call step (useful for multi-step tool calls)
+ * - chunkMs: Timeout between stream chunks - aborts if no chunk received within this duration
+ */
+export interface TimeoutConfig {
+    totalMs?: number
+    stepMs?: number
+    chunkMs?: number
+}
+
+export interface TelemetryConfig {
+    isEnabled: boolean
+    functionId?: string
+    recordInputs?: boolean
+    recordOutputs?: boolean
+    metadata?: Record<string, string | number | boolean>
+}
+
 export interface GenerationConfig {
     temperature: number
     maxTokens: number
@@ -10,8 +30,10 @@ export interface GenerationConfig {
     stopSequences?: string[]
     minP?: number
     systemPrompt?: string
-    connectTimeout?: number // ms
-    readTimeout?: number // ms
+    connectTimeout?: number
+    readTimeout?: number
+    timeout?: TimeoutConfig
+    telemetry?: TelemetryConfig
 }
 
 export interface LLMModel {
@@ -40,11 +62,13 @@ export interface Message {
 }
 
 export interface BenchmarkMetrics {
-    ttft: number // Time to First Token (ms)
-    tps: number // Tokens Per Second
-    totalDuration: number // Total generation time (ms)
+    ttft: number
+    tps: number
+    totalDuration: number
     tokenCount: number
-    cost?: number // Estimated cost
+    inputTokens?: number
+    outputTokens?: number
+    cost?: number
 }
 
 export interface BenchmarkResult {
