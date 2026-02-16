@@ -63,7 +63,6 @@ function getProvider(model: LLMModel) {
     throw new Error(`Provider ${model.provider} not supported yet`)
 }
 
-// Resolve the base URL for a model's provider
 function getBaseURL(model: LLMModel): string {
     if (model.baseURL) return model.baseURL
     const providerType = model.provider as string
@@ -72,11 +71,6 @@ function getBaseURL(model: LLMModel): string {
     throw new Error(`BaseURL is required for ${providerType} provider`)
 }
 
-// Direct fetch for image generation models.
-// OpenRouter image models (flux, seedream, etc.) use the chat completions
-// endpoint and return images in the response content as base64 data URLs.
-// The AI SDK's generateText/streamText doesn't parse the image response
-// format correctly, so we need to handle the raw API response ourselves.
 async function generateImageViaFetch(
     model: LLMModel,
     prompt: string
@@ -115,20 +109,16 @@ async function generateImageViaFetch(
 
     const data = await resp.json()
 
-    // Extract image data from response — OpenRouter returns images
-    // in various locations depending on the model
     const imageUrls: string[] = []
     let text = ''
 
     if (data.choices && data.choices.length > 0) {
         const message = data.choices[0].message || data.choices[0].delta || {}
 
-        // Case 1: content is a string (may contain markdown image or data URL)
         if (typeof message.content === 'string') {
             text = message.content
         }
 
-        // Case 2: content is an array of parts (multimodal response)
         if (Array.isArray(message.content)) {
             for (const part of message.content) {
                 if (part.type === 'text') {
@@ -140,7 +130,6 @@ async function generateImageViaFetch(
             }
         }
 
-        // Case 3: images array on the message (some OpenRouter models)
         if (Array.isArray(message.images)) {
             for (const img of message.images) {
                 const imgUrl =

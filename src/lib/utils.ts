@@ -10,11 +10,10 @@ export async function downloadFile(
     fileName: string,
     mimeType: string
 ) {
-    // Check for Tauri environment
-    // @ts-ignore
     const isTauri =
         typeof window !== 'undefined' &&
-        !!((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
+        // @ts-expect-error Tauri internal properties not typed
+        !!(window.__TAURI_INTERNALS__ || window.__TAURI__)
 
     if (isTauri) {
         try {

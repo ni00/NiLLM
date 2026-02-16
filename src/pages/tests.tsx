@@ -117,19 +117,13 @@ export function TestsPage() {
         ...storedSets.filter((s) => !builtInTests.find((b) => b.id === s.id))
     ]
 
-    // Apply sort order
     const sortedSets = [...allSets].sort((a, b) => {
         const indexA = testSetOrder.indexOf(a.id)
         const indexB = testSetOrder.indexOf(b.id)
 
-        // If both are in order list, sort by index
         if (indexA !== -1 && indexB !== -1) return indexA - indexB
-        // If only A is in list, A comes first
         if (indexA !== -1) return -1
-        // If only B is in list, B comes first
         if (indexB !== -1) return 1
-        // If neither, keep original order (but maybe sort by name or creation?)
-        // For now keep stable
         return 0
     })
 

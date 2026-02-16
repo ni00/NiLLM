@@ -46,7 +46,6 @@ export function getPendingUpdatesCount(): number {
     return Object.keys(pendingUpdates).length
 }
 
-// Constants for timeouts (Defaults)
 const DEFAULT_CONNECT_TIMEOUT = 15000
 const DEFAULT_READ_TIMEOUT = 30000
 
@@ -62,7 +61,6 @@ function runWorkerStream(
     const readTimeoutMs = model.config?.readTimeout || DEFAULT_READ_TIMEOUT
 
     return new Promise<void>((resolve) => {
-        // Instantiate the worker
         const worker = new Worker(
             new URL('../../lib/workers/stream.worker.ts', import.meta.url),
             {
@@ -81,7 +79,6 @@ function runWorkerStream(
             if (readTimeout) clearTimeout(readTimeout)
             worker.terminate()
             activeTasks.delete(worker)
-            // Clean up pending updates for this result to avoid zombie updates
             delete pendingUpdates[resultId]
         }
 
@@ -95,10 +92,9 @@ function runWorkerStream(
             })
             store.clearStreamingData(resultId)
             cleanup()
-            resolve() // Resolve anyway to not block the queue
+            resolve()
         }
 
-        // Set initial connection timeout
         connectTimeout = setTimeout(() => {
             handleError(
                 `Connection timed out after ${connectTimeoutMs / 1000}s`
@@ -109,16 +105,13 @@ function runWorkerStream(
             const { type, textDelta, reasoningDelta, metrics, isFinal, error } =
                 e.data
 
-            // Reset read timeout on any activity
             if (readTimeout) clearTimeout(readTimeout)
-            // Clear connect timeout on first successful update/start
             if (connectTimeout && (type === 'start' || type === 'update')) {
                 clearTimeout(connectTimeout)
                 connectTimeout = null
             }
 
             if (type === 'start') {
-                // Started successfully, now watch for read timeout
                 readTimeout = setTimeout(() => {
                     handleError(
                         `Stream timed out (no data for ${readTimeoutMs / 1000}s)`
@@ -128,7 +121,6 @@ function runWorkerStream(
             }
 
             if (type === 'update') {
-                // Refresh read timeout
                 readTimeout = setTimeout(() => {
                     handleError(
                         `Stream timed out (no data for ${readTimeoutMs / 1000}s)`
@@ -143,7 +135,6 @@ function runWorkerStream(
                     currentReasoning += reasoningDelta
                 }
 
-                // RAF Batching: Queue update instead of setting immediately
                 pendingUpdates[resultId] = {
                     response: currentText,
                     reasoning: currentReasoning || undefined,
@@ -152,14 +143,11 @@ function runWorkerStream(
                 scheduleFlush()
 
                 if (isFinal) {
-                    // Update persistent store with final result immediately to ensure consistency
                     store.updateResult(sessionId, model.id, resultId, {
                         response: currentText,
                         reasoning: currentReasoning || undefined,
                         metrics
                     })
-                    // No need to clear from pendingUpdates, the next generic flush will handle the transient state,
-                    // or we can remove it to be cleaner, but overwriting is fine.
                 }
             } else if (type === 'done') {
                 store.clearStreamingData(resultId)
@@ -173,10 +161,9 @@ function runWorkerStream(
         worker.onerror = (err) => {
             console.error('Worker error:', err)
             handleError('Worker initialization failed')
-            cleanup() // Ensure cleanup on worker error
+            cleanup()
         }
 
-        // Start the worker
         worker.postMessage({
             model,
             messages,
@@ -198,15 +185,11 @@ export async function broadcastMessage(
         throw new Error('No active models selected')
     }
 
-    // Helper to escape regex special characters
     const escapeRegExp = (string: string) => {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     }
 
-    // Check for @ mentions
     const mentionedModels = activeModels.filter((m) => {
-        // Match @ModelName followed by end of string or whitespace/punctuation
-        // Case insensitive matching
         const pattern = new RegExp(
             `@${escapeRegExp(m.name)}($|\\s|\\.|,|\\?|!)`,
             'i'
@@ -217,7 +200,6 @@ export async function broadcastMessage(
     const targetModels =
         mentionedModels.length > 0 ? mentionedModels : activeModels
 
-    // Strip mentions from prompt if any were found
     let processedPrompt = prompt
     if (mentionedModels.length > 0) {
         mentionedModels.forEach((m) => {
@@ -227,7 +209,6 @@ export async function broadcastMessage(
             )
             processedPrompt = processedPrompt.replace(pattern, '')
         })
-        // Clean up accumulation of spaces
         processedPrompt = processedPrompt.replace(/\s+/g, ' ').trim()
     }
 
@@ -243,19 +224,16 @@ export async function broadcastMessage(
     const promises = targetModels.map(async (model) => {
         const resultId = crypto.randomUUID()
 
-        // Merge config: Global < Model Override
         const mergedConfig = {
             ...store.globalConfig,
             ...model.config
         }
 
-        // Create a model object with merged config
         const modelWithMergedConfig = {
             ...model,
             config: mergedConfig
         }
 
-        // Build history for this specific model
         const history: any[] = []
         if (session && session.results[model.id]) {
             session.results[model.id].forEach((res) => {
@@ -276,7 +254,6 @@ export async function broadcastMessage(
 
         messages.push(...history, { role: 'user', content: processedPrompt })
 
-        // Initial empty result
         const displayPrompt = processedPrompt.replace(
             /<<<<IMAGE_START>>>>.*?<<<<IMAGE_END>>>>/gs,
             '[Image]'
@@ -336,7 +313,6 @@ export async function retryResult(
 
     const resultToRetry = modelResults[resultIndex]
 
-    // Reset result state to loading/empty
     store.updateResult(sessionId, modelId, resultId, {
         error: undefined,
         response: '',
@@ -344,7 +320,6 @@ export async function retryResult(
         timestamp: Date.now()
     })
 
-    // Build history from previous results
     const historyResults = modelResults.slice(0, resultIndex)
     const history: any[] = []
     historyResults.forEach((res) => {
@@ -354,7 +329,6 @@ export async function retryResult(
         }
     })
 
-    // Build messages
     const messages: any[] = []
     if (store.globalConfig.systemPrompt) {
         messages.push({
@@ -364,7 +338,6 @@ export async function retryResult(
     }
     messages.push(...history, { role: 'user', content: resultToRetry.prompt })
 
-    // Merge config
     const mergedConfig = {
         ...store.globalConfig,
         ...model.config
@@ -374,7 +347,5 @@ export async function retryResult(
         config: mergedConfig
     }
 
-    // Run stream
-    // Note: We don't await this inside the UI handler typically, but here we can return the promise.
     await runWorkerStream(modelWithMergedConfig, messages, resultId, sessionId)
 }

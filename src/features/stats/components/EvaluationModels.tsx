@@ -97,13 +97,6 @@ export function EvaluationModels({
     maxTPS,
     onClearModel
 }: EvaluationModelsProps) {
-    // Determine which table implementation to use (conceptually), but here I'll just use the simple one
-    // since I saw the table component doesn't exist in the file list.
-    // I will use local component definitions to emulate the shadcn/ui table structure
-    // without needing to create a new file, ensuring it works immediately.
-
-    // Using the local SimpleTable components defined above.
-
     const [sortConfig, setSortConfig] = useState<{
         key: keyof ModelStat
         direction: 'asc' | 'desc'

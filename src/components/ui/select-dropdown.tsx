@@ -34,7 +34,7 @@ export function SelectDropdown({
     placeholder = 'Select...',
     className,
     width = 'w-full',
-    // searchable = false, // TODO: Implement search if needed
+    searchable: _searchable = false,
     disabled = false
 }: SelectDropdownProps) {
     const [open, setOpen] = React.useState(false)

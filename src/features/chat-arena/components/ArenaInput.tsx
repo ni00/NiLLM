@@ -62,14 +62,9 @@ export const ArenaInput = ({
               )
             : []
 
-    // Refs for safe measuring
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const textareaRef = useRef<HTMLTextAreaElement>(null) // We need a ref to the Textarea component's underlying input
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
     const measureRef = useRef<HTMLDivElement>(null)
-
-    // We need to access the underlying textarea DOM element.
-    // Since ShadCN Textarea forwards ref, we can use a callback ref or just standard ref if it works.
-    // Let's assume Textarea component forwards ref correctly to the HTMLTextAreaElement.
 
     const [previews, setPreviews] = useState<Record<string, string>>({})
     const [isDragging, setIsDragging] = useState(false)
@@ -143,17 +138,11 @@ export const ArenaInput = ({
         const scrollTop = textarea.scrollTop
         const clientHeight = textarea.clientHeight
 
-        // Calculate position relative to bottom-left of the textarea container
-        // We want the menu to appear ABOVE the cursor line.
-        // Cursor Y relative to top = offsetTop - scrollTop
-        // Distance from bottom = clientHeight - (offsetTop - scrollTop)
-        // We add a little buffer (e.g. 24px line height) to position it "above" the current line
-
         const bottom = clientHeight - (offsetTop - scrollTop)
 
         setMentionPosition({
             left: offsetLeft,
-            top: bottom // reusing 'top' property name to store bottom offset for simplicity, or we can rename state
+            top: bottom
         })
 
         measureRef.current.removeChild(span)
@@ -169,12 +158,8 @@ export const ArenaInput = ({
 
         if (lastAt !== -1) {
             const textAfterAt = textBeforeCursor.substring(lastAt + 1)
-            // Valid matches: empty (just typed @), or no whitespace
             if (!/\s/.test(textAfterAt) || textAfterAt.length === 0) {
                 setMentionQuery(textAfterAt)
-                // We need to wait for render/layout if height changed,
-                // but usually textarea height update happens after.
-                // For safety pass the element directly.
                 requestAnimationFrame(() => updateMeasurePosition(e.target))
                 return
             }
@@ -182,7 +167,6 @@ export const ArenaInput = ({
         setMentionQuery(null)
     }
 
-    // Override keydown for navigation
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (mentionQuery !== null && filteredModels.length > 0) {
             if (e.key === 'ArrowUp') {
@@ -226,10 +210,9 @@ export const ArenaInput = ({
         setInput(newText)
         setMentionQuery(null)
 
-        // Reset cursor focus and position (setTimeout to allow render)
         setTimeout(() => {
             if (textareaRef.current) {
-                const newCursor = lastAt + model.name.length + 2 // @ + name + space
+                const newCursor = lastAt + model.name.length + 2
                 textareaRef.current.selectionStart = newCursor
                 textareaRef.current.selectionEnd = newCursor
                 textareaRef.current.focus()
@@ -314,7 +297,7 @@ export const ArenaInput = ({
                     <div
                         className="absolute z-50 w-64 p-1 overflow-hidden bg-popover text-popover-foreground rounded-md border shadow-md animate-in fade-in zoom-in-95 duration-100"
                         style={{
-                            bottom: mentionPosition.top + 28, // Position above the cursor line
+                            bottom: mentionPosition.top + 28,
                             left: mentionPosition.left + 16,
                             minWidth: '200px'
                         }}
@@ -329,7 +312,6 @@ export const ArenaInput = ({
                                             ? 'bg-accent text-accent-foreground'
                                             : 'hover:bg-muted'
                                     )}
-                                    // Mouse enter to set index creates a nice hover effect combined with keyboard
                                     onMouseEnter={() => setMentionIndex(idx)}
                                     onClick={() => selectModel(model)}
                                 >
@@ -418,7 +400,6 @@ export const ArenaInput = ({
                         className={cn(
                             'min-h-[80px] max-h-[200px] resize-none shadow-sm rounded-xl p-3',
                             'focus-visible:ring-primary/20',
-                            // Ensure font matches measure div
                             'font-sans text-sm leading-relaxed',
                             textareaClassName
                         )}
