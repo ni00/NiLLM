@@ -6,9 +6,15 @@ import './global.css'
 import AppRouter from '@/app/router'
 import AppProvider from '@/app/provider'
 
+const isTauri =
+    typeof window !== 'undefined' &&
+    !!((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
+
 export default function App() {
     useEffect(() => {
-        emit('frontend-ready')
+        if (isTauri) {
+            emit('frontend-ready')
+        }
     }, [])
 
     return (
