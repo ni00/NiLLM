@@ -42,7 +42,7 @@ export function ConfirmClearDialog({
                         </span>{' '}
                         all performance data for{' '}
                         <span className="font-medium text-foreground">
-                            "{modelName}"
+                            &ldquo;{modelName}&rdquo;
                         </span>
                         .
                     </AlertDialogDescription>

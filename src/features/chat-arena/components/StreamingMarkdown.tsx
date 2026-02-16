@@ -1,19 +1,15 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react'
-import { createPortal } from 'react-dom'
+import React, { useEffect, useState, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Copy, Check, Download, ZoomIn, X } from 'lucide-react'
+import { ContextMenu } from './ContextMenu'
+import { ImageLightbox } from './ImageLightbox'
+import { downloadImage } from '@/lib/utils/downloadImage'
 
 interface StreamingMarkdownProps {
     content: string
     isStreaming?: boolean
 }
 
-/**
- * Optimized Markdown renderer for streaming content.
- * Uses requestAnimationFrame-based throttling to ensure smooth rendering
- * without overwhelming the CPU during high-frequency token updates.
- */
 export const StreamingMarkdown = React.memo(
     ({ content, isStreaming }: StreamingMarkdownProps) => {
         const [displayContent, setDisplayContent] = useState(content)
@@ -21,26 +17,20 @@ export const StreamingMarkdown = React.memo(
         const frameId = useRef<number | null>(null)
         const lastUpdate = useRef<number>(0)
 
-        // Context Menu State
         const [menuOpen, setMenuOpen] = useState(false)
         const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
         const [copied, setCopied] = useState(false)
-        // Track if context menu was triggered on an image
         const [contextImageSrc, setContextImageSrc] = useState<string | null>(
             null
         )
-
-        // Lightbox State
         const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
-        // Update ref whenever content changes
         useEffect(() => {
             contentRef.current = content
         }, [content])
 
         useEffect(() => {
             if (!isStreaming) {
-                // If not streaming, sync immediately and cancel any pending frames
                 setDisplayContent(content)
                 if (frameId.current !== null) {
                     cancelAnimationFrame(frameId.current)
@@ -49,10 +39,7 @@ export const StreamingMarkdown = React.memo(
                 return
             }
 
-            // Throttled update loop
             const updateLoop = (now: number) => {
-                // Target ~10-15fps for markdown parsing during streaming is plenty
-                // and saves massive CPU cycles. (approx every 66-100ms)
                 if (now - lastUpdate.current > 80) {
                     if (displayContent !== contentRef.current) {
                         setDisplayContent(contentRef.current)
@@ -69,9 +56,8 @@ export const StreamingMarkdown = React.memo(
                     cancelAnimationFrame(frameId.current)
                 }
             }
-        }, [isStreaming]) // Only restart loop when isStreaming state changes
+        }, [isStreaming])
 
-        // Close menu on click outside
         useEffect(() => {
             const closeMenu = () => {
                 if (menuOpen) setMenuOpen(false)
@@ -80,7 +66,6 @@ export const StreamingMarkdown = React.memo(
             return () => window.removeEventListener('click', closeMenu)
         }, [menuOpen])
 
-        // Close lightbox on Escape
         useEffect(() => {
             if (!lightboxSrc) return
             const handleKey = (e: KeyboardEvent) => {
@@ -94,7 +79,6 @@ export const StreamingMarkdown = React.memo(
             e.preventDefault()
             e.stopPropagation()
 
-            // Check if right-click was on an image
             const target = e.target as HTMLElement
             const imgSrc =
                 target.tagName === 'IMG'
@@ -107,8 +91,7 @@ export const StreamingMarkdown = React.memo(
             setCopied(false)
         }
 
-        const handleCopy = (e: React.MouseEvent) => {
-            e.stopPropagation()
+        const handleCopy = () => {
             const selection = window.getSelection()?.toString()
             const textToCopy = selection || content
             navigator.clipboard.writeText(textToCopy)
@@ -116,122 +99,13 @@ export const StreamingMarkdown = React.memo(
             setTimeout(() => setMenuOpen(false), 800)
         }
 
-        const downloadImage = useCallback(async (src: string) => {
-            if (!src) return
-
-            let ext = 'png'
-            const mimeMatch = src.match(/^data:image\/(\w+);/)
-            if (mimeMatch) {
-                ext = mimeMatch[1] === 'jpeg' ? 'jpg' : mimeMatch[1]
-            }
-            const fileName = `generated-image-${Date.now()}.${ext}`
-
-            try {
-                let blob: Blob
-
-                if (src.startsWith('data:')) {
-                    const base64Match = src.match(
-                        /^data:image\/\w+;base64,(.+)$/
-                    )
-                    if (!base64Match) {
-                        console.error('Invalid data URL format')
-                        return
-                    }
-                    const byteCharacters = atob(base64Match[1])
-                    const byteNumbers = new Array(byteCharacters.length)
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i)
-                    }
-                    const byteArray = new Uint8Array(byteNumbers)
-                    const mimeType =
-                        src.match(/^data:(image\/\w+);/)?.[1] || 'image/png'
-                    blob = new Blob([byteArray], { type: mimeType })
-                } else {
-                    const response = await fetch(src)
-                    blob = await response.blob()
-                }
-
-                const isTauri =
-                    typeof window !== 'undefined' &&
-                    !!(
-                        (window as any).__TAURI_INTERNALS__ ||
-                        (window as any).__TAURI__
-                    )
-
-                let savedViaTauri = false
-
-                if (isTauri) {
-                    try {
-                        const { save } =
-                            await import('@tauri-apps/plugin-dialog')
-                        const { writeFile } =
-                            await import('@tauri-apps/plugin-fs')
-
-                        const filePath = await save({
-                            defaultPath: fileName,
-                            filters: [
-                                {
-                                    name: ext.toUpperCase(),
-                                    extensions: [ext]
-                                }
-                            ]
-                        })
-
-                        if (filePath) {
-                            const arrayBuffer = await blob.arrayBuffer()
-                            await writeFile(
-                                filePath,
-                                new Uint8Array(arrayBuffer)
-                            )
-                            savedViaTauri = true
-                        }
-                    } catch (tauriError) {
-                        console.warn(
-                            'Tauri save failed, trying browser fallback:',
-                            tauriError
-                        )
-                    }
-                }
-
-                if (!savedViaTauri) {
-                    const url = URL.createObjectURL(blob)
-                    const link = document.createElement('a')
-                    link.href = url
-                    link.download = fileName
-                    document.body.appendChild(link)
-                    link.click()
-                    document.body.removeChild(link)
-                    URL.revokeObjectURL(url)
-                }
-            } catch (error) {
-                console.error('Failed to download image:', error)
-            }
-        }, [])
-
-        const handleDownloadImage = useCallback(
-            async (e: React.MouseEvent) => {
-                e.stopPropagation()
-                if (!contextImageSrc) return
-                await downloadImage(contextImageSrc)
-                setMenuOpen(false)
-            },
-            [contextImageSrc, downloadImage]
-        )
-
-        // Calculate context menu bounds
-        const menuHeight = contextImageSrc ? 90 : 40
-        const menuWidth = 160
-
         return (
             <div
                 className="markdown-body text-sm leading-relaxed px-1"
                 onContextMenu={handleContextMenu}
                 style={{
-                    // Optimization: Tell the browser this content will change frequently
                     willChange: isStreaming ? 'contents' : 'auto',
-                    // Optimization: Contain the layout and paint to this container
                     contain: 'layout style paint',
-                    // Ensure the container has its own layer
                     transform: 'translateZ(0)',
                     wordBreak: 'break-word',
                     overflowWrap: 'anywhere'
@@ -240,9 +114,7 @@ export const StreamingMarkdown = React.memo(
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     urlTransform={(url) => {
-                        // Allow data: URLs for images (base64 image generation)
                         if (url.startsWith('data:image/')) return url
-                        // Default behavior for other URLs
                         if (
                             url.startsWith('http://') ||
                             url.startsWith('https://')
@@ -290,123 +162,29 @@ export const StreamingMarkdown = React.memo(
                     {displayContent}
                 </ReactMarkdown>
 
-                {/* Context Menu */}
-                {menuOpen &&
-                    createPortal(
-                        <div
-                            className="fixed z-[100] min-w-[160px] overflow-hidden rounded-lg border border-border/50 bg-popover/95 backdrop-blur-sm p-1 text-popover-foreground shadow-xl"
-                            style={{
-                                top: Math.min(
-                                    menuPosition.y,
-                                    window.innerHeight - menuHeight
-                                ),
-                                left: Math.min(
-                                    menuPosition.x,
-                                    window.innerWidth - menuWidth
-                                ),
-                                animation: 'fadeInScale 0.15s ease-out'
-                            }}
-                        >
-                            {/* Show image-specific options when right-clicking on an image */}
-                            {contextImageSrc && (
-                                <>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            setLightboxSrc(contextImageSrc)
-                                            setMenuOpen(false)
-                                        }}
-                                        className="relative flex w-full cursor-default select-none items-center rounded-md px-2.5 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
-                                    >
-                                        <ZoomIn className="mr-2.5 h-4 w-4 opacity-60" />
-                                        <span>View Full Size</span>
-                                    </button>
-                                    <button
-                                        onClick={handleDownloadImage}
-                                        className="relative flex w-full cursor-default select-none items-center rounded-md px-2.5 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
-                                    >
-                                        <Download className="mr-2.5 h-4 w-4 opacity-60" />
-                                        <span>Download Image</span>
-                                    </button>
-                                    <div className="my-1 h-px bg-border/50" />
-                                </>
-                            )}
-                            <button
-                                onClick={handleCopy}
-                                className="relative flex w-full cursor-default select-none items-center rounded-md px-2.5 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
-                            >
-                                {copied ? (
-                                    <Check className="mr-2.5 h-4 w-4 text-green-500" />
-                                ) : (
-                                    <Copy className="mr-2.5 h-4 w-4 opacity-60" />
-                                )}
-                                <span>{copied ? 'Copied' : 'Copy Text'}</span>
-                            </button>
-                        </div>,
-                        document.body
-                    )}
+                <ContextMenu
+                    isOpen={menuOpen}
+                    position={menuPosition}
+                    hasImage={!!contextImageSrc}
+                    copied={copied}
+                    onCopy={handleCopy}
+                    onViewImage={() =>
+                        contextImageSrc && setLightboxSrc(contextImageSrc)
+                    }
+                    onDownloadImage={() =>
+                        contextImageSrc && downloadImage(contextImageSrc)
+                    }
+                    onClose={() => setMenuOpen(false)}
+                />
 
-                {/* Image Lightbox */}
-                {lightboxSrc &&
-                    createPortal(
-                        <div
-                            className="fixed inset-0 z-[200] flex items-center justify-center"
-                            style={{
-                                animation: 'fadeIn 0.2s ease-out'
-                            }}
-                            onClick={() => setLightboxSrc(null)}
-                        >
-                            {/* Backdrop */}
-                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+                {lightboxSrc && (
+                    <ImageLightbox
+                        src={lightboxSrc}
+                        onClose={() => setLightboxSrc(null)}
+                        onDownload={downloadImage}
+                    />
+                )}
 
-                            {/* Close button */}
-                            <button
-                                onClick={() => setLightboxSrc(null)}
-                                className="absolute z-10 rounded-full bg-white/10 hover:bg-white/20 p-2 text-white transition-colors"
-                                style={{
-                                    top: 'calc(1rem + var(--safe-area-inset-top, 0px))',
-                                    right: '1rem'
-                                }}
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
-
-                            {/* Download button */}
-                            <button
-                                onClick={async (e) => {
-                                    e.stopPropagation()
-                                    await downloadImage(lightboxSrc)
-                                }}
-                                className="absolute z-10 rounded-full bg-white/10 hover:bg-white/20 p-2 text-white transition-colors"
-                                style={{
-                                    top: 'calc(1rem + var(--safe-area-inset-top, 0px))',
-                                    right: '4rem'
-                                }}
-                            >
-                                <Download className="h-6 w-6" />
-                            </button>
-
-                            {/* Image */}
-                            <img
-                                src={lightboxSrc}
-                                alt="Full size image"
-                                onClick={(e) => e.stopPropagation()}
-                                style={{
-                                    position: 'relative',
-                                    maxWidth: '90vw',
-                                    maxHeight: '90vh',
-                                    objectFit: 'contain',
-                                    borderRadius: '8px',
-                                    boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
-                                    animation: 'scaleIn 0.25s ease-out',
-                                    cursor: 'default'
-                                }}
-                            />
-                        </div>,
-                        document.body
-                    )}
-
-                {/* Animation styles */}
                 <style>{`
                     @keyframes fadeIn {
                         from { opacity: 0; }

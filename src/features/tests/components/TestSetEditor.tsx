@@ -149,8 +149,8 @@ export function TestSetEditor({
                             ))}
                             {editForm.cases.length === 0 && (
                                 <div className="text-center py-8 text-muted-foreground italic bg-muted/20 rounded-lg">
-                                    No test cases yet. Click "Add Case" to
-                                    start.
+                                    No test cases yet. Click &ldquo;Add
+                                    Case&rdquo; to start.
                                 </div>
                             )}
                         </div>

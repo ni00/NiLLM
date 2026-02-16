@@ -137,7 +137,7 @@ export function TestSetCard({
                             onClick={() => onRunSingle(c.prompt)}
                         >
                             <span className="truncate flex-1 italic text-muted-foreground">
-                                "{c.prompt}"
+                                &ldquo;{c.prompt}&rdquo;
                             </span>
                             <Play className="h-3 w-3 text-primary opacity-0 group-hover/item:opacity-100 transition-opacity" />
                         </div>

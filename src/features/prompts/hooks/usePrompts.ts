@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router'
 import { PromptTemplate, PromptVariable } from '@/lib/types'
 import { generateText } from 'ai'
 import { getProvider } from '@/lib/ai-provider'
+import { downloadFile, readJsonFile } from '@/lib/utils'
 
 export interface PromptForm {
     title: string
@@ -103,7 +104,6 @@ export function usePrompts() {
     }
 
     const handleExport = (tmpl: PromptTemplate) => {
-        const { downloadFile } = require('@/lib/utils')
         downloadFile(
             JSON.stringify(tmpl, null, 2),
             `${tmpl.title.replace(/\s+/g, '_')}.json`,
@@ -115,7 +115,6 @@ export function usePrompts() {
         const file = e.target.files?.[0]
         if (!file) return
         try {
-            const { readJsonFile } = await import('@/lib/utils')
             const data = await readJsonFile(file)
             if (data.title && data.content) {
                 addPromptTemplate({

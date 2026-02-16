@@ -1,13 +1,4 @@
-import {
-    Play,
-    Send,
-    Eraser,
-    Paperclip,
-    X,
-    FileText,
-    Maximize2,
-    Trash2
-} from 'lucide-react'
+import { Play, Send, Eraser, Paperclip, Maximize2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -19,6 +10,8 @@ import {
 import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { abortAllTasks } from '@/features/benchmark/engine'
+import { MentionPicker } from './MentionPicker'
+import { AttachmentPreview } from './AttachmentPreview'
 
 interface ArenaInputProps {
     input: string
@@ -51,7 +44,6 @@ export const ArenaInput = ({
     const activeModelIds = useActiveModelIds()
     const activeModels = models.filter((m) => activeModelIds.includes(m.id))
 
-    // Mention state
     const [mentionQuery, setMentionQuery] = useState<string | null>(null)
     const [mentionIndex, setMentionIndex] = useState(0)
     const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 })
@@ -75,7 +67,6 @@ export const ArenaInput = ({
         }
     }, [mentionQuery])
 
-    // HTML5 drag and drop fallback (for browser)
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault()
         e.stopPropagation()
@@ -91,8 +82,6 @@ export const ArenaInput = ({
     const handleDragLeave = (e: React.DragEvent) => {
         e.preventDefault()
         e.stopPropagation()
-
-        // Check if we're actually leaving the container
         if (e.currentTarget.contains(e.relatedTarget as Node)) {
             return
         }
@@ -110,7 +99,6 @@ export const ArenaInput = ({
         }
     }
 
-    // Update measure div to match textarea styles
     const updateMeasurePosition = (textarea: HTMLTextAreaElement) => {
         if (!measureRef.current) return
 
@@ -129,9 +117,8 @@ export const ArenaInput = ({
         )
         measureRef.current.textContent = textUntilCursor
 
-        // Use a span to get the exact position of the last character
         const span = document.createElement('span')
-        span.textContent = '.' // placeholder
+        span.textContent = '.'
         measureRef.current.appendChild(span)
 
         const { offsetLeft, offsetTop } = span
@@ -285,47 +272,20 @@ export const ArenaInput = ({
                     className?.includes('h-full') ? 'h-full' : ''
                 )}
             >
-                {/* Hidden measure div for caret positioning */}
                 <div
                     ref={measureRef}
                     className="absolute top-0 left-0 visibility-hidden pointer-events-none opacity-0 whitespace-pre-wrap -z-50"
                     aria-hidden="true"
                 />
 
-                {/* Mention Popover */}
-                {mentionQuery !== null && filteredModels.length > 0 && (
-                    <div
-                        className="absolute z-50 w-64 p-1 overflow-hidden bg-popover text-popover-foreground rounded-md border shadow-md animate-in fade-in zoom-in-95 duration-100"
-                        style={{
-                            bottom: mentionPosition.top + 28,
-                            left: mentionPosition.left + 16,
-                            minWidth: '200px'
-                        }}
-                    >
-                        <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                            {filteredModels.map((model, idx) => (
-                                <button
-                                    key={model.id}
-                                    className={cn(
-                                        'w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm select-none outline-none cursor-pointer text-left transition-colors',
-                                        idx === mentionIndex
-                                            ? 'bg-accent text-accent-foreground'
-                                            : 'hover:bg-muted'
-                                    )}
-                                    onMouseEnter={() => setMentionIndex(idx)}
-                                    onClick={() => selectModel(model)}
-                                >
-                                    <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-                                    <span className="truncate flex-1">
-                                        {model.name}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground uppercase">
-                                        {model.providerName || model.provider}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                {mentionQuery !== null && (
+                    <MentionPicker
+                        models={filteredModels}
+                        selectedIndex={mentionIndex}
+                        position={mentionPosition}
+                        onSelect={selectModel}
+                        onHover={setMentionIndex}
+                    />
                 )}
 
                 <input
@@ -336,50 +296,12 @@ export const ArenaInput = ({
                     onChange={handleFileSelect}
                 />
 
-                {attachments.length > 0 && (
-                    <div className="flex items-start gap-2">
-                        <div className="flex gap-3 overflow-x-auto py-1 px-1 flex-1 scrollbar-thin scrollbar-thumb-muted-foreground/20">
-                            {attachments.map((file, idx) => (
-                                <div
-                                    key={idx + file.name}
-                                    className="relative flex-none group/attachment"
-                                >
-                                    <div className="border rounded-lg overflow-hidden bg-muted relative w-16 h-16 flex items-center justify-center shadow-sm">
-                                        {file.type.startsWith('image/') &&
-                                        previews[file.name] ? (
-                                            <img
-                                                src={previews[file.name]}
-                                                alt={file.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <FileText className="w-8 h-8 text-muted-foreground/50" />
-                                        )}
-                                        <div className="absolute inset-0 bg-black/0 group-hover/attachment:bg-black/10 transition-colors" />
-                                    </div>
-                                    <button
-                                        onClick={() => removeAttachment(idx)}
-                                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md opacity-0 group-hover/attachment:opacity-100 transition-all scale-90 group-hover/attachment:scale-100 z-10"
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                    <div className="text-[10px] text-muted-foreground truncate w-16 mt-1.5 text-center font-medium">
-                                        {file.name}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setAttachments([])}
-                            className="h-7 px-2 mt-1 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full flex-shrink-0"
-                            title="Clear all attachments"
-                        >
-                            <Trash2 className="w-3 h-3 mr-1" /> Clear
-                        </Button>
-                    </div>
-                )}
+                <AttachmentPreview
+                    attachments={attachments}
+                    previews={previews}
+                    onRemove={removeAttachment}
+                    onClearAll={() => setAttachments([])}
+                />
 
                 <div
                     className={cn(
@@ -409,7 +331,6 @@ export const ArenaInput = ({
                         onDrop={handleDrop}
                     />
 
-                    {/* Drag and Drop Overlay */}
                     {isDragging && (
                         <div className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary rounded-xl flex items-center justify-center backdrop-blur-[2px] pointer-events-none animate-in fade-in zoom-in-95 duration-200">
                             <div className="bg-background/90 px-4 py-2 rounded-full shadow-lg border flex items-center gap-2">

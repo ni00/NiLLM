@@ -121,7 +121,7 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
             let scores: Record<string, number>
             try {
                 scores = JSON.parse(jsonStr)
-            } catch (parseError) {
+            } catch {
                 console.error('JSON Parse Error. Content:', text)
                 throw new Error(
                     'Failed to parse scores. Try a more capable model (like GPT-4).'
