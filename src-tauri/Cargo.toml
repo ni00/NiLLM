@@ -1,6 +1,6 @@
 [package]
 name = "nillm"
-version = "1.0.7"
+version = "1.0.8"
 description = "NiLLM Arena App"
 authors = ["you"]
 edition = "2021"

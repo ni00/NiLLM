@@ -17,7 +17,7 @@
     ]
   },
   "productName": "NiLLM",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "identifier": "com.nillm.app",
   "plugins": {
     "process": {
@@ -30,23 +30,10 @@
     },
     "windows": [
       {
-        "label": "main",
         "title": "NiLLM",
         "width": 1000,
         "height": 600,
-        "dragDropEnabled": true,
-        "visible": false
-      },
-      {
-        "label": "splashscreen",
-        "title": "NiLLM",
-        "url": "splashscreen.html",
-        "width": 300,
-        "height": 200,
-        "decorations": false,
-        "transparent": true,
-        "resizable": false,
-        "center": true
+        "dragDropEnabled": true
       }
     ]
   }
