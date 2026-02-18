@@ -29,3 +29,9 @@ dist-ssr
 *.keystore
 keystore.properties
 src-tauri/gen/android/keystore.properties
+
+# AI
+.claude
+.cursor
+.opencode
+.omc

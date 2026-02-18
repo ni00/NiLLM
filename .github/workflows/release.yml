@@ -102,16 +102,53 @@ jobs:
             - name: Install frontend dependencies
               run: pnpm install
 
-            - name: Build and Upload
+            - name: Build Tauri App
               uses: tauri-apps/tauri-action@v0
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tagName: ${{ needs.metadata.outputs.tag_name }}
-                  releaseName: 'NiLLM ${{ needs.metadata.outputs.tag_name }}'
-                  releaseDraft: true
-                  prerelease: ${{ needs.metadata.outputs.tag_name == 'nightly' }}
                   args: ${{ matrix.args }}
+
+            - name: Rename bundle files with version
+              shell: bash
+              run: |
+                  VERSION="${{ needs.metadata.outputs.version }}"
+                  BUNDLE_DIR="src-tauri/target/release/bundle"
+
+                  # Rename files with version
+                  for file in $(find "$BUNDLE_DIR" -type f \( -name "*.msi" -o -name "*.exe" -o -name "*.dmg" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" -o -name "*.tar.gz" \)); do
+                    filename=$(basename "$file")
+                    # Extract extension
+                    if [[ "$filename" == *.tar.gz ]]; then
+                      ext=".tar.gz"
+                      base="${filename%.tar.gz}"
+                    else
+                      ext=".${filename##*.}"
+                      base="${filename%.*}"
+                    fi
+                    # Create new name with version
+                    newname="${base}_${VERSION}${ext}"
+                    if [ "$filename" != "$newname" ]; then
+                      mv "$file" "$(dirname "$file")/$newname"
+                      echo "Renamed: $filename -> $newname"
+                    fi
+                  done
+
+            - name: Upload Release Assets
+              if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ needs.metadata.outputs.tag_name }}
+                  files: |
+                      src-tauri/target/release/bundle/**/*.msi
+                      src-tauri/target/release/bundle/**/*.exe
+                      src-tauri/target/release/bundle/**/*.dmg
+                      src-tauri/target/release/bundle/**/*.deb
+                      src-tauri/target/release/bundle/**/*.AppImage
+                      src-tauri/target/release/bundle/**/*.rpm
+                      src-tauri/target/release/bundle/**/*.tar.gz
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Upload Artifacts (main only)
               if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
@@ -125,6 +162,7 @@ jobs:
                       src-tauri/target/release/bundle/**/*.deb
                       src-tauri/target/release/bundle/**/*.AppImage
                       src-tauri/target/release/bundle/**/*.rpm
+                      src-tauri/target/release/bundle/**/*.tar.gz
     build-android:
         needs: [metadata, create-release]
         if: always() && needs.metadata.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
@@ -202,7 +240,7 @@ jobs:
               run: |
                   APK_PATH=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -1)
                   if [ -n "$APK_PATH" ]; then
-                    NEW_NAME="NiLLM-${{ matrix.arch }}.apk"
+                    NEW_NAME="NiLLM-${{ needs.metadata.outputs.version }}-${{ matrix.arch }}.apk"
                     mv "$APK_PATH" "$NEW_NAME"
                     echo "apk_file=$NEW_NAME" >> $GITHUB_OUTPUT
                   fi
@@ -284,19 +322,28 @@ jobs:
             - name: Build Android AAB
               run: pnpm tauri android build --aab
 
+            - name: Rename AAB
+              run: |
+                  AAB_PATH=$(find src-tauri/gen/android/app/build/outputs/bundle -name "*.aab" | head -1)
+                  if [ -n "$AAB_PATH" ]; then
+                    NEW_NAME="NiLLM-${{ needs.metadata.outputs.version }}.aab"
+                    mv "$AAB_PATH" "$NEW_NAME"
+                    echo "aab_file=$NEW_NAME" >> $GITHUB_OUTPUT
+                  fi
+
             - name: Upload Artifacts
               if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
               uses: actions/upload-artifact@v4
               with:
                   name: NiLLM-android-aab
-                  path: src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+                  path: NiLLM-${{ needs.metadata.outputs.version }}.aab
 
             - name: Upload Release Assets
               if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
               uses: softprops/action-gh-release@v2
               with:
                   tag_name: ${{ needs.metadata.outputs.tag_name }}
-                  files: src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+                  files: NiLLM-${{ needs.metadata.outputs.version }}.aab
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
