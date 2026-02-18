@@ -36,13 +36,21 @@ jobs:
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
-            - name: Update nightly tag
+            - name: Delete existing nightly release
               if: github.ref == 'refs/heads/main'
               run: |
-                  git config user.name "github-actions[bot]"
-                  git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git tag -f nightly
-                  git push origin nightly --force
+                  # Delete existing release with tag 'nightly' if it exists
+                  if gh api repos/${{ github.repository }}/releases/tags/nightly >/dev/null 2>&1; then
+                    release_id=$(gh api repos/${{ github.repository }}/releases/tags/nightly --jq '.id')
+                    echo "Deleting existing nightly release ID: $release_id"
+                    gh api repos/${{ github.repository }}/releases/$release_id -X DELETE
+                    # Also delete the tag
+                    git push origin :refs/tags/nightly 2>/dev/null || true
+                  else
+                    echo "No existing nightly release found"
+                  fi
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             - name: Create Release
               id: create-release
               uses: softprops/action-gh-release@v2
@@ -63,7 +71,11 @@ jobs:
             matrix:
                 include:
                     - platform: 'macos-latest'
-                      args: '--target universal-apple-darwin'
+                      args: '--target aarch64-apple-darwin'
+                      arch: 'aarch64'
+                    - platform: 'macos-latest'
+                      args: '--target x86_64-apple-darwin'
+                      arch: 'x86_64'
                     - platform: 'windows-latest'
                       args: ''
                     - platform: 'ubuntu-22.04'
@@ -87,7 +99,7 @@ jobs:
             - name: Install Rust stable
               uses: dtolnay/rust-toolchain@stable
               with:
-                  targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+                  targets: ${{ matrix.arch == 'aarch64' && 'aarch64-apple-darwin' || (matrix.arch == 'x86_64' && 'x86_64-apple-darwin' || '') }}
 
             - name: Rust cache
               uses: swatinem/rust-cache@v2
@@ -113,11 +125,17 @@ jobs:
               shell: bash
               run: |
                   VERSION="${{ needs.metadata.outputs.version }}"
+                  ARCH="${{ matrix.arch }}"
                   BUNDLE_DIR="src-tauri/target/release/bundle"
 
-                  # Rename files with version
+                  # Rename files with version (only if version not already in filename)
                   for file in $(find "$BUNDLE_DIR" -type f \( -name "*.msi" -o -name "*.exe" -o -name "*.dmg" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" -o -name "*.tar.gz" \)); do
                     filename=$(basename "$file")
+                    # Skip if version already in filename
+                    if [[ "$filename" == *"$VERSION"* ]]; then
+                      echo "Skipping (version already in name): $filename"
+                      continue
+                    fi
                     # Extract extension
                     if [[ "$filename" == *.tar.gz ]]; then
                       ext=".tar.gz"
@@ -126,8 +144,12 @@ jobs:
                       ext=".${filename##*.}"
                       base="${filename%.*}"
                     fi
-                    # Create new name with version
-                    newname="${base}_${VERSION}${ext}"
+                    # Add arch suffix for macOS builds
+                    if [ -n "$ARCH" ]; then
+                      newname="${base}_${VERSION}_${ARCH}${ext}"
+                    else
+                      newname="${base}_${VERSION}${ext}"
+                    fi
                     if [ "$filename" != "$newname" ]; then
                       mv "$file" "$(dirname "$file")/$newname"
                       echo "Renamed: $filename -> $newname"
