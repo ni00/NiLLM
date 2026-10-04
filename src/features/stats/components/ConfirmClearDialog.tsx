@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { AlertCircle } from 'lucide-react'
 import {
     AlertDialog,
@@ -23,6 +24,7 @@ export function ConfirmClearDialog({
     onConfirm,
     onCancel
 }: ConfirmClearDialogProps) {
+    const t = useI18n()
     return (
         <AlertDialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
             <AlertDialogContent className="border-destructive/20 shadow-destructive/5 max-w-md">
@@ -32,28 +34,23 @@ export function ConfirmClearDialog({
                             <AlertCircle className="h-5 w-5" />
                         </div>
                         <AlertDialogTitle>
-                            Clear Model Statistics?
+                            {t('Clear Model Statistics?')}
                         </AlertDialogTitle>
                     </div>
                     <AlertDialogDescription>
-                        This will{' '}
-                        <span className="font-bold text-foreground">
-                            permanently delete
-                        </span>{' '}
-                        all performance data for{' '}
-                        <span className="font-medium text-foreground">
-                            &ldquo;{modelName}&rdquo;
-                        </span>
-                        .
+                        {t(
+                            'Permanently delete all performance data for “{name}”.',
+                            { name: modelName ?? '' }
+                        )}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
                     <AlertDialogAction
                         onClick={onConfirm}
                         className="bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm"
                     >
-                        Clear Data
+                        {t('Clear Data')}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

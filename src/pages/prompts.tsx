@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { BookTemplate, Plus, FolderInput } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -64,6 +65,7 @@ function SortablePromptCard({ template, ...props }: SortablePromptCardProps) {
 }
 
 export function PromptsPage() {
+    const t = useI18n()
     const {
         promptTemplates,
         isEditing,
@@ -107,8 +109,7 @@ export function PromptsPage() {
 
     return (
         <PageLayout
-            title="Prompt Templates"
-            description="Manage and use reusable prompt templates with variable support."
+            title={t('Prompt Templates')}
             icon={BookTemplate}
             actions={
                 <div className="flex gap-2">
@@ -118,7 +119,7 @@ export function PromptsPage() {
                             onChange={handleImport}
                             className="absolute inset-0 opacity-0 cursor-pointer"
                             accept=".json"
-                            title="Import JSON Template"
+                            title={t('Import JSON Template')}
                         />
                         <Button
                             variant="outline"
@@ -126,7 +127,7 @@ export function PromptsPage() {
                         >
                             <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                             <span className="hidden md:inline text-xs font-medium">
-                                Import
+                                {t('Import')}
                             </span>
                         </Button>
                     </div>
@@ -137,7 +138,7 @@ export function PromptsPage() {
                     >
                         <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
-                            Create
+                            {t('Create')}
                         </span>
                     </Button>
                 </div>

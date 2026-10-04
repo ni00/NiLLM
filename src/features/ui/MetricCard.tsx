@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BenchmarkMetrics } from '@/lib/types'
 import { Zap, Clock, Scale, Hash } from 'lucide-react'
@@ -8,6 +9,7 @@ interface MetricCardProps {
 }
 
 export function MetricCard({ metrics, modelName }: MetricCardProps) {
+    const t = useI18n()
     return (
         <Card className="w-full bg-card/50 backdrop-blur-sm border-muted">
             <CardHeader className="pb-2">
@@ -20,29 +22,29 @@ export function MetricCard({ metrics, modelName }: MetricCardProps) {
                 <div className="grid grid-cols-3 gap-4">
                     <div className="flex flex-col gap-1">
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Zap className="h-3 w-3" /> Speed
+                            <Zap className="h-3 w-3" /> {t('Speed')}
                         </span>
                         <span className="text-2xl font-bold">
                             {metrics.tps}{' '}
                             <span className="text-xs font-normal text-muted-foreground">
-                                t/s
+                                {'t/s'}
                             </span>
                         </span>
                     </div>
                     <div className="flex flex-col gap-1">
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> Latency (TTFT)
+                            <Clock className="h-3 w-3" /> {t('Latency (TTFT)')}
                         </span>
                         <span className="text-2xl font-bold">
                             {Number(metrics.ttft.toFixed(2))}{' '}
                             <span className="text-xs font-normal text-muted-foreground">
-                                ms
+                                {'ms'}
                             </span>
                         </span>
                     </div>
                     <div className="flex flex-col gap-1">
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Hash className="h-3 w-3" /> Tokens
+                            <Hash className="h-3 w-3" /> {t('Tokens')}
                         </span>
                         <span className="text-2xl font-bold">
                             {metrics.tokenCount}

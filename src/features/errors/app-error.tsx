@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,17 +9,18 @@ import {
 } from '@/features/errors/error-base'
 
 export default function AppErrorPage() {
+    const t = useI18n()
     return (
         <ErrorView>
-            <ErrorHeader>We&apos;re fixing it</ErrorHeader>
+            <ErrorHeader>{t("We're fixing it")}</ErrorHeader>
             <ErrorDescription>
-                The app encountered an error and needs to be restarted.
+                {t('The app encountered an error and needs to be restarted.')}
                 <br />
-                We know about it and we&apos;re working to fix it.
+                {t("We know about it and we're working to fix it.")}
             </ErrorDescription>
             <ErrorActions>
                 <Button size="lg" onClick={relaunch}>
-                    Relaunch app
+                    {t('Relaunch app')}
                 </Button>
             </ErrorActions>
         </ErrorView>

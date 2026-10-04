@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -32,6 +33,7 @@ export function VariableFiller({
     onChangeVariable,
     onSelectModel
 }: VariableFillerProps) {
+    const t = useI18n()
     if (!isOpen || !template) return null
 
     const enabledModels = models.filter((m) => m.enabled)
@@ -41,7 +43,7 @@ export function VariableFiller({
             <div className="w-full max-w-xl bg-card border shadow-2xl rounded-xl flex flex-col max-h-[90vh] animate-in zoom-in-95">
                 <div className="p-4 border-b flex justify-between items-center bg-muted/20">
                     <h3 className="font-semibold">
-                        Fill Variables: {template.title}
+                        {t('Fill Variables:')} {template.title}
                     </h3>
                     <Button variant="ghost" size="icon" onClick={onClose}>
                         <X className="h-5 w-5" />
@@ -50,11 +52,13 @@ export function VariableFiller({
                 <div className="p-6 overflow-y-auto space-y-4">
                     <div className="flex justify-between gap-2 items-center">
                         <span className="text-xs text-muted-foreground italic">
-                            Manually enter values or use AI to auto-fill.
+                            {t('Manually enter values or use AI to auto-fill.')}
                         </span>
                         {models.length === 0 ? (
                             <span className="text-xs text-destructive">
-                                No models available. Add models in settings.
+                                {t(
+                                    'No models available. Add models in settings.'
+                                )}
                             </span>
                         ) : (
                             <SelectDropdown
@@ -68,7 +72,7 @@ export function VariableFiller({
                                     value: m.id,
                                     description: m.providerName || m.provider
                                 }))}
-                                placeholder="Select Model..."
+                                placeholder={t('Select Model...')}
                                 width={200}
                                 disabled={models.length === 0 || isGenerating}
                             />
@@ -90,7 +94,9 @@ export function VariableFiller({
                                 onChange={(e) =>
                                     onChangeVariable(v.name, e.target.value)
                                 }
-                                placeholder={`Value for ${v.name}...`}
+                                placeholder={t('Value for {name}…', {
+                                    name: v.name
+                                })}
                                 className="h-20"
                             />
                         </div>
@@ -98,7 +104,7 @@ export function VariableFiller({
                 </div>
                 <div className="p-4 border-t bg-muted/20 flex justify-end gap-2">
                     <Button variant="ghost" onClick={onClose}>
-                        Cancel
+                        {t('Cancel')}
                     </Button>
                     <Button onClick={onUse}>
                         {isGenerating ? (
@@ -106,7 +112,7 @@ export function VariableFiller({
                         ) : (
                             <Play className="h-4 w-4 mr-2" />
                         )}
-                        Fill & Use
+                        {t('Fill & Use')}
                     </Button>
                 </div>
             </div>

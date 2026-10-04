@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import {
     memo,
     useCallback,
@@ -159,6 +160,7 @@ export function VirtualModelList({
     onSelectProvider,
     ...actions
 }: Props) {
+    const t = useI18n()
     const scrollRef = useRef<HTMLDivElement>(null)
     const widthRef = useRef<HTMLDivElement>(null)
     const [columns, setColumns] = useState(1)
@@ -268,14 +270,14 @@ export function VirtualModelList({
             ref={scrollRef}
             data-models-scroll-viewport
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 md:px-6 pb-4 md:pb-6"
-            aria-label="Model list"
+            aria-label={t('Model list')}
             role="region"
             tabIndex={0}
         >
             <div ref={widthRef}>
                 {!groups.length && (
                     <p className="py-12 text-center text-muted-foreground">
-                        No models match your search.
+                        {t('No models match your search.')}
                     </p>
                 )}
                 <DndContext

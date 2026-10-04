@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { SelectDropdown } from '@/components/ui/select-dropdown'
 import { useState } from 'react'
 import { BarChart3 } from 'lucide-react'
@@ -11,6 +12,7 @@ import { ExportMenu } from '@/features/stats/components/ExportMenu'
 import { ConfirmClearDialog } from '@/features/stats/components/ConfirmClearDialog'
 
 export function StatsPage() {
+    const t = useI18n()
     const {
         mounted,
         modelStats,
@@ -59,8 +61,7 @@ export function StatsPage() {
 
     return (
         <PageLayout
-            title="Performance"
-            description="Live metrics and benchmark results."
+            title={t('Performance')}
             icon={BarChart3}
             actions={
                 <ExportMenu
@@ -80,23 +81,23 @@ export function StatsPage() {
             <div className="flex flex-wrap gap-3 mb-6">
                 <div className="w-40">
                     <SelectDropdown
-                        ariaLabel="Time range"
+                        ariaLabel={t('Time range')}
                         value={range}
                         onChange={setRange}
                         options={[
-                            { value: 'all', label: 'All time' },
-                            { value: '7', label: 'Last 7 days' },
-                            { value: '30', label: 'Last 30 days' }
+                            { value: 'all', label: t('All time') },
+                            { value: '7', label: t('Last 7 days') },
+                            { value: '30', label: t('Last 30 days') }
                         ]}
                     />
                 </div>
                 <div className="w-56">
                     <SelectDropdown
-                        ariaLabel="Provider filter"
+                        ariaLabel={t('Provider filter')}
                         value={providerKey}
                         onChange={setProviderKey}
                         options={[
-                            { value: 'all', label: 'All providers' },
+                            { value: 'all', label: t('All providers') },
                             ...providers.map((p) => ({
                                 value: p.key,
                                 label: p.label
@@ -106,15 +107,15 @@ export function StatsPage() {
                 </div>
                 <div className="w-40">
                     <SelectDropdown
-                        ariaLabel="Model mode"
+                        ariaLabel={t('Model mode')}
                         value={mode}
                         onChange={(value) =>
                             setMode(value as 'all' | 'chat' | 'image')
                         }
                         options={[
-                            { value: 'all', label: 'All modes' },
-                            { value: 'chat', label: 'Chat' },
-                            { value: 'image', label: 'Image' }
+                            { value: 'all', label: t('All modes') },
+                            { value: 'chat', label: t('Chat') },
+                            { value: 'image', label: t('Image') }
                         ]}
                     />
                 </div>
@@ -122,7 +123,7 @@ export function StatsPage() {
             <div className="grid gap-4 mb-6 sm:grid-cols-3">
                 <div className="rounded-xl border p-4">
                     <p className="text-sm text-muted-foreground">
-                        Success rate
+                        {t('Success rate')}
                     </p>
                     <p className="text-2xl font-semibold">
                         {completedCount + errorCount + cancelledCount
@@ -130,32 +131,44 @@ export function StatsPage() {
                             : '—'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        {completedCount} completed · {errorCount} failed ·{' '}
-                        {cancelledCount} cancelled
+                        {t(
+                            '{completed} completed · {failed} failed · {cancelled} cancelled',
+                            {
+                                completed: completedCount,
+                                failed: errorCount,
+                                cancelled: cancelledCount
+                            }
+                        )}
                     </p>
                 </div>
                 <div className="rounded-xl border p-4">
                     <p className="text-sm text-muted-foreground">
-                        Known cost (USD)
+                        {t('Known cost (USD)')}
                     </p>
                     <p className="text-2xl font-semibold">
                         {costSampleCount ? `$${totalCost.toFixed(4)}` : '—'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        Pricing available for {costSampleCount} /{' '}
-                        {completedCount} completed requests
+                        {t(
+                            'Pricing available for {priced} / {completed} completed requests',
+                            {
+                                priced: costSampleCount,
+                                completed: completedCount
+                            }
+                        )}
                     </p>
                 </div>
                 <div className="rounded-xl border p-4">
                     <p className="text-sm text-muted-foreground">
-                        Token measurements
+                        {t('Token measurements')}
                     </p>
                     <p className="text-2xl font-semibold">
-                        {estimatedCount} estimated
+                        {t('{count} estimated', { count: estimatedCount })}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        Provider usage takes precedence. Failed requests
-                        excluded from performance averages.
+                        {t(
+                            'Provider usage takes precedence. Failed requests excluded from performance averages.'
+                        )}
                     </p>
                 </div>
             </div>

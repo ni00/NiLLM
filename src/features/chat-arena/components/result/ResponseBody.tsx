@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { StreamingMarkdown } from '../StreamingMarkdown'
@@ -18,6 +19,7 @@ export function ResponseBody({
     error,
     onRetry
 }: ResponseBodyProps) {
+    const t = useI18n()
     return (
         <div
             className="min-h-[1.5rem]"
@@ -41,7 +43,9 @@ export function ResponseBody({
                 <div className="flex items-center gap-2 text-primary font-medium animate-pulse px-1">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>
-                        {reasoning ? 'Thinking...' : 'Generating response...'}
+                        {reasoning
+                            ? t('Thinking...')
+                            : t('Generating response...')}
                     </span>
                 </div>
             )}
@@ -58,7 +62,7 @@ export function ResponseBody({
                         className="self-end h-7 text-xs border-destructive/30 hover:bg-destructive/10 hover:text-destructive gap-2"
                     >
                         <RefreshCw className="w-3 h-3" />
-                        Retry
+                        {t('Retry')}
                     </Button>
                 </div>
             )}

@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import {
     Layers,
     ChevronUp,
@@ -16,6 +17,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
 
 export const QueuePopover = () => {
+    const t = useI18n()
     const {
         messageQueue,
         isProcessing,
@@ -46,7 +48,7 @@ export const QueuePopover = () => {
                             {messageQueue.length}
                         </span>
                     )}
-                    <span className="text-xs font-medium">Queue</span>
+                    <span className="text-xs font-medium">{t('Queue')}</span>
                 </Button>
             </PopoverTrigger>
             <PopoverContent
@@ -56,15 +58,18 @@ export const QueuePopover = () => {
                 sideOffset={8}
             >
                 <div className="flex items-center justify-between border-b pb-2 mb-3">
-                    <h3 className="font-semibold text-sm">Processing Queue</h3>
+                    <h3 className="font-semibold text-sm">
+                        {t('Processing Queue')}
+                    </h3>
                     <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">
-                        {messageQueue.filter((m) => !m.paused).length} Active
+                        {messageQueue.filter((m) => !m.paused).length}{' '}
+                        {t('Active')}
                     </span>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                     {messageQueue.length === 0 ? (
                         <div className="py-8 text-center text-muted-foreground italic text-sm">
-                            Queue is empty
+                            {t('Queue is empty')}
                         </div>
                     ) : (
                         messageQueue.map((item, index) => (
@@ -114,12 +119,12 @@ export const QueuePopover = () => {
                                     <div className="text-xs text-muted-foreground mt-0.5 flex gap-2">
                                         <span>
                                             {item.paused
-                                                ? 'Paused'
+                                                ? t('Paused')
                                                 : index === 0 &&
                                                     !item.paused &&
                                                     isProcessing
-                                                  ? 'Processing...'
-                                                  : 'Pending'}
+                                                  ? t('Processing...')
+                                                  : t('Pending')}
                                         </span>
                                     </div>
                                 </div>
@@ -133,7 +138,11 @@ export const QueuePopover = () => {
                                                 ? 'hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500'
                                                 : 'hover:bg-amber-500/10 text-muted-foreground hover:text-amber-500'
                                         }`}
-                                        title={item.paused ? 'Resume' : 'Pause'}
+                                        title={
+                                            item.paused
+                                                ? t('Resume')
+                                                : t('Pause')
+                                        }
                                     >
                                         {item.paused ? (
                                             <PlayCircle className="w-3.5 h-3.5" />
@@ -144,7 +153,7 @@ export const QueuePopover = () => {
                                     <button
                                         onClick={() => removeFromQueue(item.id)}
                                         className="p-1.5 hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-colors"
-                                        title="Remove"
+                                        title={t('Remove')}
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>

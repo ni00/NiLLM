@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { providerOptions } from '@/lib/providers/catalog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +24,7 @@ export function ModelEditor({
     onSave,
     onChange
 }: ModelEditorProps) {
+    const t = useI18n()
     if (!isOpen) return null
 
     return (
@@ -33,11 +35,13 @@ export function ModelEditor({
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <h2 className="text-2xl font-bold tracking-tight">
-                                {editingId ? 'Edit Model' : 'Add New Model'}
+                                {editingId
+                                    ? t('Edit Model')
+                                    : t('Add New Model')}
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                Configure your {modelData.provider} adapter
-                                settings.
+                                {t('Configure your')} {modelData.provider}{' '}
+                                {t('adapter settings.')}
                             </p>
                         </div>
                         <div className="p-2 rounded-full bg-primary/10 text-primary">
@@ -52,11 +56,11 @@ export function ModelEditor({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                                    Display Name
+                                    {t('Display Name')}
                                 </Label>
                                 <Input
                                     className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all"
-                                    placeholder="e.g. GPT-4 Turbo"
+                                    placeholder={t('e.g. GPT-4 Turbo')}
                                     value={modelData.name || ''}
                                     onChange={(e) =>
                                         onChange({
@@ -68,7 +72,7 @@ export function ModelEditor({
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                                    Provider
+                                    {t('Provider')}
                                 </Label>
                                 <SelectDropdown
                                     value={modelData.provider || ''}
@@ -80,12 +84,15 @@ export function ModelEditor({
                                         })
                                     }
                                     className="h-10 border-border/50 bg-muted/20 transition-all justify-between"
-                                    options={providerOptions}
+                                    options={providerOptions.map((option) => ({
+                                        ...option,
+                                        label: t(option.label)
+                                    }))}
                                 />
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                                    Mode
+                                    {t('Mode')}
                                 </Label>
                                 <SelectDropdown
                                     value={modelData.mode || 'chat'}
@@ -98,11 +105,11 @@ export function ModelEditor({
                                     className="h-10 border-border/50 bg-muted/20 transition-all justify-between"
                                     options={[
                                         {
-                                            label: 'Chat Completion',
+                                            label: t('Chat Completion'),
                                             value: 'chat'
                                         },
                                         {
-                                            label: 'Image Generation',
+                                            label: t('Image Generation'),
                                             value: 'image'
                                         }
                                     ]}
@@ -113,11 +120,11 @@ export function ModelEditor({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                                    Model ID
+                                    {t('Model ID')}
                                 </Label>
                                 <Input
                                     className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all font-mono text-xs"
-                                    placeholder="e.g. openai/gpt-4"
+                                    placeholder={'e.g. openai/gpt-4'}
                                     value={modelData.providerId || ''}
                                     onChange={(e) =>
                                         onChange({
@@ -129,11 +136,11 @@ export function ModelEditor({
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                                    Provider Tag (Optional)
+                                    {t('Provider Tag (Optional)')}
                                 </Label>
                                 <Input
                                     className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all"
-                                    placeholder="e.g. DeepSeek"
+                                    placeholder={t('e.g. DeepSeek')}
                                     value={modelData.providerName || ''}
                                     onChange={(e) =>
                                         onChange({
@@ -147,7 +154,7 @@ export function ModelEditor({
 
                         <div className="space-y-2">
                             <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                                Base URL (Optional override)
+                                {t('Base URL (Optional override)')}
                             </Label>
                             <Input
                                 className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all font-mono text-xs"
@@ -164,12 +171,12 @@ export function ModelEditor({
 
                         <div className="space-y-2">
                             <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                                API Key (Optional override)
+                                {t('API Key (Optional override)')}
                             </Label>
                             <Input
                                 type="password"
                                 className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all"
-                                placeholder="sk-..."
+                                placeholder={'sk-...'}
                                 value={modelData.apiKey || ''}
                                 onChange={(e) =>
                                     onChange({
@@ -189,13 +196,15 @@ export function ModelEditor({
                         onClick={onClose}
                         className="h-11 px-6 text-muted-foreground border border-transparent hover:border-border"
                     >
-                        Cancel
+                        {t('Cancel')}
                     </Button>
                     <Button
                         onClick={onSave}
                         className="h-11 px-10 shadow-lg shadow-primary/20 transition-all active:scale-95"
                     >
-                        {editingId ? 'Update Configuration' : 'Save Model'}
+                        {editingId
+                            ? t('Update Configuration')
+                            : t('Save Model')}
                     </Button>
                 </div>
             </div>

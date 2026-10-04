@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,6 +23,7 @@ export function PromptEditor({
     onSave,
     onChange
 }: PromptEditorProps) {
+    const t = useI18n()
     if (!isOpen) return null
 
     const extractedVars =
@@ -45,7 +47,7 @@ export function PromptEditor({
             <div className="w-full max-w-2xl bg-card border shadow-2xl rounded-xl flex flex-col max-h-[90vh] animate-in zoom-in-95">
                 <div className="p-4 border-b flex justify-between items-center bg-muted/20">
                     <h3 className="font-semibold">
-                        {editingId ? 'Edit Template' : 'New Template'}
+                        {editingId ? t('Edit Template') : t('New Template')}
                     </h3>
                     <Button variant="ghost" size="icon" onClick={onClose}>
                         <X className="h-5 w-5" />
@@ -53,20 +55,20 @@ export function PromptEditor({
                 </div>
                 <div className="p-6 overflow-y-auto space-y-4">
                     <div className="space-y-2">
-                        <Label>Title</Label>
+                        <Label>{t('Title')}</Label>
                         <Input
                             value={editForm.title}
                             onChange={(e) =>
                                 onChange({ ...editForm, title: e.target.value })
                             }
-                            placeholder="My Awesome Prompt"
+                            placeholder={t('My Awesome Prompt')}
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Content</Label>
+                        <Label>{t('Content')}</Label>
                         <div className="text-xs text-muted-foreground mb-1">
-                            Use <code>{'{{variable}}'}</code> to define
-                            variables.
+                            {t('Use')} <code>{'{{variable}}'}</code>{' '}
+                            {t('to define variables.')}
                         </div>
                         <Textarea
                             value={editForm.content}
@@ -77,16 +79,19 @@ export function PromptEditor({
                                 })
                             }
                             className="min-h-[200px] font-mono text-sm"
-                            placeholder="Write a story about {{topic}} in the style of {{author}}..."
+                            placeholder={t(
+                                'Write a story about {{topic}} in the style of {{author}}...'
+                            )}
                         />
                     </div>
 
                     {extractedVars.length > 0 && (
                         <div className="space-y-3 pt-4 border-t">
-                            <Label>Variable Descriptions</Label>
+                            <Label>{t('Variable Descriptions')}</Label>
                             <p className="text-xs text-muted-foreground">
-                                Describe your variables to help the AI auto-fill
-                                them.
+                                {t(
+                                    'Describe your variables to help the AI auto-fill them.'
+                                )}
                             </p>
                             {extractedVars.map((vName) => {
                                 const match = editForm.variables.find(
@@ -108,7 +113,10 @@ export function PromptEditor({
                                                     e.target.value
                                                 )
                                             }
-                                            placeholder={`Description for ${vName}`}
+                                            placeholder={t(
+                                                'Description for {name}',
+                                                { name: vName }
+                                            )}
                                             className="h-8 text-xs"
                                         />
                                     </div>
@@ -119,13 +127,13 @@ export function PromptEditor({
                 </div>
                 <div className="p-4 border-t bg-muted/20 flex justify-end gap-2">
                     <Button variant="ghost" onClick={onClose}>
-                        Cancel
+                        {t('Cancel')}
                     </Button>
                     <Button
                         onClick={onSave}
                         disabled={!editForm.title || !editForm.content}
                     >
-                        <Save className="h-4 w-4 mr-2" /> Save
+                        <Save className="h-4 w-4 mr-2" /> {t('Save')}
                     </Button>
                 </div>
             </div>

@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,6 +31,7 @@ export function ProviderImportDialog({
     onClose,
     onAdded
 }: Props) {
+    const t = useI18n()
     const [connection, setConnection] = useState<ProviderConnection>(
         initialConnection || { provider: 'openrouter' }
     )
@@ -75,13 +77,15 @@ export function ProviderImportDialog({
             setSelected(new Set(available.map((model) => model.id)))
             setLimit(50)
             if (!available.length)
-                setError('This provider returned no supported models.')
+                setError(t('This provider returned no supported models.'))
         } catch (failure) {
             if (!controller.signal.aborted)
                 setError(
                     failure instanceof Error && !failure.message.includes('[')
                         ? failure.message
-                        : 'Could not read the model list. Check the provider settings.'
+                        : t(
+                              'Could not read the model list. Check the provider settings.'
+                          )
                 )
         } finally {
             if (!controller.signal.aborted) setLoading(false)
@@ -107,19 +111,23 @@ export function ProviderImportDialog({
         >
             <DialogContent className="w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto gap-4 p-4 sm:p-6">
                 <DialogHeader className="p-0 pb-3 pr-6">
-                    <DialogTitle>Add provider models</DialogTitle>
+                    <DialogTitle>{t('Add provider models')}</DialogTitle>
                     <DialogDescription>
-                        Fetch the provider’s model list and add all models at
-                        once. Existing models are skipped.
+                        {t(
+                            'Fetch the provider’s model list and add all models at once. Existing models are skipped.'
+                        )}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                        <Label>Provider</Label>
+                        <Label>{t('Provider')}</Label>
                         <SelectDropdown
-                            ariaLabel="Provider"
+                            ariaLabel={t('Provider')}
                             value={connection.provider}
-                            options={providerOptions}
+                            options={providerOptions.map((option) => ({
+                                ...option,
+                                label: t(option.label)
+                            }))}
                             onChange={(value) =>
                                 change({
                                     provider: value as LLMProvider,
@@ -130,19 +138,23 @@ export function ProviderImportDialog({
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="provider-name">
-                            Provider display name
+                            {t('Provider display name')}
                         </Label>
                         <Input
                             id="provider-name"
                             value={connection.providerName || ''}
-                            placeholder={PROVIDERS[connection.provider].label}
+                            placeholder={t(
+                                PROVIDERS[connection.provider].label
+                            )}
                             onChange={(e) =>
                                 change({ providerName: e.target.value })
                             }
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="provider-endpoint">Base URL</Label>
+                        <Label htmlFor="provider-endpoint">
+                            {t('Base URL')}
+                        </Label>
                         <Input
                             id="provider-endpoint"
                             value={connection.baseURL || ''}
@@ -156,14 +168,16 @@ export function ProviderImportDialog({
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="provider-key">API key</Label>
+                        <Label htmlFor="provider-key">{t('API key')}</Label>
                         <Input
                             id="provider-key"
                             type="password"
                             autoComplete="off"
                             value={connection.apiKey || ''}
                             onChange={(e) => change({ apiKey: e.target.value })}
-                            placeholder="Optional for public / local providers"
+                            placeholder={t(
+                                'Optional for public / local providers'
+                            )}
                         />
                     </div>
                 </div>
@@ -172,7 +186,7 @@ export function ProviderImportDialog({
                         onClick={() => void fetchModels()}
                         disabled={loading}
                     >
-                        {loading ? 'Fetching…' : 'Fetch models'}
+                        {loading ? t('Fetching…') : t('Fetch models')}
                     </Button>
                     {loading && (
                         <Button
@@ -182,7 +196,7 @@ export function ProviderImportDialog({
                                 setLoading(false)
                             }}
                         >
-                            Cancel request
+                            {t('Cancel request')}
                         </Button>
                     )}
                 </div>
@@ -194,8 +208,8 @@ export function ProviderImportDialog({
                 {catalog.length > 0 && (
                     <>
                         <Input
-                            aria-label="Search discovered models"
-                            placeholder="Search models…"
+                            aria-label={t('Search discovered models')}
+                            placeholder={t('Search models…')}
                             value={query}
                             onChange={(e) => {
                                 setQuery(e.target.value)
@@ -204,7 +218,10 @@ export function ProviderImportDialog({
                         />
                         <div className="flex items-center gap-3 text-sm">
                             <span>
-                                {selected.size} / {catalog.length} selected
+                                {t('{selected} / {total} selected', {
+                                    selected: selected.size,
+                                    total: catalog.length
+                                })}
                             </span>
                             <Button
                                 size="sm"
@@ -215,14 +232,14 @@ export function ProviderImportDialog({
                                     )
                                 }
                             >
-                                Select all
+                                {t('Select all')}
                             </Button>
                             <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => setSelected(new Set())}
                             >
-                                Clear selection
+                                {t('Clear selection')}
                             </Button>
                             <Button
                                 size="sm"
@@ -237,7 +254,7 @@ export function ProviderImportDialog({
                                     )
                                 }
                             >
-                                Select filtered
+                                {t('Select filtered')}
                             </Button>
                         </div>
                         <div className="max-h-64 overflow-y-auto rounded-md border divide-y">
@@ -264,7 +281,12 @@ export function ProviderImportDialog({
                                             {model.name}
                                         </span>
                                         <span className="block text-xs text-muted-foreground truncate">
-                                            {model.id} · {model.mode}
+                                            {model.id} ·{' '}
+                                            {t(
+                                                model.mode === 'image'
+                                                    ? 'Image'
+                                                    : 'Chat'
+                                            )}
                                         </span>
                                     </span>
                                 </label>
@@ -275,20 +297,24 @@ export function ProviderImportDialog({
                                 variant="ghost"
                                 onClick={() => setLimit((n) => n + 50)}
                             >
-                                Show more ({filtered.length - limit} remaining)
+                                {t('Show more ({count} remaining)', {
+                                    count: filtered.length - limit
+                                })}
                             </Button>
                         )}
                     </>
                 )}
                 <div className="flex justify-end gap-2">
                     <Button variant="ghost" onClick={onClose}>
-                        Cancel
+                        {t('Cancel')}
                     </Button>
                     <Button
                         disabled={!selected.size || loading}
                         onClick={addSelected}
                     >
-                        Add {selected.size || ''} models
+                        {t('Add {count} models', {
+                            count: selected.size || ''
+                        })}
                     </Button>
                 </div>
             </DialogContent>

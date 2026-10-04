@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { ReactNode } from 'react'
 
@@ -8,6 +9,7 @@ export function ErrorView({
     children: ReactNode
     className?: string
 }) {
+    const t = useI18n()
     return (
         <main
             className={cn(
@@ -16,7 +18,9 @@ export function ErrorView({
             )}
         >
             <div className="text-center">
-                <p className="text-base font-semibold text-red-600">Error</p>
+                <p className="text-base font-semibold text-red-600">
+                    {t('Error')}
+                </p>
                 {children}
             </div>
         </main>

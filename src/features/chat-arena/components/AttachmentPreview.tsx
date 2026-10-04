@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { X, FileText, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -14,6 +15,7 @@ export function AttachmentPreview({
     onRemove,
     onClearAll
 }: AttachmentPreviewProps) {
+    const t = useI18n()
     if (attachments.length === 0) return null
 
     return (
@@ -54,9 +56,9 @@ export function AttachmentPreview({
                 size="sm"
                 onClick={onClearAll}
                 className="h-7 px-2 mt-1 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full flex-shrink-0"
-                title="Clear all attachments"
+                title={t('Clear all attachments')}
             >
-                <Trash2 className="w-3 h-3 mr-1" /> Clear
+                <Trash2 className="w-3 h-3 mr-1" /> {t('Clear')}
             </Button>
         </div>
     )

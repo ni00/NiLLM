@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import React, { useState, useRef, useEffect } from 'react'
 import { Brain, ChevronDown } from 'lucide-react'
 import { StreamingMarkdown } from '../StreamingMarkdown'
@@ -9,6 +10,7 @@ interface ThinkingBlockProps {
 
 export const ThinkingBlock = React.memo(
     ({ reasoning, isStreaming }: ThinkingBlockProps) => {
+        const t = useI18n()
         const [isExpanded, setIsExpanded] = useState(isStreaming)
         const contentRef = useRef<HTMLDivElement>(null)
         const [contentHeight, setContentHeight] = useState<number | undefined>(
@@ -55,13 +57,16 @@ export const ThinkingBlock = React.memo(
                         )}
                     </div>
                     <span className="thinking-block-label">
-                        {isStreaming ? 'Thinking...' : 'Thought Process'}
+                        {isStreaming ? t('Thinking...') : t('Thought Process')}
                     </span>
                     {!isStreaming && reasoning.length > 0 && (
                         <span className="thinking-block-count">
-                            {reasoning.length > 1000
-                                ? `${Math.round(reasoning.length / 1000)}k chars`
-                                : `${reasoning.length} chars`}
+                            {t('{count} chars', {
+                                count:
+                                    reasoning.length > 1000
+                                        ? `${Math.round(reasoning.length / 1000)}k`
+                                        : reasoning.length
+                            })}
                         </span>
                     )}
                     <ChevronDown

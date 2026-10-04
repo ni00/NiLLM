@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { useState, useRef, useEffect, TouchEvent, MouseEvent } from 'react'
 import { LLMModel } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -10,6 +11,7 @@ interface ArenaCarouselProps {
 }
 
 export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
+    const t = useI18n()
     const [currentIndex, setCurrentIndex] = useState(0)
 
     // Touch state
@@ -130,7 +132,7 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
     if (models.length === 0) {
         return (
             <div className="p-4 text-center text-muted-foreground">
-                No models selected
+                {t('No models selected')}
             </div>
         )
     }
@@ -173,7 +175,7 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
                                 ? 'bg-primary w-8'
                                 : 'bg-muted-foreground/30 w-2 hover:bg-muted-foreground/50 hover:w-3'
                         )}
-                        aria-label={`Switch to ${model.name}`}
+                        aria-label={t('Switch to {name}', { name: model.name })}
                         title={model.name}
                     />
                 ))}

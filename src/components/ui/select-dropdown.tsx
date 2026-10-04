@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import * as React from 'react'
 import { Check, ChevronDown, LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -33,12 +34,14 @@ export function SelectDropdown({
     ariaLabel,
     onChange,
     options,
-    placeholder = 'Select...',
+    placeholder,
     className,
     width = 'w-full',
     searchable: _searchable = false,
     disabled = false
 }: SelectDropdownProps) {
+    const t = useI18n()
+    const placeholderText = placeholder ?? t('Select...')
     const [open, setOpen] = React.useState(false)
 
     const selectedOption = options.find((opt) => opt.value === value)
@@ -51,7 +54,7 @@ export function SelectDropdown({
                     role="combobox"
                     aria-expanded={open}
                     aria-label={
-                        ariaLabel || selectedOption?.label || placeholder
+                        ariaLabel || selectedOption?.label || placeholderText
                     }
                     disabled={disabled}
                     className={cn(
@@ -71,7 +74,7 @@ export function SelectDropdown({
                         <span className="truncate">
                             {selectedOption
                                 ? selectedOption.label
-                                : placeholder}
+                                : placeholderText}
                         </span>
                     </span>
                     <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -125,7 +128,7 @@ export function SelectDropdown({
                         ))}
                         {options.length === 0 && (
                             <div className="py-6 text-center text-sm text-muted-foreground">
-                                No options found.
+                                {t('No options found.')}
                             </div>
                         )}
                     </div>

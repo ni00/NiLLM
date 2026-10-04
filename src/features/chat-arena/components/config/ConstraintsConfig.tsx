@@ -1,11 +1,13 @@
+import { useI18n } from '@/lib/i18n'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { SectionHeader, ConfigSectionProps } from './SectionHeader'
 
 export function ConstraintsConfig({ config, onChange }: ConfigSectionProps) {
+    const t = useI18n()
     return (
         <div className="space-y-6">
-            <SectionHeader title="Constraints" />
+            <SectionHeader title={t('Constraints')} />
 
             <div className="grid gap-5">
                 <div className="space-y-2.5">
@@ -13,7 +15,7 @@ export function ConstraintsConfig({ config, onChange }: ConfigSectionProps) {
                         htmlFor="maxTokens"
                         className="text-xs font-bold opacity-60 uppercase tracking-tight"
                     >
-                        Max Tokens
+                        {t('Max Tokens')}
                     </Label>
                     <Input
                         id="maxTokens"
@@ -32,11 +34,11 @@ export function ConstraintsConfig({ config, onChange }: ConfigSectionProps) {
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2.5">
                         <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                            Seed
+                            {t('Seed')}
                         </Label>
                         <Input
                             type="number"
-                            placeholder="Random"
+                            placeholder={t('Random')}
                             value={config.seed ?? ''}
                             onChange={(e) =>
                                 onChange({
@@ -50,7 +52,7 @@ export function ConstraintsConfig({ config, onChange }: ConfigSectionProps) {
                     </div>
                     <div className="space-y-2.5">
                         <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                            Repetition Penalty
+                            {t('Repetition Penalty')}
                         </Label>
                         <Input
                             type="number"
@@ -71,10 +73,10 @@ export function ConstraintsConfig({ config, onChange }: ConfigSectionProps) {
 
                 <div className="space-y-2.5">
                     <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                        Stop Sequences
+                        {t('Stop Sequences')}
                     </Label>
                     <Input
-                        placeholder="e.g. \n, USER, END"
+                        placeholder={'e.g. \\n, USER, END'}
                         value={config.stopSequences?.join(', ') || ''}
                         onChange={(e) =>
                             onChange({

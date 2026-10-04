@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Star } from 'lucide-react'
 import { getStarColor, getScoreBadgeStyles } from '../../utils/metrics'
 
@@ -8,10 +9,11 @@ interface RatingBarProps {
 }
 
 export function RatingBar({ rating, ratingSource, onRate }: RatingBarProps) {
+    const t = useI18n()
     return (
         <div className="flex items-center gap-3 pt-4 border-t border-border/30 mt-4 group/rating flex-wrap">
             <div className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
-                Score
+                {t('Score')}
             </div>
             <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((score) => (
@@ -31,7 +33,9 @@ export function RatingBar({ rating, ratingSource, onRate }: RatingBarProps) {
                     className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full border transition-all hover:scale-110 active:scale-95 cursor-default ${getScoreBadgeStyles(rating)}`}
                 >
                     <span className="text-xs font-black uppercase tracking-tighter opacity-80 whitespace-nowrap">
-                        {ratingSource === 'ai' ? 'AI Judge' : 'Human Judge'}
+                        {ratingSource === 'ai'
+                            ? t('AI Judge')
+                            : t('Human Judge')}
                     </span>
                     <span className="text-[14px] font-bold tabular-nums tracking-tight border-l pl-2 ml-0.5 border-current/20 leading-none">
                         {rating.toFixed(1)}

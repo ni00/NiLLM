@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import React from 'react'
@@ -11,18 +12,21 @@ export interface ArenaGlobalParamsProps {
 
 export const ArenaGlobalParams = React.memo(
     ({ config, onChange }: ArenaGlobalParamsProps) => {
+        const t = useI18n()
         return (
             <div className="space-y-4">
                 <div className="space-y-1">
                     <h4 className="text-sm font-semibold">
-                        Generation Parameters
+                        {t('Generation Parameters')}
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                        Adjust sampling and length constraints globally.
+                        {t('Adjust sampling and length constraints globally.')}
                     </p>
                 </div>
                 <div className="space-y-2 rounded-xl border p-4">
-                    <Label htmlFor="max-concurrent">Concurrent models</Label>
+                    <Label htmlFor="max-concurrent">
+                        {t('Concurrent models')}
+                    </Label>
                     <Input
                         id="max-concurrent"
                         type="number"
@@ -41,8 +45,9 @@ export const ArenaGlobalParams = React.memo(
                         className="w-24"
                     />
                     <p className="text-xs text-muted-foreground">
-                        Run up to this many models at once; remaining models
-                        wait for a free slot.
+                        {t(
+                            'Run up to this many models at once; remaining models wait for a free slot.'
+                        )}
                     </p>
                 </div>
                 <div className="p-4 border rounded-xl bg-muted/5">

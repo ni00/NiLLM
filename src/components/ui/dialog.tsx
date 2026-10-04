@@ -1,8 +1,14 @@
+import { useI18n } from '@/lib/i18n'
 import * as React from 'react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+
+function LocalizedCloseLabel() {
+    const t = useI18n()
+    return <span className="sr-only">{t('Close')}</span>
+}
 
 const Dialog = DialogPrimitive.Root
 
@@ -44,7 +50,7 @@ const DialogContent = React.forwardRef<
             {children}
             <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-1 opacity-70 transition-opacity hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-10">
                 <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
+                <LocalizedCloseLabel />
             </DialogPrimitive.Close>
         </DialogPrimitive.Content>
     </DialogPortal>

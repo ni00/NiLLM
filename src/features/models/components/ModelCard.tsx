@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { memo, type ComponentPropsWithRef } from 'react'
 import { providerLabel } from '@/lib/providers/catalog'
 import { Card } from '@/components/ui/card'
@@ -39,6 +40,7 @@ export const ModelCard = memo(function ModelCard({
     onToggle,
     dragHandleProps
 }: ModelCardProps) {
+    const t = useI18n()
     return (
         <Card className="group relative h-full p-0">
             <div className="p-4 flex flex-col gap-3 h-full">
@@ -49,7 +51,9 @@ export const ModelCard = memo(function ModelCard({
                                 <button
                                     type="button"
                                     {...dragHandleProps}
-                                    aria-label={`Drag ${model.name}`}
+                                    aria-label={t('Drag {name}', {
+                                        name: model.name
+                                    })}
                                     className="cursor-grab active:cursor-grabbing touch-none p-1 hover:bg-muted rounded-md transition-colors -ml-1 focus-visible:outline-2 focus-visible:outline-primary"
                                 >
                                     <GripVertical className="h-4 w-4 text-muted-foreground/40" />
@@ -71,7 +75,7 @@ export const ModelCard = memo(function ModelCard({
                     <Switch
                         checked={isActive}
                         disabled={!model.enabled}
-                        aria-label={`Select ${model.name}`}
+                        aria-label={t('Select {name}', { name: model.name })}
                         onCheckedChange={() => onToggle(model.id)}
                         className="scale-75 data-[state=checked]:bg-primary"
                     />
@@ -81,36 +85,36 @@ export const ModelCard = memo(function ModelCard({
                     <div className="flex flex-col">
                         <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
                             <Zap className="h-3.5 w-3.5 text-yellow-500" />{' '}
-                            Speed
+                            {t('Speed')}
                         </span>
                         <span className="text-sm font-mono font-bold text-foreground">
                             {avgTPS}
                             <span className="text-xs ml-0.5 font-normal opacity-50">
-                                t/s
+                                {'t/s'}
                             </span>
                         </span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
                             <Clock className="h-3.5 w-3.5 text-blue-500" />{' '}
-                            Latency
+                            {t('Latency')}
                         </span>
                         <span className="text-sm font-mono font-bold text-foreground">
                             {avgTTFT}
                             <span className="text-xs ml-0.5 font-normal opacity-50">
-                                ms
+                                {'ms'}
                             </span>
                         </span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
                             <BarChart3 className="h-3.5 w-3.5 text-green-500" />{' '}
-                            Tokens
+                            {t('Tokens')}
                         </span>
                         <span className="text-sm font-mono font-bold text-foreground">
                             {(totalTokens / 1000).toFixed(1)}
                             <span className="text-xs ml-0.5 font-normal opacity-50">
-                                k
+                                {'k'}
                             </span>
                         </span>
                     </div>
@@ -130,7 +134,7 @@ export const ModelCard = memo(function ModelCard({
                             size="icon"
                             className="h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground bg-transparent"
                             onClick={() => onDuplicate(model)}
-                            title="Duplicate"
+                            title={t('Duplicate')}
                         >
                             <Copy className="h-3 w-3" />
                         </Button>
@@ -139,7 +143,7 @@ export const ModelCard = memo(function ModelCard({
                             size="icon"
                             className="h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground bg-transparent"
                             onClick={() => onEdit(model)}
-                            title="Edit"
+                            title={t('Edit')}
                         >
                             <Pencil className="h-3 w-3" />
                         </Button>
@@ -148,7 +152,7 @@ export const ModelCard = memo(function ModelCard({
                             size="icon"
                             className="h-7 w-7 rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors text-muted-foreground bg-transparent"
                             onClick={() => onDelete(model.id)}
-                            title="Delete"
+                            title={t('Delete')}
                         >
                             <Trash2 className="h-3 w-3" />
                         </Button>

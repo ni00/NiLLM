@@ -1,3 +1,5 @@
+import { useAppStore } from '@/lib/store'
+import { useI18n } from '@/lib/i18n'
 import type { HTMLAttributes } from 'react'
 import {
     Card,
@@ -27,6 +29,8 @@ export function PromptCard({
     onUse,
     dragHandleProps
 }: PromptCardProps) {
+    const t = useI18n()
+    const language = useAppStore((state) => state.language)
     return (
         <Card className="group relative py-4 gap-2">
             <CardHeader>
@@ -46,10 +50,12 @@ export function PromptCard({
                                 {template.title}
                             </CardTitle>
                             <CardDescription className="text-xs">
-                                {template.variables.length} variables •{' '}
+                                {template.variables.length} {t('variables •')}{' '}
                                 {new Date(
                                     template.updatedAt
-                                ).toLocaleDateString()}
+                                ).toLocaleDateString(
+                                    language === 'zh' ? 'zh-CN' : language
+                                )}
                             </CardDescription>
                         </div>
                     </div>
@@ -89,7 +95,7 @@ export function PromptCard({
                     className="w-full gap-2"
                     onClick={() => onUse(template)}
                 >
-                    <Play className="h-4 w-4" /> Use Template
+                    <Play className="h-4 w-4" /> {t('Use Template')}
                 </Button>
             </CardContent>
         </Card>

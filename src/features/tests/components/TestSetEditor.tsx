@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,6 +30,7 @@ export function TestSetEditor({
     onMoveCase,
     onRunSingle
 }: TestSetEditorProps) {
+    const t = useI18n()
     if (!isOpen) return null
 
     const isValid =
@@ -41,10 +43,12 @@ export function TestSetEditor({
                 <div className="p-6 border-b border-border/50 flex justify-between items-center bg-muted/10">
                     <div>
                         <h2 className="text-xl font-bold tracking-tight">
-                            {editingSetId ? 'Edit Test Set' : 'Create Test Set'}
+                            {editingSetId
+                                ? t('Edit Test Set')
+                                : t('Create Test Set')}
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Configure your test cases and prompts.
+                            {t('Configure your test cases and prompts.')}
                         </p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={onClose}>
@@ -54,26 +58,31 @@ export function TestSetEditor({
 
                 <div className="p-6 flex-1 overflow-auto space-y-6">
                     <div className="space-y-2">
-                        <Label>Set Name</Label>
+                        <Label>{t('Set Name')}</Label>
                         <Input
                             value={editForm.name}
                             onChange={(e) =>
                                 onUpdateCase('name', e.target.value)
                             }
-                            placeholder="e.g. Challenging Logic Puzzles"
+                            placeholder={t('e.g. Challenging Logic Puzzles')}
                             className="font-bold"
                         />
                     </div>
 
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                            <Label>Test Cases ({editForm.cases.length})</Label>
+                            <Label>
+                                {t('Test Cases ({count})', {
+                                    count: editForm.cases.length
+                                })}
+                            </Label>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={onAddCase}
                             >
-                                <Plus className="h-3 w-3 mr-2" /> Add Case
+                                <Plus className="h-3 w-3 mr-2" />{' '}
+                                {t('Add Case')}
                             </Button>
                         </div>
                         <div className="space-y-3">
@@ -94,7 +103,9 @@ export function TestSetEditor({
                                                     e.target.value
                                                 )
                                             }
-                                            placeholder="Enter test prompt..."
+                                            placeholder={t(
+                                                'Enter test prompt...'
+                                            )}
                                         />
                                     </div>
                                     <div className="flex gap-1 shrink-0 mt-[2px]">
@@ -105,7 +116,7 @@ export function TestSetEditor({
                                             onClick={() =>
                                                 onRunSingle(c.prompt)
                                             }
-                                            title="Run this case"
+                                            title={t('Run this case')}
                                         >
                                             <Play className="h-4 w-4" />
                                         </Button>
@@ -149,8 +160,9 @@ export function TestSetEditor({
                             ))}
                             {editForm.cases.length === 0 && (
                                 <div className="text-center py-8 text-muted-foreground italic bg-muted/20 rounded-lg">
-                                    No test cases yet. Click &ldquo;Add
-                                    Case&rdquo; to start.
+                                    {t(
+                                        'No test cases yet. Click “Add Case” to start.'
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -159,10 +171,10 @@ export function TestSetEditor({
 
                 <div className="p-4 border-t border-border/50 bg-muted/10 flex justify-end gap-3">
                     <Button variant="ghost" onClick={onClose}>
-                        Cancel
+                        {t('Cancel')}
                     </Button>
                     <Button onClick={onSave} disabled={!isValid}>
-                        <Save className="h-4 w-4 mr-2" /> Save Set
+                        <Save className="h-4 w-4 mr-2" /> {t('Save Set')}
                     </Button>
                 </div>
             </div>

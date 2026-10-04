@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { useNavigate } from 'react-router'
 import { X, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,7 @@ export const ArenaSettings = ({
     setArenaSettingsTab,
     onClose
 }: ArenaSettingsProps) => {
+    const t = useI18n()
     const navigate = useNavigate()
     const {
         models,
@@ -41,16 +43,16 @@ export const ArenaSettings = ({
     )
 
     const TABS = [
-        { id: 'models', label: 'Models' },
-        { id: 'prompt', label: 'System Prompt' },
-        { id: 'params', label: 'Parameters' }
+        { id: 'models', label: t('Models') },
+        { id: 'prompt', label: t('System Prompt') },
+        { id: 'params', label: t('Parameters') }
     ] as const
 
     return (
         <>
             <div className="p-4 border-b flex items-center justify-between bg-muted/30">
                 <h3 className="font-semibold text-base flex items-center gap-2">
-                    <Settings2 className="w-4 h-4" /> Arena Settings
+                    <Settings2 className="w-4 h-4" /> {t('Arena Settings')}
                 </h3>
                 <Button
                     variant="ghost"
@@ -116,15 +118,15 @@ export const ArenaSettings = ({
                             className="flex-1 h-10 font-semibold"
                             onClick={() => navigate('/models')}
                         >
-                            <Settings2 className="w-3.5 h-3.5 mr-2" /> Manage
-                            Models
+                            <Settings2 className="w-3.5 h-3.5 mr-2" />{' '}
+                            {t('Manage Models')}
                         </Button>
                         <Button
                             className="flex-1 h-10 font-semibold"
                             size="sm"
                             onClick={onClose}
                         >
-                            Confirm
+                            {t('Confirm')}
                         </Button>
                     </>
                 ) : arenaSettingsTab === 'prompt' ? (
@@ -132,14 +134,14 @@ export const ArenaSettings = ({
                         className="w-full h-10 font-semibold"
                         onClick={onClose}
                     >
-                        Save & Close
+                        {t('Save & Close')}
                     </Button>
                 ) : (
                     <Button
                         className="w-full h-10 font-semibold"
                         onClick={onClose}
                     >
-                        Done
+                        {t('Done')}
                     </Button>
                 )}
             </div>

@@ -1,30 +1,42 @@
+import { useI18n } from '@/lib/i18n'
 import { Outlet, Link, useLocation } from 'react-router'
-import { Layers, BarChart3, Cpu, Box, BookTemplate } from 'lucide-react'
+import {
+    Layers,
+    BarChart3,
+    Cpu,
+    Box,
+    BookTemplate,
+    Settings
+} from 'lucide-react'
+import { useAppPreferences } from '@/features/settings/useAppPreferences'
 import { cn } from '@/lib/utils'
 
 export function Layout() {
+    const t = useI18n()
+    useAppPreferences()
     const location = useLocation()
 
     const navItems = [
-        { icon: Layers, label: 'Arena', path: '/' },
-        { icon: BookTemplate, label: 'Prompts', path: '/prompts' },
-        { icon: Box, label: 'Tests', path: '/tests' },
-        { icon: Cpu, label: 'Models', path: '/models' },
-        { icon: BarChart3, label: 'Stats', path: '/stats' }
+        { icon: Layers, label: t('Arena'), path: '/' },
+        { icon: BookTemplate, label: t('Prompts'), path: '/prompts' },
+        { icon: Box, label: t('Tests'), path: '/tests' },
+        { icon: Cpu, label: t('Models'), path: '/models' },
+        { icon: BarChart3, label: t('Stats'), path: '/stats' },
+        { icon: Settings, label: t('Settings'), path: '/settings' }
     ]
 
     return (
         <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden pt-[var(--safe-area-inset-top)]">
             {/* Sidebar / Bottom Nav */}
-            <aside className="fixed bottom-0 left-0 right-0 z-50 h-16 border-t bg-background md:border-t-0 md:relative md:h-full md:w-16 md:border-r flex md:flex-col items-center justify-around md:justify-start md:py-4 md:gap-4 flex-shrink-0 pb-[var(--safe-area-inset-bottom)]">
+            <aside className="fixed bottom-0 left-0 right-0 z-50 h-16 border-t bg-background md:border-t-0 md:relative md:h-full md:w-20 md:border-r flex md:flex-col items-center justify-around md:justify-start md:py-4 md:gap-4 flex-shrink-0 pb-[var(--safe-area-inset-bottom)]">
                 <div className="hidden md:block mb-4">
                     {/* Logo or Brand */}
                     <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-sm">
-                        N
+                        {'N'}
                     </div>
                 </div>
 
-                <nav className="flex flex-row md:flex-col gap-1 md:gap-2 w-full h-full md:h-auto px-2 justify-around md:justify-start items-center">
+                <nav className="flex flex-row md:flex-col gap-1 md:gap-2 w-full h-full md:h-auto md:flex-1 px-1 justify-around md:justify-start items-center">
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path
                         return (
@@ -32,7 +44,8 @@ export function Layout() {
                                 key={item.path}
                                 to={item.path}
                                 className={cn(
-                                    'flex flex-col items-center justify-center p-2 rounded-md transition-all gap-1 hover:bg-muted/50 flex-1 md:flex-none',
+                                    'flex flex-col items-center justify-center p-2 md:px-1 md:w-full rounded-md transition-all gap-1 hover:bg-muted/50 flex-1 md:flex-none',
+                                    item.path === '/settings' && 'md:mt-auto',
                                     isActive
                                         ? 'bg-muted text-primary'
                                         : 'text-muted-foreground'
@@ -40,7 +53,7 @@ export function Layout() {
                                 title={item.label}
                             >
                                 <item.icon className="w-5 h-5" />
-                                <span className="text-[10px] md:text-xs font-medium text-center leading-tight">
+                                <span className="text-[10px] md:text-xs font-medium text-center leading-tight whitespace-nowrap">
                                     {item.label}
                                 </span>
                             </Link>

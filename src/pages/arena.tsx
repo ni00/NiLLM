@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { KeyboardEvent, useCallback, useEffect, useState, useMemo } from 'react'
 import { LLMModel } from '@/lib/types'
 import { ArenaHeader } from '@/features/chat-arena/components/ArenaHeader'
@@ -41,6 +42,7 @@ import {
 } from '@/features/benchmark/engine'
 
 export function ArenaPage() {
+    const t = useI18n()
     const models = useModels()
     const activeModelIds = useActiveModelIds()
     const sessions = useSessions()
@@ -274,8 +276,7 @@ export function ArenaPage() {
 
     return (
         <PageLayout
-            title="Arena"
-            description="Compare multiple models in real-time with unified prompts."
+            title={t('Arena')}
             icon={Layers}
             actions={
                 <ArenaHeader
@@ -401,10 +402,11 @@ export function ArenaPage() {
             >
                 <DialogContent className="max-w-4xl w-[90vw] h-[80vh] flex flex-col p-6 gap-0">
                     <DialogHeader className="px-0 pt-0 pb-4 border-b-0">
-                        <DialogTitle>Full Screen Input</DialogTitle>
+                        <DialogTitle>{t('Full Screen Input')}</DialogTitle>
                         <DialogDescription>
-                            Type your message with more space. Supports Markdown
-                            and drag & drop.
+                            {t(
+                                'Type your message with more space. Supports Markdown and drag & drop.'
+                            )}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 min-h-0 flex flex-col">

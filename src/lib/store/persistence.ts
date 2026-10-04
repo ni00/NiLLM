@@ -12,6 +12,8 @@ export const persistedKeys = [
     'promptTemplates',
     'globalConfig',
     'language',
+    'benchmarkLanguage',
+    'theme',
     'arenaColumns',
     'arenaSortBy'
 ] as const

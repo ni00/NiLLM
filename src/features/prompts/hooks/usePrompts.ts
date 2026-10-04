@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { z } from 'zod'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useState } from 'react'
@@ -14,6 +15,7 @@ export interface PromptForm {
 }
 
 export function usePrompts() {
+    const t = useI18n()
     const {
         promptTemplates,
         addPromptTemplate,
@@ -81,7 +83,7 @@ export function usePrompts() {
     }
 
     const handleDelete = (id: string) => {
-        if (confirm('Are you sure you want to delete this template?')) {
+        if (confirm(t('Are you sure you want to delete this template?'))) {
             deletePromptTemplate(id)
         }
     }
@@ -148,11 +150,11 @@ export function usePrompts() {
                     updatedAt: Date.now()
                 })
             } else {
-                alert('Invalid template format')
+                alert(t('Invalid template format'))
             }
         } catch (err) {
             console.error(err)
-            alert('Failed to read file')
+            alert(t('Failed to read file'))
         }
     }
 
@@ -186,7 +188,7 @@ export function usePrompts() {
 
         const model = models.find((m) => m.id === modelId)
         if (!model) {
-            alert('Selected model not found.')
+            alert(t('Selected model not found.'))
             return
         }
 
@@ -226,7 +228,9 @@ export function usePrompts() {
         } catch {
             console.error('Could not generate template variables.')
             alert(
-                'Could not fill variables. Check provider settings and network access.'
+                t(
+                    'Could not fill variables. Check provider settings and network access.'
+                )
             )
         } finally {
             setIsGenerating(false)

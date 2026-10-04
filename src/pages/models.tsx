@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { useState, useMemo, useDeferredValue, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { ProviderImportDialog } from '@/features/models/components/ProviderImportDialog'
@@ -12,6 +13,7 @@ import { useModels } from '@/features/models/hooks/useModels'
 import { ModelEditor } from '@/features/models/components/ModelEditor'
 
 export function ModelsPage() {
+    const t = useI18n()
     const {
         models,
         activeModelIds,
@@ -59,8 +61,7 @@ export function ModelsPage() {
 
     return (
         <PageLayout
-            title="Models"
-            description="Manage your LLM providers and configuration."
+            title={t('Models')}
             icon={Cpu}
             isScrollable={false}
             actions={
@@ -68,13 +69,15 @@ export function ModelsPage() {
                     <Button
                         variant={reordering ? 'default' : 'outline'}
                         aria-pressed={reordering}
-                        aria-label={reordering ? 'Done reordering' : 'Reorder'}
+                        aria-label={
+                            reordering ? t('Done reordering') : t('Reorder')
+                        }
                         onClick={() => setReordering((value) => !value)}
                         className="h-9 w-9 px-0 md:w-auto md:px-4 gap-2"
                     >
                         <GripVertical className="h-4 w-4" />
                         <span className="hidden md:inline text-xs">
-                            {reordering ? 'Done reordering' : 'Reorder'}
+                            {reordering ? t('Done reordering') : t('Reorder')}
                         </span>
                     </Button>
                     <input
@@ -93,7 +96,7 @@ export function ModelsPage() {
                     >
                         <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
-                            Import
+                            {t('Import')}
                         </span>
                     </Button>
                     <Button
@@ -103,7 +106,7 @@ export function ModelsPage() {
                     >
                         <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
-                            Export
+                            {t('Export')}
                         </span>
                     </Button>
                     <Button
@@ -112,7 +115,7 @@ export function ModelsPage() {
                         className="h-9 gap-2"
                     >
                         <Plus className="h-4 w-4" />
-                        <span className="text-xs">Add provider</span>
+                        <span className="text-xs">{t('Add provider')}</span>
                     </Button>
                     {!isAdding && (
                         <Button
@@ -129,7 +132,7 @@ export function ModelsPage() {
                         >
                             <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                             <span className="hidden md:inline text-xs font-medium">
-                                Add
+                                {t('Add')}
                             </span>
                         </Button>
                     )}
@@ -138,8 +141,8 @@ export function ModelsPage() {
         >
             <div className="shrink-0 px-4 md:px-6 pt-4 md:pt-6 pb-4 space-y-2">
                 <Input
-                    aria-label="Search configured models"
-                    placeholder="Search models or providers…"
+                    aria-label={t('Search configured models')}
+                    placeholder={t('Search models or providers…')}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                 />
@@ -171,8 +174,10 @@ export function ModelsPage() {
                     onAdded={(count) =>
                         setNotice(
                             count
-                                ? `Added ${count} models.`
-                                : 'All selected models are already configured.'
+                                ? t('Added {count} models.', { count })
+                                : t(
+                                      'All selected models are already configured.'
+                                  )
                         )
                     }
                 />

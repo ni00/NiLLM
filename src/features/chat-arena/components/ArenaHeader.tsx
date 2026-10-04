@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import {
     Download,
     Sparkles,
@@ -28,6 +29,7 @@ export const ArenaHeader = ({
     onShowJudgePanel,
     onShowArenaSettings
 }: ArenaHeaderProps) => {
+    const t = useI18n()
     const { arenaColumns, setArenaColumns, arenaSortBy, setArenaSortBy } =
         useAppStore(
             useShallow((state) => ({
@@ -39,20 +41,20 @@ export const ArenaHeader = ({
         )
 
     const layoutOptions = [
-        { label: 'Auto', value: 0 },
-        { label: '1 Column', value: 1 },
-        { label: '2 Columns', value: 2 },
-        { label: '3 Columns', value: 3 },
-        { label: '4 Columns', value: 4 },
-        { label: 'Slide', value: 5 }
+        { label: t('Auto'), value: 0 },
+        { label: t('1 Column'), value: 1 },
+        { label: t('2 Columns'), value: 2 },
+        { label: t('3 Columns'), value: 3 },
+        { label: t('4 Columns'), value: 4 },
+        { label: t('Slide'), value: 5 }
     ]
 
     const sortOptions = [
-        { label: 'Default', value: 'default' },
-        { label: 'Model Name', value: 'name' },
-        { label: 'Avg TTFT', value: 'ttft' },
-        { label: 'Avg TPS', value: 'tps' },
-        { label: 'Avg Rating', value: 'rating' }
+        { label: t('Default'), value: 'default' },
+        { label: t('Model Name'), value: 'name' },
+        { label: t('Avg TTFT'), value: 'ttft' },
+        { label: t('Avg TPS'), value: 'tps' },
+        { label: t('Avg Rating'), value: 'rating' }
     ]
 
     return (
@@ -70,7 +72,7 @@ export const ArenaHeader = ({
                     >
                         <LayoutGrid className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
-                            Layout
+                            {t('Layout')}
                         </span>
                     </Button>
                 </PopoverTrigger>
@@ -106,7 +108,7 @@ export const ArenaHeader = ({
                     >
                         <ArrowUpDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
-                            Sort
+                            {t('Sort')}
                         </span>
                     </Button>
                 </PopoverTrigger>
@@ -149,7 +151,7 @@ export const ArenaHeader = ({
             >
                 <Download className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="hidden md:inline text-xs font-medium">
-                    Export
+                    {t('Export')}
                 </span>
             </Button>
 
@@ -161,7 +163,7 @@ export const ArenaHeader = ({
             >
                 <Sparkles className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="hidden md:inline text-xs font-medium">
-                    Judge
+                    {t('Judge')}
                 </span>
             </Button>
 
@@ -173,7 +175,7 @@ export const ArenaHeader = ({
             >
                 <Settings2 className="w-4 h-4 text-muted-foreground group-hover:rotate-90 transition-all duration-300" />
                 <span className="hidden md:inline text-xs font-medium">
-                    Configure
+                    {t('Configure')}
                 </span>
             </Button>
         </div>

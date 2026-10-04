@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Play, Send, Eraser, Paperclip, Maximize2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -38,6 +39,7 @@ export const ArenaInput = ({
     className,
     textareaClassName
 }: ArenaInputProps) => {
+    const t = useI18n()
     const clearActiveSession = useClearActiveSession()
     const stopAll = useStopAll()
     const models = useModels()
@@ -316,8 +318,10 @@ export const ArenaInput = ({
                         onKeyDown={handleKeyDown}
                         placeholder={
                             attachments.length > 0
-                                ? 'Add a message...'
-                                : 'Send a message to all models... (Use @ to mention models)'
+                                ? t('Add a message...')
+                                : t(
+                                      'Send a message to all models... (Use @ to mention models)'
+                                  )
                         }
                         className={cn(
                             'min-h-[80px] max-h-[200px] resize-none shadow-sm rounded-xl p-3',
@@ -336,7 +340,7 @@ export const ArenaInput = ({
                             <div className="bg-background/90 px-4 py-2 rounded-full shadow-lg border flex items-center gap-2">
                                 <Paperclip className="w-4 h-4 text-primary" />
                                 <span className="text-sm font-medium">
-                                    Drop files to attach
+                                    {t('Drop files to attach')}
                                 </span>
                             </div>
                         </div>
@@ -350,7 +354,7 @@ export const ArenaInput = ({
                             size="icon"
                             onClick={() => fileInputRef.current?.click()}
                             className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
-                            title="Attach files"
+                            title={t('Attach files')}
                         >
                             <Paperclip className="w-4 h-4" />
                         </Button>
@@ -360,7 +364,8 @@ export const ArenaInput = ({
                             onClick={handleClearContext}
                             className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all rounded-full"
                         >
-                            <Eraser className="w-3 h-3 mr-1.5" /> Clear Context
+                            <Eraser className="w-3 h-3 mr-1.5" />{' '}
+                            {t('Clear Context')}
                         </Button>
                         {onExpand && (
                             <Button
@@ -368,7 +373,7 @@ export const ArenaInput = ({
                                 size="icon"
                                 onClick={onExpand}
                                 className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
-                                title="Expand to full screen"
+                                title={t('Expand to full screen')}
                             >
                                 <Maximize2 className="w-4 h-4" />
                             </Button>
@@ -377,7 +382,7 @@ export const ArenaInput = ({
 
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-muted-foreground hidden sm:inline-block">
-                            Enter for new line, Shift+Enter to send
+                            {t('Enter for new line, Shift+Enter to send')}
                         </span>
                         <Button
                             onClick={onSend}

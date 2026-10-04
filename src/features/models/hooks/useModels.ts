@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { useState, useMemo, useCallback } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { DragEndEvent } from '@dnd-kit/core'
@@ -16,6 +17,7 @@ export interface ModelFormData {
 }
 
 export function useModels() {
+    const t = useI18n()
     const {
         models,
         addModel,
@@ -136,11 +138,11 @@ export function useModels() {
                 const store = useAppStore.getState()
                 store.importModels(parseModels(data))
             } else {
-                alert('Invalid model data format')
+                alert(t('Invalid model data format'))
             }
         } catch {
             console.error('Failed to import model data.')
-            alert('Invalid model data. Check the JSON format.')
+            alert(t('Invalid model data. Check the JSON format.'))
         }
         e.target.value = ''
     }

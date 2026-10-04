@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { createPortal } from 'react-dom'
 import { X, Download } from 'lucide-react'
 
@@ -12,6 +13,7 @@ export function ImageLightbox({
     onClose,
     onDownload
 }: ImageLightboxProps) {
+    const t = useI18n()
     return createPortal(
         <div
             className="fixed inset-0 z-[200] flex items-center justify-center"
@@ -47,7 +49,7 @@ export function ImageLightbox({
 
             <img
                 src={src}
-                alt="Full size image"
+                alt={t('Full size image')}
                 onClick={(e) => e.stopPropagation()}
                 style={{
                     position: 'relative',

@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import React from 'react'
 import { Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ export const ModelConfigPanel = React.memo(
         onUpdateModel,
         onStartEditingDetails
     }: ModelConfigPanelProps) => {
+        const t = useI18n()
         return (
             <div className="flex flex-col h-full bg-muted/5">
                 <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
@@ -25,10 +27,10 @@ export const ModelConfigPanel = React.memo(
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <h4 className="text-sm font-bold tracking-tight">
-                                    Parameters
+                                    {t('Parameters')}
                                 </h4>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                    Override global generation settings.
+                                    {t('Override global generation settings.')}
                                 </p>
                             </div>
                             <Button
@@ -41,7 +43,7 @@ export const ModelConfigPanel = React.memo(
                                     })
                                 }
                             >
-                                Reset
+                                {t('Reset')}
                             </Button>
                         </div>
                         <div className="bg-muted/5 rounded-xl border p-4">
@@ -67,7 +69,7 @@ export const ModelConfigPanel = React.memo(
                         onClick={() => onStartEditingDetails(model)}
                     >
                         <Pencil className="w-3.5 h-3.5 mr-2" />
-                        Edit Model Details
+                        {t('Edit Model Details')}
                     </Button>
                 </div>
             </div>

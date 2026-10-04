@@ -133,6 +133,8 @@ export const backupSchema = z
         activeSessionId: z.string().nullable().optional(),
         testSetOrder: z.array(z.string()).optional(),
         language: z.enum(['en', 'zh', 'ja']).optional(),
+        benchmarkLanguage: z.enum(['en', 'zh', 'ja']).nullable().optional(),
+        theme: z.enum(['system', 'light', 'dark']).optional(),
         arenaColumns: finite.int().min(0).max(5).optional(),
         arenaSortBy: z
             .enum(['default', 'name', 'ttft', 'tps', 'rating'])

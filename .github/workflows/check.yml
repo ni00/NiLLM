@@ -23,7 +23,7 @@ jobs:
             - run: pnpm build
             - run: pnpm exec playwright install --with-deps chromium
             - run: pnpm test:e2e
-            - run: pnpm exec playwright test e2e/provider-arena.spec.ts e2e/models-scroll.spec.ts --grep 'large model|provider to arena'
+            - run: pnpm exec playwright test e2e/provider-arena.spec.ts e2e/models-scroll.spec.ts e2e/settings.spec.ts --grep 'large model|provider to arena|settings'
               env:
                   PLAYWRIGHT_PREVIEW: 1
     rust:

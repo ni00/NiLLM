@@ -1,16 +1,18 @@
+import { useI18n } from '@/lib/i18n'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { ConfigSlider } from '../ConfigSlider'
 import { SectionHeader, ConfigSectionProps } from './SectionHeader'
 
 export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
+    const t = useI18n()
     return (
         <div className="space-y-6">
-            <SectionHeader title="Sampling" />
+            <SectionHeader title={t('Sampling')} />
 
             <div className="grid gap-6">
                 <ConfigSlider
-                    label="Temperature"
+                    label={t('Temperature')}
                     id="temp"
                     value={config.temperature ?? 0.7}
                     min={0}
@@ -21,7 +23,7 @@ export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
                 />
 
                 <ConfigSlider
-                    label="Top P"
+                    label={t('Top P')}
                     id="topP"
                     value={config.topP ?? 0.9}
                     min={0}
@@ -34,11 +36,11 @@ export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2.5">
                         <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                            Top K
+                            {t('Top K')}
                         </Label>
                         <Input
                             type="number"
-                            placeholder="Auto"
+                            placeholder={t('Auto')}
                             value={config.topK ?? ''}
                             onChange={(e) =>
                                 onChange({
@@ -52,12 +54,12 @@ export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
                     </div>
                     <div className="space-y-2.5">
                         <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                            Min P
+                            {t('Min P')}
                         </Label>
                         <Input
                             type="number"
                             step="0.01"
-                            placeholder="Off"
+                            placeholder={t('Off')}
                             value={config.minP ?? ''}
                             onChange={(e) =>
                                 onChange({

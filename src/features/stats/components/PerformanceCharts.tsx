@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import {
     Card,
     CardContent,
@@ -27,6 +28,7 @@ export function PerformanceCharts({
     chartData,
     mounted
 }: PerformanceChartsProps) {
+    const t = useI18n()
     if (!mounted) return null
 
     return (
@@ -34,11 +36,11 @@ export function PerformanceCharts({
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-primary" /> Generation
-                        Speed (t/s)
+                        <Activity className="h-4 w-4 text-primary" />{' '}
+                        {t('Generation Speed (t/s)')}
                     </CardTitle>
                     <CardDescription>
-                        Throughput comparison per model.
+                        {t('Throughput comparison per model.')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[280px] w-full">
@@ -91,6 +93,7 @@ export function PerformanceCharts({
                                 />
                                 <Bar
                                     isAnimationActive={false}
+                                    name={t('Speed')}
                                     dataKey="speed"
                                     radius={[4, 4, 0, 0]}
                                     barSize={32}
@@ -119,11 +122,11 @@ export function PerformanceCharts({
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-blue-500" /> Avg. Latency
-                        (ms)
+                        <Clock className="h-4 w-4 text-blue-500" />{' '}
+                        {t('Avg. Latency (ms)')}
                     </CardTitle>
                     <CardDescription>
-                        Time to first token (Lower is better).
+                        {t('Time to first token (Lower is better).')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[280px] w-full">
@@ -180,6 +183,7 @@ export function PerformanceCharts({
                                 />
                                 <Bar
                                     isAnimationActive={false}
+                                    name={t('Latency')}
                                     dataKey="latency"
                                     fill="var(--muted-foreground)"
                                     fillOpacity={0.2}

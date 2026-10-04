@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import React from 'react'
 import { LLMModel } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -38,6 +39,7 @@ const SortableModelItem = ({
     isActive,
     onToggle
 }: SortableModelItemProps) => {
+    const t = useI18n()
     const {
         attributes,
         listeners,
@@ -70,7 +72,7 @@ const SortableModelItem = ({
                 {...attributes}
                 {...listeners}
                 className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-muted-foreground/30 hover:text-primary transition-colors"
-                title="Drag to reorder"
+                title={t('Drag to reorder')}
             >
                 <GripVertical className="w-4 h-4" />
             </div>
@@ -105,6 +107,7 @@ export const ArenaModelSelector = React.memo(
         onToggleAll,
         onReorder
     }: ArenaModelSelectorProps) => {
+        const t = useI18n()
         const sensors = useSensors(
             useSensor(PointerSensor, {
                 activationConstraint: {
@@ -134,10 +137,10 @@ export const ArenaModelSelector = React.memo(
                 <div className="flex items-center justify-between">
                     <div className="space-y-1">
                         <h4 className="text-sm font-semibold">
-                            Model Selection
+                            {t('Model Selection')}
                         </h4>
                         <p className="text-xs text-muted-foreground">
-                            Select the models to compare in the arena.
+                            {t('Select the models to compare in the arena.')}
                         </p>
                     </div>
                     <button
@@ -150,7 +153,7 @@ export const ArenaModelSelector = React.memo(
                         )}
                     >
                         {isAllSelected && <Check className="w-3 h-3" />}
-                        {isAllSelected ? 'Deselect All' : 'Select All'}
+                        {isAllSelected ? t('Deselect All') : t('Select All')}
                     </button>
                 </div>
 

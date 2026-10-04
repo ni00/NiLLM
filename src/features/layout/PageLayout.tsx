@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils'
 
 interface PageLayoutProps {
     title: string
-    description?: string
     icon?: LucideIcon
     actions?: React.ReactNode
     children?: React.ReactNode
@@ -26,7 +25,6 @@ interface PageLayoutProps {
 
 export function PageLayout({
     title,
-    description,
     icon,
     actions,
     children,
@@ -44,7 +42,6 @@ export function PageLayout({
         >
             <PageHeader
                 title={title}
-                description={description}
                 icon={icon}
                 className={cn(
                     'p-4 md:p-6 pb-4 border-b flex-shrink-0',

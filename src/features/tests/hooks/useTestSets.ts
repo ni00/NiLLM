@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { z } from 'zod'
 import { useState, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -13,6 +14,7 @@ export interface TestSetForm {
 }
 
 export function useTestSets() {
+    const t = useI18n()
     const {
         addTestSet,
         deleteTestSet,
@@ -37,8 +39,8 @@ export function useTestSets() {
             activeModelIds: state.activeModelIds,
             addToQueue: state.addToQueue,
             addBatchToQueue: state.addBatchToQueue,
-            language: state.language,
-            setLanguage: state.setLanguage,
+            language: state.benchmarkLanguage ?? state.language,
+            setLanguage: state.setBenchmarkLanguage,
             testSets: state.testSets,
             testSetOrder: state.testSetOrder
         }))
@@ -198,7 +200,7 @@ export function useTestSets() {
             addTestSet(newSet)
         } catch (err) {
             console.error(err)
-            alert('Failed to parse file.')
+            alert(t('Failed to parse file.'))
         } finally {
             setIsImporting(false)
             if (fileInputRef.current) fileInputRef.current.value = ''
@@ -216,7 +218,9 @@ export function useTestSets() {
     const handleRunTest = async (testSet: TestSet) => {
         if (isRunningRef.current) return
         if (activeModelIds.length === 0) {
-            alert('Please select at least one active model in the Arena first.')
+            alert(
+                t('Please select at least one active model in the Arena first.')
+            )
             return
         }
 
@@ -256,7 +260,9 @@ export function useTestSets() {
     const handleRunSingle = async (prompt: string) => {
         if (isRunningRef.current) return
         if (activeModelIds.length === 0) {
-            alert('Please select at least one active model in the Arena first.')
+            alert(
+                t('Please select at least one active model in the Arena first.')
+            )
             return
         }
         isRunningRef.current = true

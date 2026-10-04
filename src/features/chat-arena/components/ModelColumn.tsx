@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import React, { useRef } from 'react'
 import {
     Settings2,
@@ -71,6 +72,7 @@ export const ModelColumn = React.memo(
         footerRanges,
         className
     }: ModelColumnProps) => {
+        const t = useI18n()
         const updateModel = useUpdateModel()
         const activeSessionId = useActiveSessionId()
         const updateResult = useUpdateResult()
@@ -242,7 +244,7 @@ export const ModelColumn = React.memo(
                                 variant="outline"
                                 className="h-9 w-9 rounded-full shadow-2xl border-border/40 bg-background/95 hover:bg-primary hover:border-primary hover:shadow-primary/20 transition-all duration-300 group/btn hover:scale-110 active:scale-95"
                                 onClick={scrollToTop}
-                                title="Scroll to Top"
+                                title={t('Scroll to Top')}
                             >
                                 <ArrowUp className="w-4.5 h-4.5 text-foreground/50 group-hover/btn:text-primary-foreground transition-colors" />
                             </Button>
@@ -265,8 +267,8 @@ export const ModelColumn = React.memo(
                                 }}
                                 title={
                                     isFollowing
-                                        ? 'Following (Click to stop)'
-                                        : 'Follow output'
+                                        ? t('Following (Click to stop)')
+                                        : t('Follow output')
                                 }
                             >
                                 {isFollowing ? (
@@ -281,7 +283,7 @@ export const ModelColumn = React.memo(
                                 variant="outline"
                                 className="h-9 w-9 rounded-full shadow-2xl border-border/40 bg-background/95 hover:bg-primary hover:border-primary hover:shadow-primary/20 transition-all duration-300 group/btn hover:scale-110 active:scale-95"
                                 onClick={scrollToBottom}
-                                title="Scroll to Bottom"
+                                title={t('Scroll to Bottom')}
                             >
                                 <ArrowDown className="w-4.5 h-4.5 text-foreground/50 group-hover/btn:text-primary-foreground transition-colors" />
                             </Button>
@@ -337,7 +339,7 @@ export const ModelColumn = React.memo(
                                     <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground/30 py-20 gap-3">
                                         <MessageSquareText className="w-10 h-10 opacity-20" />
                                         <div className="text-sm font-medium">
-                                            Ready to compare
+                                            {t('Ready to compare')}
                                         </div>
                                     </div>
                                 )}
@@ -357,7 +359,7 @@ export const ModelColumn = React.memo(
                                 />
                             ) : isEditing ? (
                                 <div className="text-xs font-semibold text-primary/60 uppercase tracking-widest pl-1">
-                                    Configuration Mode
+                                    {t('Configuration Mode')}
                                 </div>
                             ) : (
                                 <div className="h-4" />

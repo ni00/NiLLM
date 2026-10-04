@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { useState, useEffect } from 'react'
 import { storeHydration } from '@/lib/store'
@@ -8,16 +9,7 @@ const createAppRouter = () =>
     createBrowserRouter([
         {
             element: <Layout />,
-            HydrateFallback: () => (
-                <div className="flex h-screen w-screen items-center justify-center bg-background">
-                    <div className="flex flex-col items-center gap-2">
-                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                        <p className="text-sm text-muted-foreground animate-pulse">
-                            Initializing app...
-                        </p>
-                    </div>
-                </div>
-            ),
+            HydrateFallback: LoadingView,
             children: [
                 {
                     path: '/',
@@ -40,12 +32,28 @@ const createAppRouter = () =>
                     lazy: () => import('@/pages/prompts')
                 },
                 {
+                    path: '/settings',
+                    lazy: () => import('@/pages/settings')
+                },
+                {
                     path: '*',
                     lazy: () => import('@/pages/not-found')
                 }
             ]
         }
     ])
+
+function LoadingView() {
+    const t = useI18n()
+    return (
+        <div
+            role="status"
+            className="flex h-screen items-center justify-center"
+        >
+            {t('Loading your arena…')}
+        </div>
+    )
+}
 
 export default function AppRouter() {
     const [router, setRouter] = useState<ReturnType<
@@ -60,14 +68,6 @@ export default function AppRouter() {
             active = false
         }
     }, [])
-    if (!router)
-        return (
-            <div
-                role="status"
-                className="flex h-screen items-center justify-center"
-            >
-                Loading your arena…
-            </div>
-        )
+    if (!router) return <LoadingView />
     return <RouterProvider router={router} />
 }

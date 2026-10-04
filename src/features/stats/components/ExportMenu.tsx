@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import type { ModelStat } from '../domain/statistics'
 import { exportStatsCSV } from '../domain/export'
 import { useState } from 'react'
@@ -52,6 +53,7 @@ export function ExportMenu({
     fastestModel,
     onClearAll
 }: ExportMenuProps) {
+    const t = useI18n()
     const [confirmClearAll, setConfirmClearAll] = useState(false)
     const [importing, setImporting] = useState(false)
 
@@ -123,10 +125,10 @@ export function ExportMenu({
             const { readJsonFile } = await import('@/lib/utils')
             const data = await readJsonFile(file)
             await useAppStore.getState().importData(JSON.stringify(data))
-            alert('Data restored successfully.')
+            alert(t('Data restored successfully.'))
         } catch (err) {
             console.error('Import failed', err)
-            alert('Failed to import data')
+            alert(t('Failed to import data'))
         } finally {
             setImporting(false)
             e.target.value = ''
@@ -152,7 +154,7 @@ export function ExportMenu({
             >
                 <History className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="hidden md:inline text-xs font-medium">
-                    {importing ? 'Restoring...' : 'Restore'}
+                    {importing ? t('Restoring...') : t('Restore')}
                 </span>
             </Button>
 
@@ -163,7 +165,7 @@ export function ExportMenu({
             >
                 <Database className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <span className="hidden md:inline text-xs font-medium">
-                    Backup
+                    {t('Backup')}
                 </span>
             </Button>
 
@@ -175,7 +177,7 @@ export function ExportMenu({
                     >
                         <FileBarChart className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
-                            Reports
+                            {t('Reports')}
                         </span>
                         <ChevronDown className="hidden md:block h-3 w-3 opacity-50 transition-transform group-data-[state=open]:rotate-180" />
                     </Button>
@@ -187,14 +189,14 @@ export function ExportMenu({
                             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left rounded-md hover:bg-primary/5 hover:text-primary transition-colors"
                         >
                             <FileJson className="h-4 w-4" />
-                            Export Stats JSON
+                            {t('Export Stats JSON')}
                         </button>
                         <button
                             onClick={handleExportCSV}
                             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left rounded-md hover:bg-primary/5 hover:text-primary transition-colors"
                         >
                             <FileSpreadsheet className="h-4 w-4" />
-                            Export Stats CSV
+                            {t('Export Stats CSV')}
                         </button>
                     </div>
                 </PopoverContent>
@@ -211,14 +213,15 @@ export function ExportMenu({
                 >
                     <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
                     <span className="hidden md:inline text-xs font-medium">
-                        Clear
+                        {t('Clear')}
                     </span>
                 </Button>
                 <AlertDialogContent className="p-0 overflow-hidden max-w-md border shadow-2xl rounded-2xl">
                     {/* Header - Segmented like Arena Settings */}
                     <div className="px-5 py-4 border-b flex items-center justify-between bg-muted/30">
                         <h3 className="font-semibold text-base flex items-center gap-2 text-destructive">
-                            <AlertCircle className="w-4 h-4" /> Danger Zone
+                            <AlertCircle className="w-4 h-4" />{' '}
+                            {t('Danger Zone')}
                         </h3>
                         <AlertDialogCancel className="h-8 w-8 p-0 border-none bg-transparent hover:bg-muted/50 rounded-full mt-0 transition-colors">
                             <X className="h-4 w-4 text-muted-foreground" />
@@ -229,17 +232,14 @@ export function ExportMenu({
                     <div className="p-8 space-y-4">
                         <div className="space-y-2">
                             <p className="text-sm font-medium text-foreground/90 leading-relaxed">
-                                This action will{' '}
-                                <span className="text-destructive font-bold underline decoration-destructive/20 underline-offset-4">
-                                    permanently delete
-                                </span>{' '}
-                                all session history, chat records, and benchmark
-                                performance results.
+                                {t(
+                                    'Permanently delete all session history, chat records, and benchmark performance results.'
+                                )}
                             </p>
                             <p className="text-xs text-muted-foreground/70 leading-relaxed">
-                                Once confirmed, this data cannot be recovered.
-                                Please ensure you have backed up any critical
-                                reports.
+                                {t(
+                                    'Once confirmed, this data cannot be recovered. Please ensure you have backed up any critical reports.'
+                                )}
                             </p>
                         </div>
                     </div>
@@ -247,7 +247,7 @@ export function ExportMenu({
                     {/* Footer - Solid background like Arena Settings */}
                     <div className="px-6 py-4 border-t bg-muted/20 flex gap-3">
                         <AlertDialogCancel className="flex-1 h-10 font-semibold border-muted-foreground/10 hover:bg-muted-foreground/5 mt-0">
-                            Cancel
+                            {t('Cancel')}
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => {
@@ -256,7 +256,7 @@ export function ExportMenu({
                             }}
                             className="flex-1 h-10 font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm active:scale-95 transition-all"
                         >
-                            Confirm Clear
+                            {t('Confirm Clear')}
                         </AlertDialogAction>
                     </div>
                 </AlertDialogContent>

@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import type { Dispatch, SetStateAction } from 'react'
 import { providerOptions } from '@/lib/providers/catalog'
 import { Button } from '@/components/ui/button'
@@ -28,16 +29,17 @@ export const ModelEditDialog = ({
     onClose,
     onSave
 }: ModelEditDialogProps) => {
+    const t = useI18n()
     return (
         <Dialog open={!!editForm} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-md border-primary/20">
                 <DialogHeader>
-                    <DialogTitle>Edit Model Details</DialogTitle>
+                    <DialogTitle>{t('Edit Model Details')}</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="max-h-[70vh]">
                     <CardContent className="space-y-4 p-6 pb-8">
                         <div className="space-y-2">
-                            <Label>Display Name</Label>
+                            <Label>{t('Display Name')}</Label>
                             <Input
                                 value={editForm.name || ''}
                                 onChange={(e) =>
@@ -49,7 +51,7 @@ export const ModelEditDialog = ({
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Provider Type</Label>
+                            <Label>{t('Provider Type')}</Label>
                             <SelectDropdown
                                 value={editForm.provider || ''}
                                 onChange={(val) =>
@@ -58,11 +60,14 @@ export const ModelEditDialog = ({
                                         provider: val as LLMModel['provider']
                                     }))
                                 }
-                                options={providerOptions}
+                                options={providerOptions.map((option) => ({
+                                    ...option,
+                                    label: t(option.label)
+                                }))}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Model Mode</Label>
+                            <Label>{t('Model Mode')}</Label>
                             <SelectDropdown
                                 value={editForm.mode || 'chat'}
                                 onChange={(val) =>
@@ -72,18 +77,21 @@ export const ModelEditDialog = ({
                                     }))
                                 }
                                 options={[
-                                    { label: 'Chat Completion', value: 'chat' },
                                     {
-                                        label: 'Image Generation',
+                                        label: t('Chat Completion'),
+                                        value: 'chat'
+                                    },
+                                    {
+                                        label: t('Image Generation'),
                                         value: 'image'
                                     }
                                 ]}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Provider Tag (Optional)</Label>
+                            <Label>{t('Provider Tag (Optional)')}</Label>
                             <Input
-                                placeholder="Display name on card"
+                                placeholder={t('Display name on card')}
                                 value={editForm.providerName || ''}
                                 onChange={(e) =>
                                     setEditForm((prev) => ({
@@ -94,7 +102,7 @@ export const ModelEditDialog = ({
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Model ID</Label>
+                            <Label>{t('Model ID')}</Label>
                             <Input
                                 value={editForm.providerId || ''}
                                 onChange={(e) =>
@@ -103,11 +111,11 @@ export const ModelEditDialog = ({
                                         providerId: e.target.value
                                     }))
                                 }
-                                placeholder="e.g. openai/gpt-4"
+                                placeholder={'e.g. openai/gpt-4'}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>API Key (Optional)</Label>
+                            <Label>{t('API Key (Optional)')}</Label>
                             <Input
                                 type="password"
                                 value={editForm.apiKey || ''}
@@ -117,11 +125,11 @@ export const ModelEditDialog = ({
                                         apiKey: e.target.value
                                     }))
                                 }
-                                placeholder="Leave empty to use global"
+                                placeholder={t('Leave empty to use global')}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Base URL (Optional)</Label>
+                            <Label>{t('Base URL (Optional)')}</Label>
                             <Input
                                 value={editForm.baseURL || ''}
                                 onChange={(e) =>
@@ -137,10 +145,10 @@ export const ModelEditDialog = ({
                 </ScrollArea>
                 <DialogFooter>
                     <Button variant="ghost" onClick={onClose}>
-                        Cancel
+                        {t('Cancel')}
                     </Button>
                     <Button onClick={onSave} className="shadow-sm">
-                        Save Changes
+                        {t('Save Changes')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

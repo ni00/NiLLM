@@ -1,8 +1,10 @@
+import { useI18n } from '@/lib/i18n'
 import { Label } from '@/components/ui/label'
 import { ConfigSlider } from '../ConfigSlider'
 import { SectionHeader, ConfigSectionProps } from './SectionHeader'
 
 export function TimeoutsConfig({ config, onChange }: ConfigSectionProps) {
+    const t = useI18n()
     const timeout = config.timeout || {}
 
     const updateTimeout = (updates: Partial<typeof timeout>) => {
@@ -11,17 +13,19 @@ export function TimeoutsConfig({ config, onChange }: ConfigSectionProps) {
 
     return (
         <div className="space-y-6 pt-4 border-t border-border/40">
-            <SectionHeader title="Timeouts (ms)" />
+            <SectionHeader title={t('Timeouts (ms)')} />
 
             {/* AI SDK Native Timeouts */}
             <div className="space-y-4">
                 <div className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                    AI SDK Timeouts
+                    {t('AI SDK Timeouts')}
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                            <Label className="text-xs opacity-70">Total</Label>
+                            <Label className="text-xs opacity-70">
+                                {t('Total')}
+                            </Label>
                             <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
                                 {timeout.totalMs || 120000}
                             </span>
@@ -38,7 +42,9 @@ export function TimeoutsConfig({ config, onChange }: ConfigSectionProps) {
 
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                            <Label className="text-xs opacity-70">Step</Label>
+                            <Label className="text-xs opacity-70">
+                                {t('Step')}
+                            </Label>
                             <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
                                 {timeout.stepMs || 60000}
                             </span>
@@ -55,7 +61,9 @@ export function TimeoutsConfig({ config, onChange }: ConfigSectionProps) {
 
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                            <Label className="text-xs opacity-70">Chunk</Label>
+                            <Label className="text-xs opacity-70">
+                                {t('Chunk')}
+                            </Label>
                             <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
                                 {timeout.chunkMs || 10000}
                             </span>
@@ -75,13 +83,13 @@ export function TimeoutsConfig({ config, onChange }: ConfigSectionProps) {
             {/* Legacy Timeouts (engine.ts fallback) */}
             <div className="space-y-4 opacity-60">
                 <div className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                    Legacy (Fallback)
+                    {t('Legacy (Fallback)')}
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
                             <Label className="text-xs opacity-70">
-                                Connect
+                                {t('Connect')}
                             </Label>
                             <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
                                 {config.connectTimeout || 15000}
@@ -99,7 +107,9 @@ export function TimeoutsConfig({ config, onChange }: ConfigSectionProps) {
 
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                            <Label className="text-xs opacity-70">Read</Label>
+                            <Label className="text-xs opacity-70">
+                                {t('Read')}
+                            </Label>
                             <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
                                 {config.readTimeout || 30000}
                             </span>

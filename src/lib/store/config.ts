@@ -29,23 +29,34 @@ const DEFAULT_CONFIG: GenerationConfig = {
     }
 }
 
+export type AppLanguage = 'en' | 'zh' | 'ja'
+export type AppTheme = 'system' | 'light' | 'dark'
+
 export interface ConfigSlice {
     globalConfig: GenerationConfig
     updateGlobalConfig: (updates: Partial<GenerationConfig>) => void
-    language: 'en' | 'zh' | 'ja'
-    setLanguage: (lang: 'en' | 'zh' | 'ja') => void
+    language: AppLanguage
+    setLanguage: (lang: AppLanguage) => void
+    benchmarkLanguage: AppLanguage | null
+    setBenchmarkLanguage: (language: AppLanguage | null) => void
+    theme: AppTheme
+    setTheme: (theme: AppTheme) => void
 }
 
 export const createConfigSlice: StateCreator<AppState, [], [], ConfigSlice> = (
     set
 ) => ({
     globalConfig: DEFAULT_CONFIG,
-    language: 'en' as 'en' | 'zh' | 'ja',
+    language: 'en',
+    benchmarkLanguage: null,
+    theme: 'system',
 
     updateGlobalConfig: (updates) =>
         set((state) => ({
             globalConfig: { ...state.globalConfig, ...updates }
         })),
 
-    setLanguage: (language) => set({ language })
+    setLanguage: (language) => set({ language }),
+    setBenchmarkLanguage: (benchmarkLanguage) => set({ benchmarkLanguage }),
+    setTheme: (theme) => set({ theme })
 })

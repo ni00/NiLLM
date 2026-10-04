@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import React from 'react'
 import { BenchmarkResult } from '@/lib/types'
 import { getMetricColor } from '../utils/metrics'
@@ -14,6 +15,7 @@ export interface ModelColumnStatsProps {
 
 export const ModelColumnStats = React.memo(
     ({ results, footerRanges }: ModelColumnStatsProps) => {
+        const t = useI18n()
         const {
             ttft: fTtftRange,
             tps: fTpsRange,
@@ -52,49 +54,49 @@ export const ModelColumnStats = React.memo(
         return (
             <div className="flex flex-wrap gap-1.5 text-xs font-mono text-muted-foreground tabular-nums overflow-hidden">
                 <div
-                    title="Average TTFT"
+                    title={t('Average TTFT')}
                     className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
                 >
-                    <span className="opacity-50">TTFT</span>
+                    <span className="opacity-50">{'TTFT'}</span>
                     <span
                         className={`font-bold ${getMetricColor(avgTtft, fTtftRange.min, fTtftRange.max, 'min-best')}`}
                     >
                         {Number(avgTtft.toFixed(2))}
                     </span>
-                    <span className="opacity-40 text-[8px]">ms</span>
+                    <span className="opacity-40 text-[8px]">{'ms'}</span>
                 </div>
 
                 <div
-                    title="Average Tokens/sec"
+                    title={t('Average Tokens/sec')}
                     className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
                 >
-                    <span className="opacity-50">SPD</span>
+                    <span className="opacity-50">{'SPD'}</span>
                     <span
                         className={`font-bold ${getMetricColor(avgTps, fTpsRange.min, fTpsRange.max, 'max-best')}`}
                     >
                         {avgTps.toFixed(1)}
                     </span>
-                    <span className="opacity-40 text-[8px]">t/s</span>
+                    <span className="opacity-40 text-[8px]">{'t/s'}</span>
                 </div>
 
                 <div
-                    title="Total Duration"
+                    title={t('Total Duration')}
                     className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
                 >
-                    <span className="opacity-50">TIME</span>
+                    <span className="opacity-50">{'TIME'}</span>
                     <span
                         className={`font-bold ${getMetricColor(sumTime, fTimeRange.min, fTimeRange.max, 'min-best')}`}
                     >
                         {(sumTime / 1000).toFixed(2)}
                     </span>
-                    <span className="opacity-40 text-[8px]">s</span>
+                    <span className="opacity-40 text-[8px]">{'s'}</span>
                 </div>
 
                 <div
-                    title="Total Tokens"
+                    title={t('Total Tokens')}
                     className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
                 >
-                    <span className="opacity-50">TOKS</span>
+                    <span className="opacity-50">{'TOKS'}</span>
                     <span
                         className={`font-bold ${getMetricColor(sumToks, fToksRange.min, fToksRange.max, 'min-best')}`}
                     >

@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import type { HTMLAttributes } from 'react'
 import {
     Card,
@@ -58,6 +59,7 @@ export function TestSetCard({
     onRunSingle,
     dragHandleProps
 }: TestSetCardProps) {
+    const t = useI18n()
     const isBuiltIn = testSet.id.startsWith('builtin')
 
     return (
@@ -79,7 +81,9 @@ export function TestSetCard({
                                 {testSet.name}
                             </CardTitle>
                             <CardDescription className="text-xs">
-                                {testSet.cases.length} evaluation cases
+                                {t('{count} evaluation cases', {
+                                    count: testSet.cases.length
+                                })}
                             </CardDescription>
                         </div>
                     </div>
@@ -90,7 +94,7 @@ export function TestSetCard({
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
                             onClick={() => onEdit(testSet)}
-                            title="Edit"
+                            title={t('Edit')}
                         >
                             <Pencil className="h-4 w-4" />
                         </Button>
@@ -99,7 +103,7 @@ export function TestSetCard({
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
                             onClick={() => onExport(testSet)}
-                            title="Export to JSON"
+                            title={t('Export to JSON')}
                         >
                             <Download className="h-4 w-4" />
                         </Button>
@@ -109,7 +113,7 @@ export function TestSetCard({
                                 size="icon"
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                                 onClick={() => onDelete(testSet.id)}
-                                title="Delete"
+                                title={t('Delete')}
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
@@ -120,7 +124,7 @@ export function TestSetCard({
                                     size="icon"
                                     className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                                     onClick={() => onDelete(testSet.id)}
-                                    title="Reset to default"
+                                    title={t('Reset to default')}
                                 >
                                     <RotateCcw className="h-4 w-4" />
                                 </Button>
@@ -138,7 +142,9 @@ export function TestSetCard({
                             onClick={() => onRunSingle(c.prompt)}
                         >
                             <span className="truncate flex-1 italic text-muted-foreground">
-                                &ldquo;{c.prompt}&rdquo;
+                                {'“'}
+                                {c.prompt}
+                                {'”'}
                             </span>
                             <Play className="h-3 w-3 text-primary opacity-0 group-hover/item:opacity-100 transition-opacity" />
                         </div>
@@ -148,7 +154,10 @@ export function TestSetCard({
                             className="text-xs text-muted-foreground/50 text-center italic cursor-pointer hover:text-primary transition-colors"
                             onClick={() => onEdit(testSet)}
                         >
-                            + {testSet.cases.length - 3} more cases
+                            +{' '}
+                            {t('{count} more cases', {
+                                count: testSet.cases.length - 3
+                            })}
                         </div>
                     )}
                 </div>
@@ -162,7 +171,7 @@ export function TestSetCard({
                     ) : (
                         <Play className="mr-2 h-4 w-4" />
                     )}
-                    Run Batch Evaluation
+                    {t('Run Batch Evaluation')}
                 </Button>
             </CardContent>
         </Card>

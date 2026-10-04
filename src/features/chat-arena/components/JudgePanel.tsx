@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Gavel, X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -29,11 +30,12 @@ export const JudgePanel = ({
     onAutoJudge,
     activeSession
 }: JudgePanelProps) => {
+    const t = useI18n()
     return (
         <>
             <div className="p-4 border-b flex items-center justify-between bg-muted/30">
                 <h3 className="font-semibold text-base flex items-center gap-2">
-                    <Gavel className="w-4 h-4" /> AI Judge Settings
+                    <Gavel className="w-4 h-4" /> {t('AI Judge Settings')}
                 </h3>
                 <Button
                     variant="ghost"
@@ -46,7 +48,7 @@ export const JudgePanel = ({
             </div>
             <div className="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                 <div className="space-y-2">
-                    <Label>Select Judge Model</Label>
+                    <Label>{t('Select Judge Model')}</Label>
                     <div className="grid gap-2 max-h-[200px] overflow-y-auto border rounded-md p-2">
                         {models.map((model) => (
                             <div
@@ -79,12 +81,12 @@ export const JudgePanel = ({
                 </div>
                 <div className="space-y-2">
                     <Label className="text-xs font-semibold opacity-70 uppercase tracking-wider">
-                        Judge System Prompt
+                        {t('Judge System Prompt')}
                     </Label>
                     <Textarea
                         value={judgePrompt}
                         onChange={(e) => setJudgePrompt(e.target.value)}
-                        placeholder="Enter judge instructions..."
+                        placeholder={t('Enter judge instructions...')}
                         className="min-h-[150px] text-sm leading-relaxed resize-none focus-visible:ring-primary/20"
                     />
                 </div>
@@ -105,10 +107,10 @@ export const JudgePanel = ({
                     {isJudging ? (
                         <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Judging Responses...
+                            {t('Judging Responses...')}
                         </>
                     ) : (
-                        'Start Judging'
+                        t('Start Judging')
                     )}
                 </Button>
 
@@ -120,7 +122,15 @@ export const JudgePanel = ({
                                 : 'bg-primary/5 text-primary border border-primary/10'
                         }`}
                     >
-                        {judgeStatus}
+                        {judgeStatus.startsWith('Consulting ')
+                            ? t('Consulting {name}…', {
+                                  name: judgeStatus.slice(11, -3)
+                              })
+                            : judgeStatus.startsWith('Error: ')
+                              ? t('Error: {message}', {
+                                    message: t(judgeStatus.slice(7))
+                                })
+                              : t(judgeStatus)}
                     </div>
                 )}
             </div>

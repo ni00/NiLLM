@@ -41,7 +41,10 @@ export const createAppState: StateCreator<AppState> = (set, get, api) => ({
             sessions: state.sessions,
             testSets: state.testSets,
             promptTemplates: state.promptTemplates,
-            globalConfig: state.globalConfig
+            globalConfig: state.globalConfig,
+            language: state.language,
+            benchmarkLanguage: state.benchmarkLanguage,
+            theme: state.theme
         })
     },
     importData: async (json: string) => {
@@ -63,7 +66,13 @@ export const createAppState: StateCreator<AppState> = (set, get, api) => ({
                 sessions: data.sessions || state.sessions,
                 testSets: data.testSets || state.testSets,
                 promptTemplates: data.promptTemplates || state.promptTemplates,
-                globalConfig: data.globalConfig || state.globalConfig
+                globalConfig: data.globalConfig || state.globalConfig,
+                language: data.language ?? state.language,
+                benchmarkLanguage:
+                    data.benchmarkLanguage !== undefined
+                        ? data.benchmarkLanguage
+                        : state.benchmarkLanguage,
+                theme: data.theme ?? state.theme
             }))
         } catch {
             throw new Error(

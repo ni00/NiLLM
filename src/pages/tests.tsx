@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Box, FolderInput, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -69,6 +70,7 @@ function SortableTestSetCard({ testSet, ...props }: SortableTestSetCardProps) {
 }
 
 export function TestsPage() {
+    const t = useI18n()
     const {
         fileInputRef,
         isImporting,
@@ -145,8 +147,7 @@ export function TestsPage() {
 
     return (
         <PageLayout
-            title="Test Sets"
-            description="Built-in and custom benchmarks for systematic model evaluation."
+            title={t('Test Sets')}
             icon={Box}
             actions={
                 <div className="flex items-center gap-2">
@@ -169,7 +170,7 @@ export function TestsPage() {
                     >
                         <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
-                            {isImporting ? 'Importing...' : 'Import'}
+                            {isImporting ? t('Importing...') : t('Import')}
                         </span>
                     </Button>
                     <Button
@@ -179,7 +180,7 @@ export function TestsPage() {
                     >
                         <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
-                            Create
+                            {t('Create')}
                         </span>
                     </Button>
                 </div>
@@ -190,7 +191,7 @@ export function TestsPage() {
                     <div className="flex items-center gap-2 mb-4">
                         <Sparkles className="h-4 w-4 text-primary" />
                         <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">
-                            Standard Benchmarks
+                            {t('Standard Benchmarks')}
                         </h2>
                     </div>
                     <DndContext

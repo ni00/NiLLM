@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
     ErrorView,
@@ -8,21 +9,22 @@ import {
 import { useNavigate } from 'react-router'
 
 export default function NotFoundErrorPage() {
+    const t = useI18n()
     const navigate = useNavigate()
     return (
         <ErrorView>
-            <ErrorHeader>Page not found</ErrorHeader>
+            <ErrorHeader>{t('Page not found')}</ErrorHeader>
             <ErrorDescription>
-                Sorry, we couldn’t find the page you’re looking for.
+                {t('Sorry, we couldn’t find the page you’re looking for.')}
             </ErrorDescription>
             <ErrorActions>
                 <Button size="lg" onClick={() => navigate(-1)}>
-                    Go back
+                    {t('Go back')}
                 </Button>
                 <Button size="lg" variant="ghost">
-                    Contact support{' '}
+                    {t('Contact support')}{' '}
                     <span aria-hidden="true" className="ml-1">
-                        &rarr;
+                        {'→'}
                     </span>
                 </Button>
             </ErrorActions>

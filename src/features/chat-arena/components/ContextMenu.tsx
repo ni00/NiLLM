@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { createPortal } from 'react-dom'
 import { Copy, Check, Download, ZoomIn } from 'lucide-react'
 
@@ -22,6 +23,7 @@ export function ContextMenu({
     onDownloadImage,
     onClose
 }: ContextMenuProps) {
+    const t = useI18n()
     if (!isOpen) return null
 
     const menuHeight = hasImage ? 90 : 40
@@ -47,7 +49,7 @@ export function ContextMenu({
                         className="relative flex w-full cursor-default select-none items-center rounded-md px-2.5 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
                     >
                         <ZoomIn className="mr-2.5 h-4 w-4 opacity-60" />
-                        <span>View Full Size</span>
+                        <span>{t('View Full Size')}</span>
                     </button>
                     <button
                         onClick={() => {
@@ -57,7 +59,7 @@ export function ContextMenu({
                         className="relative flex w-full cursor-default select-none items-center rounded-md px-2.5 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
                     >
                         <Download className="mr-2.5 h-4 w-4 opacity-60" />
-                        <span>Download Image</span>
+                        <span>{t('Download Image')}</span>
                     </button>
                     <div className="my-1 h-px bg-border/50" />
                 </>
@@ -71,7 +73,7 @@ export function ContextMenu({
                 ) : (
                     <Copy className="mr-2.5 h-4 w-4 opacity-60" />
                 )}
-                <span>{copied ? 'Copied' : 'Copy Text'}</span>
+                <span>{copied ? t('Copied') : t('Copy Text')}</span>
             </button>
         </div>,
         document.body

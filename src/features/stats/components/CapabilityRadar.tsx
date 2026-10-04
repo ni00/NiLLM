@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n'
 import { useMemo } from 'react'
 import {
     Card,
@@ -34,11 +35,12 @@ export function CapabilityRadar({
     topRatingModel,
     totalMessages
 }: CapabilityRadarProps) {
+    const t = useI18n()
     const matrix = useMemo(
         () =>
             (['Speed', 'Quality', 'Responsiveness'] as const).map(
                 (subject) => ({
-                    subject,
+                    subject: t(subject),
                     ...Object.fromEntries(
                         radarData.map((model, index) => [
                             `model${index}`,
@@ -47,7 +49,7 @@ export function CapabilityRadar({
                     )
                 })
             ),
-        [radarData]
+        [radarData, t]
     )
     const colors = [
         'var(--primary)',
@@ -66,12 +68,13 @@ export function CapabilityRadar({
             <Card className="md:col-span-4 transition-all hover:shadow-md">
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
-                        <Star className="h-4 w-4 text-amber-500" /> Capability
-                        Matrix
+                        <Star className="h-4 w-4 text-amber-500" />{' '}
+                        {t('Capability Matrix')}
                     </CardTitle>
                     <CardDescription>
-                        Speed and responsiveness are relative to the best
-                        measured model; quality uses the 1–5 rating scale.
+                        {t(
+                            'Speed and responsiveness are relative to the best measured model; quality uses the 1–5 rating scale.'
+                        )}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[320px] w-full">
@@ -137,7 +140,8 @@ export function CapabilityRadar({
                 <Card className="flex-1 bg-muted/20 border-none">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                            <Zap className="h-3 w-3" /> Leading Responsiveness
+                            <Zap className="h-3 w-3" />{' '}
+                            {t('Leading Responsiveness')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -145,7 +149,8 @@ export function CapabilityRadar({
                             {fastestModel?.name || 'N/A'}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
-                            {fastestModel?.avgTTFT.toFixed(0)}ms initial latency
+                            {fastestModel?.avgTTFT.toFixed(0)}
+                            {t('ms initial latency')}
                         </div>
                     </CardContent>
                 </Card>
@@ -153,7 +158,7 @@ export function CapabilityRadar({
                 <Card className="flex-1 bg-muted/20 border-none">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                            <Star className="h-3 w-3" /> Quality Leader
+                            <Star className="h-3 w-3" /> {t('Quality Leader')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -161,8 +166,8 @@ export function CapabilityRadar({
                             {topRatingModel?.name || 'N/A'}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
-                            {topRatingModel?.avgRating.toFixed(1)} / 5.0 avg
-                            score
+                            {topRatingModel?.avgRating.toFixed(1)}{' '}
+                            {t('/ 5.0 avg score')}
                         </div>
                     </CardContent>
                 </Card>
@@ -170,7 +175,8 @@ export function CapabilityRadar({
                 <Card className="flex-1 bg-muted/20 border-none">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                            <MessageSquare className="h-3 w-3" /> Message Volume
+                            <MessageSquare className="h-3 w-3" />{' '}
+                            {t('Message Volume')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -178,7 +184,7 @@ export function CapabilityRadar({
                             {totalMessages}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
-                            Total model interactions logged
+                            {t('Total model interactions logged')}
                         </div>
                     </CardContent>
                 </Card>
