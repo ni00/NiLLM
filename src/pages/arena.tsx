@@ -1,4 +1,4 @@
-import { KeyboardEvent, useCallback, useEffect, useState } from 'react'
+import { KeyboardEvent, useCallback, useEffect, useState, useMemo } from 'react'
 import { LLMModel } from '@/lib/types'
 import { ArenaHeader } from '@/features/chat-arena/components/ArenaHeader'
 import { ArenaInput } from '@/features/chat-arena/components/ArenaInput'
@@ -153,8 +153,12 @@ export function ArenaPage() {
         }
     }, [setAttachments])
 
-    const activeModels = models.filter((m: LLMModel) =>
-        activeModelIds.includes(m.id)
+    const activeModels = useMemo(
+        () =>
+            models.filter(
+                (m: LLMModel) => m.enabled && activeModelIds.includes(m.id)
+            ),
+        [models, activeModelIds]
     )
     const activeSession = sessions.find((s) => s.id === activeSessionId)
 

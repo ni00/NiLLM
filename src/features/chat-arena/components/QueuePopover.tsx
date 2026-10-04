@@ -12,6 +12,7 @@ import {
     PopoverContent,
     PopoverTrigger
 } from '@/components/ui/popover'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
 
 export const QueuePopover = () => {
@@ -21,7 +22,15 @@ export const QueuePopover = () => {
         removeFromQueue,
         toggleQueuePause,
         reorderQueue
-    } = useAppStore()
+    } = useAppStore(
+        useShallow((state) => ({
+            messageQueue: state.messageQueue,
+            isProcessing: state.isProcessing,
+            removeFromQueue: state.removeFromQueue,
+            toggleQueuePause: state.toggleQueuePause,
+            reorderQueue: state.reorderQueue
+        }))
+    )
 
     return (
         <Popover>

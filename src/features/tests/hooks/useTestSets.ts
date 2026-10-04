@@ -1,4 +1,6 @@
+import { z } from 'zod'
 import { useState, useRef } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
 import { useNavigate } from 'react-router'
 import { TestSet } from '@/lib/types'
@@ -25,7 +27,22 @@ export function useTestSets() {
         setLanguage,
         testSets: storedSets,
         testSetOrder
-    } = useAppStore()
+    } = useAppStore(
+        useShallow((state) => ({
+            addTestSet: state.addTestSet,
+            deleteTestSet: state.deleteTestSet,
+            updateTestSet: state.updateTestSet,
+            setTestSetOrder: state.setTestSetOrder,
+            createSession: state.createSession,
+            activeModelIds: state.activeModelIds,
+            addToQueue: state.addToQueue,
+            addBatchToQueue: state.addBatchToQueue,
+            language: state.language,
+            setLanguage: state.setLanguage,
+            testSets: state.testSets,
+            testSetOrder: state.testSetOrder
+        }))
+    )
     const navigate = useNavigate()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isImporting, setIsImporting] = useState(false)
@@ -145,7 +162,20 @@ export function useTestSets() {
         setIsImporting(true)
         try {
             const { readJsonFile } = await import('@/lib/utils')
-            const data = await readJsonFile(file)
+            const data = z
+                .object({
+                    name: z.string().min(1),
+                    cases: z.array(
+                        z.union([
+                            z.string(),
+                            z.object({
+                                prompt: z.string(),
+                                expected: z.string().optional()
+                            })
+                        ])
+                    )
+                })
+                .parse(await readJsonFile(file))
 
             if (!data.name || !Array.isArray(data.cases)) {
                 alert(
@@ -157,10 +187,10 @@ export function useTestSets() {
             const newSet: TestSet = {
                 id: crypto.randomUUID(),
                 name: data.name,
-                cases: data.cases.map((c: any) => ({
+                cases: data.cases.map((c) => ({
                     id: crypto.randomUUID(),
-                    prompt: c.prompt || c,
-                    expected: c.expected
+                    prompt: typeof c === 'string' ? c : c.prompt,
+                    expected: typeof c === 'string' ? undefined : c.expected
                 })),
                 createdAt: Date.now()
             }

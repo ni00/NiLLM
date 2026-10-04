@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router'
 import { X, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { ArenaModelSelector } from './ArenaModelSelector'
@@ -27,7 +28,17 @@ export const ArenaSettings = ({
         reorderModels,
         globalConfig,
         updateGlobalConfig
-    } = useAppStore()
+    } = useAppStore(
+        useShallow((state) => ({
+            models: state.models,
+            activeModelIds: state.activeModelIds,
+            toggleModelActivation: state.toggleModelActivation,
+            toggleAllModels: state.toggleAllModels,
+            reorderModels: state.reorderModels,
+            globalConfig: state.globalConfig,
+            updateGlobalConfig: state.updateGlobalConfig
+        }))
+    )
 
     const TABS = [
         { id: 'models', label: 'Models' },

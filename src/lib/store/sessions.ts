@@ -1,3 +1,4 @@
+import type { AppState } from './index'
 import { StateCreator } from 'zustand'
 import { ChatSession, BenchmarkResult } from '@/lib/types'
 
@@ -24,7 +25,7 @@ export interface SessionsSlice {
 }
 
 export const createSessionsSlice: StateCreator<
-    SessionsSlice,
+    AppState,
     [],
     [],
     SessionsSlice

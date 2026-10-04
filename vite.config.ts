@@ -1,4 +1,4 @@
-import path from 'path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
@@ -21,12 +21,24 @@ export default defineConfig({
         }
     },
 
+    // Match the previously supported Tauri WebViews explicitly across Vite upgrades.
+    build: {
+        target: ['es2022', 'chrome107', 'safari16'],
+        reportCompressedSize: false
+    },
+    // Imports in model workers must remain separate from the application entry.
+    worker: { format: 'es' },
+
     // Shadcn UI
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './src'),
-            react: path.resolve(__dirname, './node_modules/react'),
-            'react-dom': path.resolve(__dirname, './node_modules/react-dom')
+            '@': fileURLToPath(new URL('./src', import.meta.url)),
+            react: fileURLToPath(
+                new URL('./node_modules/react', import.meta.url)
+            ),
+            'react-dom': fileURLToPath(
+                new URL('./node_modules/react-dom', import.meta.url)
+            )
         }
     }
 })

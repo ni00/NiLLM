@@ -1,3 +1,5 @@
+import type { Dispatch, SetStateAction } from 'react'
+import { providerOptions } from '@/lib/providers/catalog'
 import { Button } from '@/components/ui/button'
 import { CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -15,7 +17,7 @@ import {
 
 interface ModelEditDialogProps {
     editForm: Partial<LLMModel>
-    setEditForm: (val: any) => void
+    setEditForm: Dispatch<SetStateAction<Partial<LLMModel>>>
     onClose: () => void
     onSave: () => void
 }
@@ -39,7 +41,7 @@ export const ModelEditDialog = ({
                             <Input
                                 value={editForm.name || ''}
                                 onChange={(e) =>
-                                    setEditForm((prev: any) => ({
+                                    setEditForm((prev) => ({
                                         ...prev,
                                         name: e.target.value
                                     }))
@@ -51,21 +53,12 @@ export const ModelEditDialog = ({
                             <SelectDropdown
                                 value={editForm.provider || ''}
                                 onChange={(val) =>
-                                    setEditForm((prev: any) => ({
+                                    setEditForm((prev) => ({
                                         ...prev,
-                                        provider: val as any
+                                        provider: val as LLMModel['provider']
                                     }))
                                 }
-                                options={[
-                                    {
-                                        label: 'OpenRouter',
-                                        value: 'openrouter'
-                                    },
-                                    { label: 'OpenAI', value: 'openai' },
-                                    { label: 'Anthropic', value: 'anthropic' },
-                                    { label: 'Google', value: 'google' },
-                                    { label: 'Custom', value: 'custom' }
-                                ]}
+                                options={providerOptions}
                             />
                         </div>
                         <div className="space-y-2">
@@ -73,9 +66,9 @@ export const ModelEditDialog = ({
                             <SelectDropdown
                                 value={editForm.mode || 'chat'}
                                 onChange={(val) =>
-                                    setEditForm((prev: any) => ({
+                                    setEditForm((prev) => ({
                                         ...prev,
-                                        mode: val as any
+                                        mode: val as LLMModel['mode']
                                     }))
                                 }
                                 options={[
@@ -93,7 +86,7 @@ export const ModelEditDialog = ({
                                 placeholder="Display name on card"
                                 value={editForm.providerName || ''}
                                 onChange={(e) =>
-                                    setEditForm((prev: any) => ({
+                                    setEditForm((prev) => ({
                                         ...prev,
                                         providerName: e.target.value
                                     }))
@@ -105,7 +98,7 @@ export const ModelEditDialog = ({
                             <Input
                                 value={editForm.providerId || ''}
                                 onChange={(e) =>
-                                    setEditForm((prev: any) => ({
+                                    setEditForm((prev) => ({
                                         ...prev,
                                         providerId: e.target.value
                                     }))
@@ -119,7 +112,7 @@ export const ModelEditDialog = ({
                                 type="password"
                                 value={editForm.apiKey || ''}
                                 onChange={(e) =>
-                                    setEditForm((prev: any) => ({
+                                    setEditForm((prev) => ({
                                         ...prev,
                                         apiKey: e.target.value
                                     }))
@@ -132,7 +125,7 @@ export const ModelEditDialog = ({
                             <Input
                                 value={editForm.baseURL || ''}
                                 onChange={(e) =>
-                                    setEditForm((prev: any) => ({
+                                    setEditForm((prev) => ({
                                         ...prev,
                                         baseURL: e.target.value
                                     }))

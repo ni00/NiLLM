@@ -1,3 +1,4 @@
+import { providerOptions } from '@/lib/providers/catalog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,14 +14,6 @@ interface ModelEditorProps {
     onSave: () => void
     onChange: (data: Partial<LLMModel>) => void
 }
-
-const providerOptions = [
-    { label: 'OpenRouter', value: 'openrouter' },
-    { label: 'OpenAI', value: 'openai' },
-    { label: 'Anthropic', value: 'anthropic' },
-    { label: 'Google', value: 'google' },
-    { label: 'Custom (OpenAI Compatible)', value: 'custom' }
-]
 
 export function ModelEditor({
     isOpen,
@@ -82,7 +75,8 @@ export function ModelEditor({
                                     onChange={(val) =>
                                         onChange({
                                             ...modelData,
-                                            provider: val as any
+                                            provider:
+                                                val as LLMModel['provider']
                                         })
                                     }
                                     className="h-10 border-border/50 bg-muted/20 transition-all justify-between"
@@ -98,7 +92,7 @@ export function ModelEditor({
                                     onChange={(val) =>
                                         onChange({
                                             ...modelData,
-                                            mode: val as any
+                                            mode: val as LLMModel['mode']
                                         })
                                     }
                                     className="h-10 border-border/50 bg-muted/20 transition-all justify-between"

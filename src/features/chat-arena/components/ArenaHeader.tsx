@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { QueuePopover } from './QueuePopover'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
 import {
     Popover,
@@ -28,7 +29,14 @@ export const ArenaHeader = ({
     onShowArenaSettings
 }: ArenaHeaderProps) => {
     const { arenaColumns, setArenaColumns, arenaSortBy, setArenaSortBy } =
-        useAppStore()
+        useAppStore(
+            useShallow((state) => ({
+                arenaColumns: state.arenaColumns,
+                setArenaColumns: state.setArenaColumns,
+                arenaSortBy: state.arenaSortBy,
+                setArenaSortBy: state.setArenaSortBy
+            }))
+        )
 
     const layoutOptions = [
         { label: 'Auto', value: 0 },
@@ -107,7 +115,13 @@ export const ArenaHeader = ({
                         {sortOptions.map((opt) => (
                             <button
                                 key={opt.value}
-                                onClick={() => setArenaSortBy(opt.value as any)}
+                                onClick={() =>
+                                    setArenaSortBy(
+                                        opt.value as Parameters<
+                                            typeof setArenaSortBy
+                                        >[0]
+                                    )
+                                }
                                 className={cn(
                                     'flex items-center justify-between px-3 py-2 text-sm rounded-sm hover:bg-accent transition-colors text-left',
                                     arenaSortBy === opt.value

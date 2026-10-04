@@ -19,6 +19,7 @@ export interface TelemetryConfig {
 }
 
 export interface GenerationConfig {
+    maxConcurrent?: number
     temperature: number
     maxTokens: number
     topP: number
@@ -39,7 +40,7 @@ export interface GenerationConfig {
 export interface LLMModel {
     id: string
     name: string
-    provider: 'openai' | 'anthropic' | 'openrouter' | 'google' | 'other'
+    provider: LLMProvider
     providerName?: string // Custom display name for provider
     providerId?: string // e.g. "anthropic/claude-3-opus" for OpenRouter
     apiKey?: string // Optional override
@@ -47,6 +48,7 @@ export interface LLMModel {
     enabled: boolean
     mode?: 'chat' | 'image'
     config?: Partial<GenerationConfig> // Individual override
+    pricing?: { input: number; output: number } // USD per million tokens
 }
 
 export type LLMProvider =
@@ -54,7 +56,9 @@ export type LLMProvider =
     | 'anthropic'
     | 'openrouter'
     | 'google'
+    | 'deepseek'
     | 'custom'
+    | 'other' // Legacy custom provider data
 
 export interface Message {
     role: 'system' | 'user' | 'assistant'
@@ -69,6 +73,8 @@ export interface BenchmarkMetrics {
     inputTokens?: number
     outputTokens?: number
     cost?: number
+    tokenSource?: 'api' | 'estimated'
+    reasoningTokens?: number
 }
 
 export interface BenchmarkResult {
@@ -82,6 +88,7 @@ export interface BenchmarkResult {
     error?: string
     rating?: number // 1-5 score
     ratingSource?: 'human' | 'ai'
+    status?: 'pending' | 'completed' | 'error' | 'cancelled'
 }
 
 export interface ChatSession {

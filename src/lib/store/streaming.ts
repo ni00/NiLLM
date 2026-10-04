@@ -1,3 +1,4 @@
+import type { AppState } from './index'
 import { StateCreator } from 'zustand'
 import { BenchmarkResult } from '@/lib/types'
 
@@ -12,7 +13,7 @@ export interface StreamingSlice {
 }
 
 export const createStreamingSlice: StateCreator<
-    StreamingSlice,
+    AppState,
     [],
     [],
     StreamingSlice

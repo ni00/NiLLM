@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { LLMModel, BenchmarkResult } from '@/lib/types'
+import { GenerationConfig, LLMModel, BenchmarkResult } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import {
     useUpdateModel,
@@ -34,7 +34,7 @@ interface ModelColumnProps {
     manuallyExpandedBlocks: Record<string, boolean>
     onToggleBlock: (id: string) => void
     onStartEditingDetails: (model: LLMModel) => void
-    globalConfig: any
+    globalConfig: GenerationConfig
     streamingData: Record<string, Partial<BenchmarkResult>>
     metricsRanges: {
         ttft: { min: number; max: number }

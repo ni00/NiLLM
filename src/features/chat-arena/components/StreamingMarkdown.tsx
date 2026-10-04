@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react'
-import ReactMarkdown from 'react-markdown'
+import React, { useEffect, useState, useDeferredValue } from 'react'
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ContextMenu } from './ContextMenu'
 import { ImageLightbox } from './ImageLightbox'
@@ -12,10 +12,8 @@ interface StreamingMarkdownProps {
 
 export const StreamingMarkdown = React.memo(
     ({ content, isStreaming }: StreamingMarkdownProps) => {
-        const [displayContent, setDisplayContent] = useState(content)
-        const contentRef = useRef(content)
-        const frameId = useRef<number | null>(null)
-        const lastUpdate = useRef<number>(0)
+        const deferredContent = useDeferredValue(content)
+        const displayContent = isStreaming ? deferredContent : content
 
         const [menuOpen, setMenuOpen] = useState(false)
         const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
@@ -24,39 +22,6 @@ export const StreamingMarkdown = React.memo(
             null
         )
         const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
-
-        useEffect(() => {
-            contentRef.current = content
-        }, [content])
-
-        useEffect(() => {
-            if (!isStreaming) {
-                setDisplayContent(content)
-                if (frameId.current !== null) {
-                    cancelAnimationFrame(frameId.current)
-                    frameId.current = null
-                }
-                return
-            }
-
-            const updateLoop = (now: number) => {
-                if (now - lastUpdate.current > 80) {
-                    if (displayContent !== contentRef.current) {
-                        setDisplayContent(contentRef.current)
-                        lastUpdate.current = now
-                    }
-                }
-                frameId.current = requestAnimationFrame(updateLoop)
-            }
-
-            frameId.current = requestAnimationFrame(updateLoop)
-
-            return () => {
-                if (frameId.current !== null) {
-                    cancelAnimationFrame(frameId.current)
-                }
-            }
-        }, [isStreaming])
 
         useEffect(() => {
             const closeMenu = () => {
@@ -113,15 +78,11 @@ export const StreamingMarkdown = React.memo(
             >
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
-                    urlTransform={(url) => {
-                        if (url.startsWith('data:image/')) return url
-                        if (
-                            url.startsWith('http://') ||
-                            url.startsWith('https://')
-                        )
-                            return url
-                        return url
-                    }}
+                    urlTransform={(url) =>
+                        /^data:image\/(png|jpeg|gif|webp);base64,/i.test(url)
+                            ? url
+                            : defaultUrlTransform(url)
+                    }
                     components={{
                         img: ({ src, alt, ...props }) => {
                             if (!src) return null

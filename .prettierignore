@@ -3,3 +3,6 @@ build
 src-tauri
 node_modules
 pnpm-lock.yaml
+dist
+playwright-report
+test-results

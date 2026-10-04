@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
     Card,
     CardContent,
@@ -33,6 +34,31 @@ export function CapabilityRadar({
     topRatingModel,
     totalMessages
 }: CapabilityRadarProps) {
+    const matrix = useMemo(
+        () =>
+            (['Speed', 'Quality', 'Responsiveness'] as const).map(
+                (subject) => ({
+                    subject,
+                    ...Object.fromEntries(
+                        radarData.map((model, index) => [
+                            `model${index}`,
+                            model[subject]
+                        ])
+                    )
+                })
+            ),
+        [radarData]
+    )
+    const colors = [
+        'var(--primary)',
+        '#3b82f6',
+        '#10b981',
+        '#f59e0b',
+        '#8b5cf6',
+        '#ec4899',
+        '#06b6d4',
+        '#f97316'
+    ]
     if (!mounted) return null
 
     return (
@@ -44,8 +70,8 @@ export function CapabilityRadar({
                         Matrix
                     </CardTitle>
                     <CardDescription>
-                        Comparative analysis across multiple performance
-                        vectors.
+                        Speed and responsiveness are relative to the best
+                        measured model; quality uses the 1–5 rating scale.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[320px] w-full">
@@ -60,7 +86,7 @@ export function CapabilityRadar({
                                 cx="50%"
                                 cy="50%"
                                 outerRadius="80%"
-                                data={radarData}
+                                data={matrix}
                             >
                                 <PolarGrid stroke="var(--muted)" />
                                 <PolarAngleAxis
@@ -76,28 +102,17 @@ export function CapabilityRadar({
                                     tick={false}
                                     axisLine={false}
                                 />
-                                <Radar
-                                    name="Speed"
-                                    dataKey="Speed"
-                                    stroke="var(--primary)"
-                                    fill="var(--primary)"
-                                    fillOpacity={0.3}
-                                />
-                                <Radar
-                                    name="Quality"
-                                    dataKey="Quality"
-                                    stroke="var(--primary)"
-                                    strokeOpacity={0.6}
-                                    fill="var(--primary)"
-                                    fillOpacity={0.2}
-                                />
-                                <Radar
-                                    name="Responsiveness"
-                                    dataKey="Responsiveness"
-                                    stroke="var(--muted-foreground)"
-                                    fill="var(--muted-foreground)"
-                                    fillOpacity={0.1}
-                                />
+                                {radarData.map((model, index) => (
+                                    <Radar
+                                        key={index}
+                                        name={model.subject}
+                                        dataKey={`model${index}`}
+                                        stroke={colors[index]}
+                                        fill={colors[index]}
+                                        fillOpacity={0.1}
+                                        isAnimationActive={false}
+                                    />
+                                ))}
                                 <Tooltip
                                     contentStyle={{
                                         backgroundColor: 'var(--background)',

@@ -35,3 +35,8 @@ src-tauri/gen/android/keystore.properties
 .cursor
 .opencode
 .omc
+
+# Compiler and browser test artifacts
+*.tsbuildinfo
+playwright-report/
+test-results/

@@ -1,12 +1,7 @@
 import { LLMModel } from '../types'
 
-function getBaseURL(model: LLMModel): string {
-    if (model.baseURL) return model.baseURL
-    const providerType = model.provider as string
-    if (providerType === 'openrouter') return 'https://openrouter.ai/api/v1'
-    if (providerType === 'openai') return 'https://api.openai.com/v1'
-    throw new Error(`BaseURL is required for ${providerType} provider`)
-}
+import { getBaseURL } from '../providers/catalog'
+import type { Message } from '../types'
 
 export async function generateImage(
     model: LLMModel,
@@ -40,8 +35,7 @@ export async function generateImage(
     })
 
     if (!resp.ok) {
-        const errText = await resp.text()
-        throw new Error(`Image generation failed (${resp.status}): ${errText}`)
+        throw new Error(`Image generation failed (HTTP ${resp.status}).`)
     }
 
     const data = await resp.json()
@@ -106,10 +100,10 @@ export function buildImageResponse(text: string, imageUrls: string[]): string {
     return responseContent.trim()
 }
 
-export function extractPromptFromMessages(messages: any[]): string {
+export function extractPromptFromMessages(messages: Message[]): string {
     const lastMessage = messages[messages.length - 1]
     let prompt =
-        typeof lastMessage.content === 'string' ? lastMessage.content : ''
+        typeof lastMessage?.content === 'string' ? lastMessage.content : ''
     prompt = prompt
         .replace(/<<<<IMAGE_START>>>>.*?<<<<IMAGE_END>>>>/gs, '')
         .trim()

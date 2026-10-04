@@ -57,12 +57,12 @@ export async function downloadFile(
     URL.revokeObjectURL(url)
 }
 
-export async function downloadJson(data: any, fileName: string) {
+export async function downloadJson(data: unknown, fileName: string) {
     const jsonStr = JSON.stringify(data, null, 2)
     return downloadFile(jsonStr, fileName, 'application/json')
 }
 
-export function readJsonFile(file: File): Promise<any> {
+export function readJsonFile(file: File): Promise<unknown> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = (e) => {

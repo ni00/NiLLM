@@ -1,0 +1,41 @@
+name: Checks
+on:
+    pull_request:
+    push:
+        branches: [main, 'feature/**']
+permissions:
+    contents: read
+concurrency:
+    group: checks-${{ github.ref }}
+    cancel-in-progress: true
+jobs:
+    frontend:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: pnpm/action-setup@v4
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: '24'
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm check
+            - run: pnpm build
+            - run: pnpm exec playwright install --with-deps chromium
+            - run: pnpm test:e2e
+            - run: pnpm exec playwright test e2e/provider-arena.spec.ts
+              env:
+                  PLAYWRIGHT_PREVIEW: 1
+    rust:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  components: rustfmt, clippy
+            - uses: swatinem/rust-cache@v2
+              with:
+                  workspaces: './src-tauri -> target'
+            - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+            - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+            - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked -- -D warnings

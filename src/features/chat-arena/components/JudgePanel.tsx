@@ -2,7 +2,7 @@ import { Gavel, X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { LLMModel } from '@/lib/types'
+import { ChatSession, LLMModel } from '@/lib/types'
 
 interface JudgePanelProps {
     models: LLMModel[]
@@ -14,7 +14,7 @@ interface JudgePanelProps {
     judgeStatus: string | null
     onClose: () => void
     onAutoJudge: () => void
-    activeSession: any
+    activeSession: ChatSession | undefined
 }
 
 export const JudgePanel = ({
@@ -98,7 +98,7 @@ export const JudgePanel = ({
                         isJudging ||
                         !activeSession ||
                         !Object.values(activeSession.results).some(
-                            (r: any) => r.length > 0
+                            (r) => r.length > 0
                         )
                     }
                 >

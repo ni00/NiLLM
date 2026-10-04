@@ -1,9 +1,10 @@
+import { z } from 'zod'
+import type { DragEndEvent } from '@dnd-kit/core'
 import { useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
 import { useNavigate } from 'react-router'
 import { PromptTemplate, PromptVariable } from '@/lib/types'
-import { generateText } from 'ai'
-import { getProvider } from '@/lib/ai-provider'
 import { downloadFile, readJsonFile } from '@/lib/utils'
 
 export interface PromptForm {
@@ -21,7 +22,17 @@ export function usePrompts() {
         setPendingPrompt,
         models,
         reorderPromptTemplates
-    } = useAppStore()
+    } = useAppStore(
+        useShallow((state) => ({
+            promptTemplates: state.promptTemplates,
+            addPromptTemplate: state.addPromptTemplate,
+            updatePromptTemplate: state.updatePromptTemplate,
+            deletePromptTemplate: state.deletePromptTemplate,
+            setPendingPrompt: state.setPendingPrompt,
+            models: state.models,
+            reorderPromptTemplates: state.reorderPromptTemplates
+        }))
+    )
 
     const navigate = useNavigate()
 
@@ -115,7 +126,20 @@ export function usePrompts() {
         const file = e.target.files?.[0]
         if (!file) return
         try {
-            const data = await readJsonFile(file)
+            const data = z
+                .object({
+                    title: z.string().min(1),
+                    content: z.string().min(1),
+                    variables: z
+                        .array(
+                            z.object({
+                                name: z.string(),
+                                description: z.string()
+                            })
+                        )
+                        .default([])
+                })
+                .parse(await readJsonFile(file))
             if (data.title && data.content) {
                 addPromptTemplate({
                     ...data,
@@ -150,10 +174,7 @@ export function usePrompts() {
         if (!usingTemplate) return
         let finalContent = usingTemplate.content
         Object.entries(variableValues).forEach(([key, val]) => {
-            finalContent = finalContent.replace(
-                new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
-                val
-            )
+            finalContent = finalContent.replaceAll(`{{${key}}}`, val)
         })
         setPendingPrompt(finalContent)
         setIsUsing(false)
@@ -171,7 +192,11 @@ export function usePrompts() {
 
         setIsGenerating(true)
         try {
-            const provider = getProvider(model)
+            const [{ getProvider }, { generateText }] = await Promise.all([
+                import('@/lib/ai-provider'),
+                import('ai')
+            ])
+            const provider = await getProvider(model)
             const prompt = `You are a helpful assistant. 
             I have a prompt template with the following variables. Please generate realistic and creative values for them based on their descriptions.
             
@@ -185,11 +210,8 @@ export function usePrompts() {
             Example: { "var1": "generated content..." }`
 
             const response = await generateText({
-                model: provider(model.providerId!),
-                messages: [{ role: 'user', content: prompt }],
-                headers: model.apiKey
-                    ? { Authorization: `Bearer ${model.apiKey}` }
-                    : undefined
+                model: provider(model.providerId || model.id),
+                messages: [{ role: 'user', content: prompt }]
             })
 
             const text = response.text
@@ -197,17 +219,21 @@ export function usePrompts() {
             const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
             if (jsonMatch) jsonStr = jsonMatch[0]
 
-            const values = JSON.parse(jsonStr)
+            const values = z
+                .record(z.string(), z.string())
+                .parse(JSON.parse(jsonStr))
             setVariableValues((prev) => ({ ...prev, ...values }))
-        } catch (e) {
-            console.error(e)
-            alert('Failed to auto-fill variables. See console.')
+        } catch {
+            console.error('Could not generate template variables.')
+            alert(
+                'Could not fill variables. Check provider settings and network access.'
+            )
         } finally {
             setIsGenerating(false)
         }
     }
 
-    const handleDragEnd = (event: any) => {
+    const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event
         if (over && active.id !== over.id) {
             const oldIndex = promptTemplates.findIndex(

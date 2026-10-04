@@ -46,7 +46,7 @@ export function StatsOverview({
                         {totalTokensAcrossModels.toLocaleString()}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                        Total model output volume
+                        Successful output; API counts or estimates
                     </p>
                 </CardContent>
                 <div className="absolute -right-2 -bottom-2 opacity-10 text-blue-500">
@@ -57,7 +57,7 @@ export function StatsOverview({
             <Card className="relative overflow-hidden border-none bg-yellow-500/5 shadow-none">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">
-                        Avg. System Speed
+                        Avg. Request Speed
                     </CardTitle>
                     <Zap className="h-4 w-4 text-yellow-500" />
                 </CardHeader>
@@ -69,7 +69,7 @@ export function StatsOverview({
                         </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                        System-wide throughput
+                        Sample-weighted mean generation speed
                     </p>
                 </CardContent>
                 <div className="absolute -right-2 -bottom-2 opacity-10 text-yellow-500">

@@ -61,20 +61,20 @@ export function PerformanceCharts({
                                 <CartesianGrid
                                     strokeDasharray="3 3"
                                     vertical={false}
-                                    stroke="hsl(var(--muted))"
+                                    stroke="var(--muted)"
                                 />
                                 <XAxis
                                     dataKey="name"
                                     fontSize={11}
                                     tickLine={false}
                                     axisLine={false}
-                                    stroke="hsl(var(--muted-foreground))"
+                                    stroke="var(--muted-foreground)"
                                 />
                                 <YAxis
                                     fontSize={11}
                                     tickLine={false}
                                     axisLine={false}
-                                    stroke="hsl(var(--muted-foreground))"
+                                    stroke="var(--muted-foreground)"
                                 />
                                 <Tooltip
                                     cursor={{
@@ -90,6 +90,7 @@ export function PerformanceCharts({
                                     }}
                                 />
                                 <Bar
+                                    isAnimationActive={false}
                                     dataKey="speed"
                                     radius={[4, 4, 0, 0]}
                                     barSize={32}
@@ -178,6 +179,7 @@ export function PerformanceCharts({
                                     }}
                                 />
                                 <Bar
+                                    isAnimationActive={false}
                                     dataKey="latency"
                                     fill="var(--muted-foreground)"
                                     fillOpacity={0.2}

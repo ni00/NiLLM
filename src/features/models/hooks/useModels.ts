@@ -1,4 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+import type { DragEndEvent } from '@dnd-kit/core'
+import { aggregateStatistics } from '@/features/stats/domain/statistics'
+import { parseModels } from '../domain/models'
 import { useAppStore } from '@/lib/store'
 import { LLMModel } from '@/lib/types'
 
@@ -21,7 +25,18 @@ export function useModels() {
         toggleModelActivation,
         reorderModels,
         sessions
-    } = useAppStore()
+    } = useAppStore(
+        useShallow((state) => ({
+            models: state.models,
+            addModel: state.addModel,
+            updateModel: state.updateModel,
+            deleteModel: state.deleteModel,
+            activeModelIds: state.activeModelIds,
+            toggleModelActivation: state.toggleModelActivation,
+            reorderModels: state.reorderModels,
+            sessions: state.sessions
+        }))
+    )
 
     const [editingModelId, setEditingModelId] = useState<string | null>(null)
     const [isAdding, setIsAdding] = useState(false)
@@ -40,7 +55,7 @@ export function useModels() {
             addModel({
                 id: crypto.randomUUID(),
                 name: newModel.name,
-                provider: newModel.provider as any,
+                provider: newModel.provider || 'openrouter',
                 providerName: newModel.providerName,
                 providerId: newModel.providerId,
                 apiKey: newModel.apiKey,
@@ -74,38 +89,26 @@ export function useModels() {
         addModel(duplicated)
     }
 
+    const statistics = useMemo(
+        () =>
+            new Map(
+                aggregateStatistics(models, sessions).modelStats.map((stat) => [
+                    stat.id,
+                    stat
+                ])
+            ),
+        [models, sessions]
+    )
     const getModelStats = (model: LLMModel) => {
-        let totalTPS = 0,
-            tpsCount = 0
-        let totalTTFT = 0,
-            ttftCount = 0
-        let totalTokens = 0
-
-        sessions.forEach((session: any) => {
-            const results = session.results[model.id] || []
-            results.forEach((r: any) => {
-                if (r.metrics?.tps > 0) {
-                    totalTPS += r.metrics.tps
-                    tpsCount++
-                }
-                if (r.metrics?.ttft > 0) {
-                    totalTTFT += r.metrics.ttft
-                    ttftCount++
-                }
-                if (r.metrics?.tokenCount > 0) {
-                    totalTokens += r.metrics.tokenCount
-                }
-            })
-        })
-
+        const stats = statistics.get(model.id)
         return {
-            avgTPS: tpsCount > 0 ? (totalTPS / tpsCount).toFixed(1) : '-',
-            avgTTFT: ttftCount > 0 ? (totalTTFT / ttftCount).toFixed(2) : '-',
-            totalTokens
+            avgTPS: stats?.avgTPS ? stats.avgTPS.toFixed(1) : '-',
+            avgTTFT: stats?.avgTTFT ? stats.avgTTFT.toFixed(0) : '-',
+            totalTokens: stats?.totalTokens || 0
         }
     }
 
-    const handleDragEnd = (event: any) => {
+    const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event
         if (over && active.id !== over.id) {
             const oldIndex = models.findIndex((m) => m.id === active.id)
@@ -122,19 +125,25 @@ export function useModels() {
             const data = await readJsonFile(file)
             if (Array.isArray(data)) {
                 const store = useAppStore.getState()
-                store.importModels(data as LLMModel[])
+                store.importModels(parseModels(data))
             } else {
                 alert('Invalid model data format')
             }
-        } catch (err) {
-            console.error('Failed to import', err)
+        } catch {
+            console.error('Failed to import model data.')
+            alert('Invalid model data. Check the JSON format.')
         }
         e.target.value = ''
     }
 
     const handleExport = async () => {
         const { downloadJson } = await import('@/lib/utils')
-        await downloadJson(useAppStore.getState().models, 'nillm-models.json')
+        await downloadJson(
+            useAppStore
+                .getState()
+                .models.map((model) => ({ ...model, apiKey: undefined })),
+            'nillm-models.json'
+        )
     }
 
     return {

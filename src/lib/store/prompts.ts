@@ -1,3 +1,4 @@
+import type { AppState } from './index'
 import { StateCreator } from 'zustand'
 import { PromptTemplate } from '@/lib/types'
 
@@ -50,7 +51,7 @@ export interface PromptsSlice {
 }
 
 export const createPromptsSlice: StateCreator<
-    PromptsSlice,
+    AppState,
     [],
     [],
     PromptsSlice

@@ -1,9 +1,11 @@
+import type { AppState } from './index'
 import { StateCreator } from 'zustand'
 import { GenerationConfig } from '@/lib/types'
 
 const DEFAULT_CONFIG: GenerationConfig = {
+    maxConcurrent: 4,
     temperature: 0.7,
-    maxTokens: 100000,
+    maxTokens: 4096,
     topP: 0.9,
     topK: undefined,
     frequencyPenalty: 0,
@@ -34,12 +36,9 @@ export interface ConfigSlice {
     setLanguage: (lang: 'en' | 'zh' | 'ja') => void
 }
 
-export const createConfigSlice: StateCreator<
-    ConfigSlice,
-    [],
-    [],
-    ConfigSlice
-> = (set) => ({
+export const createConfigSlice: StateCreator<AppState, [], [], ConfigSlice> = (
+    set
+) => ({
     globalConfig: DEFAULT_CONFIG,
     language: 'en' as 'en' | 'zh' | 'ja',
 

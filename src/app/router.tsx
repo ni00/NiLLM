@@ -1,4 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router'
+import { useState, useEffect } from 'react'
+import { storeHydration } from '@/lib/store'
 
 import { Layout } from '@/features/layout/Layout'
 
@@ -46,5 +48,26 @@ const createAppRouter = () =>
     ])
 
 export default function AppRouter() {
-    return <RouterProvider router={createAppRouter()} />
+    const [router, setRouter] = useState<ReturnType<
+        typeof createAppRouter
+    > | null>(null)
+    useEffect(() => {
+        let active = true
+        void storeHydration.then(() => {
+            if (active) setRouter(createAppRouter())
+        })
+        return () => {
+            active = false
+        }
+    }, [])
+    if (!router)
+        return (
+            <div
+                role="status"
+                className="flex h-screen items-center justify-center"
+            >
+                Loading your arena…
+            </div>
+        )
+    return <RouterProvider router={router} />
 }

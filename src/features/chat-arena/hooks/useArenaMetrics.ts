@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { LLMModel, BenchmarkResult } from '@/lib/types'
+import { LLMModel, BenchmarkResult, BenchmarkMetrics } from '@/lib/types'
 
 export interface MetricsRanges {
     ttft: { min: number; max: number }
@@ -26,7 +26,7 @@ export interface FooterRanges {
 export function useArenaMetrics(
     activeModels: LLMModel[],
     activeSession: { results: Record<string, BenchmarkResult[]> } | undefined,
-    streamingData: Record<string, { metrics?: any }>,
+    streamingData: Record<string, { metrics?: Partial<BenchmarkMetrics> }>,
     arenaSortBy: string
 ) {
     const metricsRanges: MetricsRanges = useMemo(() => {
@@ -52,13 +52,18 @@ export function useArenaMetrics(
 
         return {
             ttft: {
-                min: Math.min(...ttftValues),
-                max: Math.max(...ttftValues)
+                min: Math.min(...(ttftValues.length ? ttftValues : [0])),
+                max: Math.max(...(ttftValues.length ? ttftValues : [0]))
             },
-            tps: { min: Math.min(...tpsValues), max: Math.max(...tpsValues) },
+            tps: {
+                min: Math.min(...(tpsValues.length ? tpsValues : [0])),
+                max: Math.max(...(tpsValues.length ? tpsValues : [0]))
+            },
             duration: {
-                min: Math.min(...durationValues),
-                max: Math.max(...durationValues)
+                min: Math.min(
+                    ...(durationValues.length ? durationValues : [0])
+                ),
+                max: Math.max(...(durationValues.length ? durationValues : [0]))
             }
         }
     }, [activeModels, activeSession, streamingData])
@@ -73,7 +78,7 @@ export function useArenaMetrics(
                         ? { ...r, metrics: { ...r.metrics, ...s.metrics } }
                         : r
                 })
-                .filter((r) => r.metrics)
+                .filter((r) => r.metrics && !r.error)
 
             const ratedResults = results.filter((r) => r.rating)
             const avgRating =
@@ -143,13 +148,22 @@ export function useArenaMetrics(
             .filter((v) => v > 0)
 
         return {
-            ttft: { min: Math.min(...fTtftVals), max: Math.max(...fTtftVals) },
-            tps: { min: Math.min(...fTpsVals), max: Math.max(...fTpsVals) },
-            duration: {
-                min: Math.min(...fTimeVals),
-                max: Math.max(...fTimeVals)
+            ttft: {
+                min: Math.min(...(fTtftVals.length ? fTtftVals : [0])),
+                max: Math.max(...(fTtftVals.length ? fTtftVals : [0]))
             },
-            tokens: { min: Math.min(...fToksVals), max: Math.max(...fToksVals) }
+            tps: {
+                min: Math.min(...(fTpsVals.length ? fTpsVals : [0])),
+                max: Math.max(...(fTpsVals.length ? fTpsVals : [0]))
+            },
+            duration: {
+                min: Math.min(...(fTimeVals.length ? fTimeVals : [0])),
+                max: Math.max(...(fTimeVals.length ? fTimeVals : [0]))
+            },
+            tokens: {
+                min: Math.min(...(fToksVals.length ? fToksVals : [0])),
+                max: Math.max(...(fToksVals.length ? fToksVals : [0]))
+            }
         }
     }, [aggregateMetrics])
 

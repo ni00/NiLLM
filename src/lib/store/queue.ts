@@ -1,3 +1,4 @@
+import type { AppState } from './index'
 import { StateCreator } from 'zustand'
 
 export interface QueueItem {
@@ -19,7 +20,7 @@ export interface QueueSlice {
     stopAll: () => void
 }
 
-export const createQueueSlice: StateCreator<QueueSlice, [], [], QueueSlice> = (
+export const createQueueSlice: StateCreator<AppState, [], [], QueueSlice> = (
     set
 ) => ({
     messageQueue: [] as QueueItem[],

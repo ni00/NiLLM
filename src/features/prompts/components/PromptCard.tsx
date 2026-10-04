@@ -1,3 +1,4 @@
+import type { HTMLAttributes } from 'react'
 import {
     Card,
     CardHeader,
@@ -15,7 +16,7 @@ interface PromptCardProps {
     onExport: (template: PromptTemplate) => void
     onDelete: (id: string) => void
     onUse: (template: PromptTemplate) => void
-    dragHandleProps?: any
+    dragHandleProps?: HTMLAttributes<HTMLElement>
 }
 
 export function PromptCard({

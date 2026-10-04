@@ -1,3 +1,5 @@
+import type { HTMLAttributes } from 'react'
+import { providerLabel } from '@/lib/providers/catalog'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -22,7 +24,7 @@ interface ModelCardProps {
     onDuplicate: (model: LLMModel) => void
     onDelete: (id: string) => void
     onToggle: (id: string) => void
-    dragHandleProps?: any
+    dragHandleProps?: HTMLAttributes<HTMLElement>
 }
 
 export function ModelCard({
@@ -58,7 +60,7 @@ export function ModelCard({
                         </div>
                         <div className="pl-6">
                             <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                                {model.providerName || model.provider}
+                                {providerLabel(model)}
                             </span>
                         </div>
                     </div>

@@ -26,7 +26,7 @@ const SimpleTable = ({ children }: { children: React.ReactNode }) => (
     >
         <table
             style={{
-                minWidth: 700,
+                minWidth: 1300,
                 width: '100%',
                 captionSide: 'bottom',
                 fontSize: '0.875rem',
@@ -141,9 +141,13 @@ export function EvaluationModels({
         return (
             <SimpleTableHead
                 className={`cursor-pointer select-none hover:bg-muted/50 transition-colors ${className}`}
-                onClick={() => handleSort(column)}
             >
-                <div className="flex items-center gap-1">
+                <button
+                    type="button"
+                    className="flex items-center gap-1"
+                    onClick={() => handleSort(column)}
+                    aria-label={`Sort by ${column}`}
+                >
                     {children}
                     {isSorted ? (
                         sortConfig.direction === 'asc' ? (
@@ -154,7 +158,7 @@ export function EvaluationModels({
                     ) : (
                         <ArrowUpDown className="h-3.5 w-3.5 ml-1 opacity-20" />
                     )}
-                </div>
+                </button>
             </SimpleTableHead>
         )
     }
@@ -212,6 +216,19 @@ export function EvaluationModels({
                                 <Clock className="h-3.5 w-3.5 text-blue-400 mr-1" />{' '}
                                 Latency
                             </SortHeader>
+                            <SortHeader column="p95TTFT">
+                                P95 latency
+                            </SortHeader>
+                            <SortHeader column="avgDuration">
+                                Duration
+                            </SortHeader>
+                            <SortHeader column="successRate">
+                                Success
+                            </SortHeader>
+                            <SortHeader column="totalTokens">Tokens</SortHeader>
+                            <SortHeader column="totalCost">
+                                Cost (USD)
+                            </SortHeader>
                             <SortHeader column="avgRating">
                                 <Star className="h-3.5 w-3.5 text-amber-500 mr-1" />{' '}
                                 Quality
@@ -266,7 +283,9 @@ export function EvaluationModels({
                                     <div className="flex flex-col gap-1.5 w-[140px]">
                                         <div className="flex items-baseline justify-between">
                                             <span className="font-mono font-medium">
-                                                {stat.avgTPS.toFixed(1)}
+                                                {stat.speedSampleCount
+                                                    ? stat.avgTPS.toFixed(1)
+                                                    : '—'}
                                             </span>
                                             <span className="text-xs text-muted-foreground">
                                                 t/s
@@ -284,11 +303,58 @@ export function EvaluationModels({
                                 </SimpleTableCell>
                                 <SimpleTableCell>
                                     <div className="font-mono">
-                                        {stat.avgTTFT.toFixed(2)}{' '}
+                                        {stat.latencySampleCount
+                                            ? stat.avgTTFT.toFixed(0)
+                                            : '—'}{' '}
                                         <span className="text-xs text-muted-foreground">
                                             ms
                                         </span>
                                     </div>
+                                </SimpleTableCell>
+                                <SimpleTableCell>
+                                    <span className="font-mono">
+                                        {stat.latencySampleCount
+                                            ? `${stat.p95TTFT.toFixed(0)} ms`
+                                            : '—'}
+                                    </span>
+                                </SimpleTableCell>
+                                <SimpleTableCell>
+                                    <span className="font-mono">
+                                        {stat.avgDuration
+                                            ? `${(stat.avgDuration / 1000).toFixed(2)} s`
+                                            : '—'}
+                                    </span>
+                                </SimpleTableCell>
+                                <SimpleTableCell>
+                                    <span>
+                                        {stat.completedCount +
+                                        stat.errorCount +
+                                        stat.cancelledCount
+                                            ? `${stat.successRate.toFixed(1)}%`
+                                            : '—'}
+                                    </span>
+                                    <p className="text-xs text-muted-foreground">
+                                        {stat.errorCount} failed ·{' '}
+                                        {stat.cancelledCount} cancelled ·{' '}
+                                        {stat.pendingCount} pending
+                                    </p>
+                                </SimpleTableCell>
+                                <SimpleTableCell>
+                                    <span>
+                                        {stat.totalTokens.toLocaleString()}
+                                    </span>
+                                    <p className="text-xs text-muted-foreground">
+                                        In {stat.inputTokens.toLocaleString()} /
+                                        Out {stat.outputTokens.toLocaleString()}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {stat.estimatedCount} estimated samples
+                                    </p>
+                                </SimpleTableCell>
+                                <SimpleTableCell>
+                                    {stat.costSampleCount
+                                        ? `$${stat.totalCost.toFixed(4)}`
+                                        : '—'}
                                 </SimpleTableCell>
                                 <SimpleTableCell>
                                     <div className="font-medium">

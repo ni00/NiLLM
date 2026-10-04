@@ -1,3 +1,4 @@
+import type { HTMLAttributes } from 'react'
 import {
     Card,
     CardContent,
@@ -31,7 +32,7 @@ interface TestSetCardProps {
     onDelete: (id: string) => void
     onRun: (set: TestSet) => void
     onRunSingle: (prompt: string) => void
-    dragHandleProps?: any
+    dragHandleProps?: HTMLAttributes<HTMLElement>
 }
 
 function getTestSetIcon(setId: string) {

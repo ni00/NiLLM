@@ -1,3 +1,4 @@
+import type { AppState } from './index'
 import { StateCreator } from 'zustand'
 
 export interface ArenaSlice {
@@ -11,7 +12,7 @@ export interface ArenaSlice {
     setPendingPrompt: (content: string | null) => void
 }
 
-export const createArenaSlice: StateCreator<ArenaSlice, [], [], ArenaSlice> = (
+export const createArenaSlice: StateCreator<AppState, [], [], ArenaSlice> = (
     set
 ) => ({
     arenaColumns: 0,

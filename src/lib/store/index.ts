@@ -1,5 +1,6 @@
-import { create, StoreApi, UseBoundStore } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { create, type StateCreator } from 'zustand'
+import { attachPersistence } from './persistence'
+import { cancelAllStreams } from '../streaming/cancellation'
 
 import { ModelsSlice, createModelsSlice } from './models'
 import { SessionsSlice, createSessionsSlice } from './sessions'
@@ -20,68 +21,78 @@ export type AppState = ModelsSlice &
     ConfigSlice &
     ArenaSlice & {
         exportData: () => string
-        importData: (data: string) => void
+        importData: (data: string) => Promise<void>
         stopAll: () => void
     }
 
-export const useAppStore: UseBoundStore<StoreApi<AppState>> =
-    create<AppState>()(
-        persist(
-            (set, get) => ({
-                ...createModelsSlice(set, get as never, {} as never),
-                ...createSessionsSlice(set, get as never, {} as never),
-                ...createTestSetsSlice(set, get as never, {} as never),
-                ...createQueueSlice(set, get as never, {} as never),
-                ...createStreamingSlice(set, get as never, {} as never),
-                ...createPromptsSlice(set, get as never, {} as never),
-                ...createConfigSlice(set, get as never, {} as never),
-                ...createArenaSlice(set, get as never, {} as never),
-                exportData: (): string => {
-                    const state = get()
-                    return JSON.stringify({
-                        models: state.models,
-                        sessions: state.sessions,
-                        testSets: state.testSets,
-                        promptTemplates: state.promptTemplates,
-                        globalConfig: state.globalConfig
-                    })
-                },
-                importData: (json: string) => {
-                    try {
-                        const data = JSON.parse(json)
-                        set((state) => ({
-                            models: data.models || state.models,
-                            sessions: data.sessions || state.sessions,
-                            testSets: data.testSets || state.testSets,
-                            promptTemplates:
-                                data.promptTemplates || state.promptTemplates,
-                            globalConfig:
-                                data.globalConfig || state.globalConfig
-                        }))
-                    } catch (e) {
-                        console.error('Failed to import data:', e)
-                    }
-                },
-                stopAll: () => {
-                    set({
-                        messageQueue: [],
-                        isProcessing: false,
-                        streamingData: {}
-                    })
-                }
-            }),
-            {
-                name: 'nillm-storage',
-                storage: createJSONStorage(() => indexedDBStorage),
-                partialize: (state: AppState) =>
-                    Object.fromEntries(
-                        Object.entries(state).filter(
-                            ([key]) => !['streamingData'].includes(key)
-                        )
-                    ) as AppState
-            }
-        )
-    )
+export const createAppState: StateCreator<AppState> = (set, get, api) => ({
+    ...createModelsSlice(set, get, api),
+    ...createSessionsSlice(set, get, api),
+    ...createTestSetsSlice(set, get, api),
+    ...createQueueSlice(set, get, api),
+    ...createStreamingSlice(set, get, api),
+    ...createPromptsSlice(set, get, api),
+    ...createConfigSlice(set, get, api),
+    ...createArenaSlice(set, get, api),
+    exportData: (): string => {
+        const state = get()
+        return JSON.stringify({
+            models: state.models,
+            sessions: state.sessions,
+            testSets: state.testSets,
+            promptTemplates: state.promptTemplates,
+            globalConfig: state.globalConfig
+        })
+    },
+    importData: async (json: string) => {
+        try {
+            const { parseBackup } = await import('../validation')
+            const data = parseBackup(JSON.parse(json))
+            set((state) => ({
+                models: data.models || state.models,
+                activeModelIds: state.activeModelIds.filter((id) =>
+                    (data.models || state.models).some(
+                        (model) => model.id === id && model.enabled
+                    )
+                ),
+                activeSessionId: (data.sessions || state.sessions).some(
+                    (session) => session.id === state.activeSessionId
+                )
+                    ? state.activeSessionId
+                    : null,
+                sessions: data.sessions || state.sessions,
+                testSets: data.testSets || state.testSets,
+                promptTemplates: data.promptTemplates || state.promptTemplates,
+                globalConfig: data.globalConfig || state.globalConfig
+            }))
+        } catch {
+            throw new Error(
+                'Invalid backup format. No application data was changed.'
+            )
+        }
+    },
+    stopAll: () => {
+        cancelAllStreams()
+        set({
+            messageQueue: [],
+            isProcessing: false,
+            streamingData: {}
+        })
+    }
+})
+
+export const useAppStore = create<AppState>()(createAppState)
+
+const persistence = attachPersistence(useAppStore, indexedDBStorage)
+export const storeHydration = persistence.hydrated
+if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', () => {
+        void persistence.flush()
+    })
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') void persistence.flush()
+    })
+}
 
 export { indexedDBStorage }
 export type {

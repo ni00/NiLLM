@@ -1,5 +1,6 @@
 export {
     useAppStore,
+    storeHydration,
     indexedDBStorage,
     type AppState,
     type ModelsSlice,

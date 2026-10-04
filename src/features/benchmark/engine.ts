@@ -1,9 +1,14 @@
 import { useAppStore } from '../../lib/store'
-import { BenchmarkResult, LLMModel } from '../../lib/types'
+import { BenchmarkResult, Message } from '../../lib/types'
+
+import { runWorkerStream } from './worker-stream'
+import {
+    cancelAllStreams,
+    streamGeneration
+} from '@/lib/streaming/cancellation'
 
 let pendingUpdates: Record<string, Partial<BenchmarkResult>> = {}
 let rafId: number | null = null
-const activeTasks = new Map<Worker, () => void>()
 let isPaused = false
 
 function scheduleFlush() {
@@ -46,130 +51,27 @@ export function getPendingUpdatesCount(): number {
     return Object.keys(pendingUpdates).length
 }
 
-const DEFAULT_CONNECT_TIMEOUT = 15000
-const DEFAULT_READ_TIMEOUT = 30000
+function scheduleUpdate(id: string, update: Partial<BenchmarkResult> | null) {
+    if (update) {
+        pendingUpdates[id] = update
+        scheduleFlush()
+    } else delete pendingUpdates[id]
+}
 
-function runWorkerStream(
-    model: LLMModel,
-    messages: any[],
-    resultId: string,
-    sessionId: string
+async function runConcurrent<T>(
+    items: T[],
+    concurrency: number,
+    task: (item: T) => Promise<void>
 ) {
-    const store = useAppStore.getState()
-    const connectTimeoutMs =
-        model.config?.connectTimeout || DEFAULT_CONNECT_TIMEOUT
-    const readTimeoutMs = model.config?.readTimeout || DEFAULT_READ_TIMEOUT
-
-    return new Promise<void>((resolve) => {
-        const worker = new Worker(
-            new URL('../../lib/workers/stream.worker.ts', import.meta.url),
-            {
-                type: 'module'
+    let index = 0
+    await Promise.all(
+        Array.from(
+            { length: Math.min(concurrency, items.length) },
+            async () => {
+                while (index < items.length) await task(items[index++])
             }
         )
-        activeTasks.set(worker, resolve)
-
-        let currentText = ''
-        let currentReasoning = ''
-        let connectTimeout: NodeJS.Timeout | null = null
-        let readTimeout: NodeJS.Timeout | null = null
-
-        const cleanup = () => {
-            if (connectTimeout) clearTimeout(connectTimeout)
-            if (readTimeout) clearTimeout(readTimeout)
-            worker.terminate()
-            activeTasks.delete(worker)
-            delete pendingUpdates[resultId]
-        }
-
-        const handleError = (errorMsg: string) => {
-            console.error(
-                `Error with model ${model.name}:`,
-                errorMsg.slice(0, 500)
-            )
-            store.updateResult(sessionId, model.id, resultId, {
-                error: errorMsg
-            })
-            store.clearStreamingData(resultId)
-            cleanup()
-            resolve()
-        }
-
-        connectTimeout = setTimeout(() => {
-            handleError(
-                `Connection timed out after ${connectTimeoutMs / 1000}s`
-            )
-        }, connectTimeoutMs)
-
-        worker.onmessage = (e) => {
-            const { type, textDelta, reasoningDelta, metrics, isFinal, error } =
-                e.data
-
-            if (readTimeout) clearTimeout(readTimeout)
-            if (connectTimeout && (type === 'start' || type === 'update')) {
-                clearTimeout(connectTimeout)
-                connectTimeout = null
-            }
-
-            if (type === 'start') {
-                readTimeout = setTimeout(() => {
-                    handleError(
-                        `Stream timed out (no data for ${readTimeoutMs / 1000}s)`
-                    )
-                }, readTimeoutMs)
-                return
-            }
-
-            if (type === 'update') {
-                readTimeout = setTimeout(() => {
-                    handleError(
-                        `Stream timed out (no data for ${readTimeoutMs / 1000}s)`
-                    )
-                }, readTimeoutMs)
-
-                if (textDelta) {
-                    currentText += textDelta
-                }
-
-                if (reasoningDelta) {
-                    currentReasoning += reasoningDelta
-                }
-
-                pendingUpdates[resultId] = {
-                    response: currentText,
-                    reasoning: currentReasoning || undefined,
-                    metrics
-                }
-                scheduleFlush()
-
-                if (isFinal) {
-                    store.updateResult(sessionId, model.id, resultId, {
-                        response: currentText,
-                        reasoning: currentReasoning || undefined,
-                        metrics
-                    })
-                }
-            } else if (type === 'done') {
-                store.clearStreamingData(resultId)
-                cleanup()
-                resolve()
-            } else if (type === 'error') {
-                handleError(error || 'Unknown error')
-            }
-        }
-
-        worker.onerror = (err) => {
-            console.error('Worker error:', err)
-            handleError('Worker initialization failed')
-            cleanup()
-        }
-
-        worker.postMessage({
-            model,
-            messages,
-            resultId
-        })
-    })
+    )
 }
 
 export async function broadcastMessage(
@@ -177,8 +79,8 @@ export async function broadcastMessage(
     existingSessionId?: string
 ) {
     const store = useAppStore.getState()
-    const activeModels = store.models.filter((m) =>
-        store.activeModelIds.includes(m.id)
+    const activeModels = store.models.filter(
+        (m) => m.enabled && store.activeModelIds.includes(m.id)
     )
 
     if (activeModels.length === 0) {
@@ -221,7 +123,13 @@ export async function broadcastMessage(
         )
     const session = store.sessions.find((s) => s.id === sessionId)
 
-    const promises = targetModels.map(async (model) => {
+    const generation = streamGeneration()
+    const requestedConcurrency = store.globalConfig.maxConcurrent ?? 4
+    const concurrency = Number.isFinite(requestedConcurrency)
+        ? Math.max(1, Math.min(16, Math.floor(requestedConcurrency)))
+        : 4
+    await runConcurrent(targetModels, concurrency, async (model) => {
+        if (generation !== streamGeneration()) return
         const resultId = crypto.randomUUID()
 
         const mergedConfig = {
@@ -234,7 +142,7 @@ export async function broadcastMessage(
             config: mergedConfig
         }
 
-        const history: any[] = []
+        const history: Message[] = []
         if (session && session.results[model.id]) {
             session.results[model.id].forEach((res) => {
                 history.push({ role: 'user', content: res.prompt })
@@ -244,25 +152,18 @@ export async function broadcastMessage(
             })
         }
 
-        const messages: any[] = []
-        if (store.globalConfig.systemPrompt) {
+        const messages: Message[] = []
+        if (model.config?.systemPrompt ?? store.globalConfig.systemPrompt) {
             messages.push({
                 role: 'system',
-                content: store.globalConfig.systemPrompt
+                content:
+                    model.config?.systemPrompt ??
+                    store.globalConfig.systemPrompt ??
+                    ''
             })
         }
 
         messages.push(...history, { role: 'user', content: processedPrompt })
-
-        const displayPrompt = processedPrompt.replace(
-            /<<<<IMAGE_START>>>>.*?<<<<IMAGE_END>>>>/gs,
-            '[Image]'
-        )
-        console.log(
-            'Adding result with prompt:',
-            displayPrompt.slice(0, 100) +
-                (displayPrompt.length > 100 ? '...' : '')
-        )
 
         const initialResult: BenchmarkResult = {
             id: resultId,
@@ -270,7 +171,8 @@ export async function broadcastMessage(
             prompt: processedPrompt,
             response: '',
             metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            status: 'pending'
         }
         store.addResult(sessionId, model.id, initialResult)
 
@@ -279,20 +181,19 @@ export async function broadcastMessage(
             modelWithMergedConfig,
             messages,
             resultId,
-            sessionId
+            sessionId,
+            scheduleUpdate
         )
     })
 
-    await Promise.all(promises)
     return sessionId
 }
 
 export function abortAllTasks() {
-    activeTasks.forEach((resolve, worker) => {
-        worker.terminate()
-        resolve()
-    })
-    activeTasks.clear()
+    cancelAllStreams()
+    pendingUpdates = {}
+    if (rafId !== null) cancelAnimationFrame(rafId)
+    rafId = null
 }
 
 export async function retryResult(
@@ -316,12 +217,14 @@ export async function retryResult(
     store.updateResult(sessionId, modelId, resultId, {
         error: undefined,
         response: '',
+        reasoning: undefined,
+        status: 'pending',
         metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
         timestamp: Date.now()
     })
 
     const historyResults = modelResults.slice(0, resultIndex)
-    const history: any[] = []
+    const history: Message[] = []
     historyResults.forEach((res) => {
         history.push({ role: 'user', content: res.prompt })
         if (res.response) {
@@ -329,11 +232,14 @@ export async function retryResult(
         }
     })
 
-    const messages: any[] = []
-    if (store.globalConfig.systemPrompt) {
+    const messages: Message[] = []
+    if (model.config?.systemPrompt ?? store.globalConfig.systemPrompt) {
         messages.push({
             role: 'system',
-            content: store.globalConfig.systemPrompt
+            content:
+                model.config?.systemPrompt ??
+                store.globalConfig.systemPrompt ??
+                ''
         })
     }
     messages.push(...history, { role: 'user', content: resultToRetry.prompt })
@@ -347,5 +253,11 @@ export async function retryResult(
         config: mergedConfig
     }
 
-    await runWorkerStream(modelWithMergedConfig, messages, resultId, sessionId)
+    await runWorkerStream(
+        modelWithMergedConfig,
+        messages,
+        resultId,
+        sessionId,
+        scheduleUpdate
+    )
 }

@@ -1,12 +1,12 @@
 import React from 'react'
 import { Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { LLMModel } from '@/lib/types'
+import { GenerationConfig, LLMModel } from '@/lib/types'
 import { ConfigEditor } from './ConfigEditor'
 
 export interface ModelConfigPanelProps {
     model: LLMModel
-    globalConfig: any
+    globalConfig: GenerationConfig
     onUpdateModel: (id: string, updates: Partial<LLMModel>) => void
     onStartEditingDetails: (model: LLMModel) => void
 }

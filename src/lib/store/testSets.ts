@@ -1,3 +1,4 @@
+import type { AppState } from './index'
 import { StateCreator } from 'zustand'
 import { TestSet } from '@/lib/types'
 
@@ -12,7 +13,7 @@ export interface TestSetsSlice {
 }
 
 export const createTestSetsSlice: StateCreator<
-    TestSetsSlice,
+    AppState,
     [],
     [],
     TestSetsSlice

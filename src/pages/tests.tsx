@@ -1,3 +1,4 @@
+import type { DragEndEvent } from '@dnd-kit/core'
 import { Box, FolderInput, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sparkles } from 'lucide-react'
@@ -127,7 +128,7 @@ export function TestsPage() {
         return 0
     })
 
-    const handleDragEnd = (event: any) => {
+    const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event
         if (over && active.id !== over.id) {
             const oldIndex = sortedSets.findIndex((s) => s.id === active.id)

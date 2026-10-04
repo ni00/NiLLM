@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { LLMModel } from '@/lib/types'
 import {
     usePendingPrompt,
@@ -29,25 +29,25 @@ export const useArenaState = () => {
         }
     }, [pendingPrompt, setPendingPrompt])
 
-    const toggleExpandAll = (modelId: string) => {
+    const toggleExpandAll = useCallback((modelId: string) => {
         setExpandedModelIds((prev) =>
             prev.includes(modelId)
                 ? prev.filter((id) => id !== modelId)
                 : [...prev, modelId]
         )
-    }
+    }, [])
 
-    const toggleBlock = (blockId: string) => {
+    const toggleBlock = useCallback((blockId: string) => {
         setManuallyExpandedBlocks((prev) => ({
             ...prev,
             [blockId]: !prev[blockId]
         }))
-    }
+    }, [])
 
-    const startEditingDetails = (model: LLMModel) => {
+    const startEditingDetails = useCallback((model: LLMModel) => {
         setModelToEdit(model)
         setEditForm({ ...model })
-    }
+    }, [])
 
     return {
         input,

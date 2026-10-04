@@ -17,6 +17,7 @@ export interface SelectOption {
 }
 
 interface SelectDropdownProps {
+    ariaLabel?: string
     value: string
     onChange: (value: string) => void
     options: SelectOption[]
@@ -29,6 +30,7 @@ interface SelectDropdownProps {
 
 export function SelectDropdown({
     value,
+    ariaLabel,
     onChange,
     options,
     placeholder = 'Select...',
@@ -48,6 +50,9 @@ export function SelectDropdown({
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
+                    aria-label={
+                        ariaLabel || selectedOption?.label || placeholder
+                    }
                     disabled={disabled}
                     className={cn(
                         'justify-between font-normal bg-background hover:bg-accent hover:text-accent-foreground',

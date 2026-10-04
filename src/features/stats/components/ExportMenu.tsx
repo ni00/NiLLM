@@ -1,3 +1,5 @@
+import type { ModelStat } from '../domain/statistics'
+import { exportStatsCSV } from '../domain/export'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,15 +28,8 @@ import { useAppStore } from '@/lib/store'
 import { downloadJson, downloadFile } from '@/lib/utils'
 
 interface ExportMenuProps {
-    modelStats: Array<{
-        name: string
-        provider: string
-        avgTPS: number
-        avgTTFT: number
-        avgRating: number
-        totalTokens: number
-        completedCount: number
-    }>
+    modelStats: ModelStat[]
+    filters: { range: string; providerKey: string; mode: string }
     totalSessions: number
     totalMessages: number
     totalTokensAcrossModels: number
@@ -47,6 +42,7 @@ interface ExportMenuProps {
 
 export function ExportMenu({
     modelStats,
+    filters,
     totalSessions,
     totalMessages,
     totalTokensAcrossModels,
@@ -65,7 +61,14 @@ export function ExportMenu({
             metadata: {
                 title: 'NiLLM Arena Performance Report',
                 generatedAt: timestamp,
-                version: '1.0.0'
+                schemaVersion: 2,
+                units: {
+                    ttft: 'milliseconds',
+                    duration: 'milliseconds',
+                    tps: 'tokens/second',
+                    cost: 'USD'
+                },
+                filters
             },
             summary: {
                 totalSessions,
@@ -78,17 +81,7 @@ export function ExportMenu({
                     latency: fastestModel?.name
                 }
             },
-            modelComparison: modelStats.map((s) => ({
-                name: s.name,
-                provider: s.provider,
-                metrics: {
-                    avgTPS: parseFloat(s.avgTPS.toFixed(2)),
-                    avgTTFT: parseFloat(s.avgTTFT.toFixed(1)),
-                    avgRating: parseFloat(s.avgRating.toFixed(1)),
-                    totalTokens: s.totalTokens,
-                    sampleCount: s.completedCount
-                }
-            }))
+            modelComparison: modelStats
         }
 
         await downloadJson(
@@ -98,29 +91,7 @@ export function ExportMenu({
     }
 
     const handleExportCSV = async () => {
-        const headers = [
-            'Model',
-            'Provider',
-            'Avg Speed (t/s)',
-            'Avg Latency (ms)',
-            'Avg Quality',
-            'Total Tokens',
-            'Sample Size'
-        ]
-        const rows = modelStats.map((s) => [
-            `"${s.name.replace(/"/g, '""')}"`,
-            `"${s.provider.replace(/"/g, '""')}"`,
-            s.avgTPS.toFixed(2),
-            s.avgTTFT.toFixed(1),
-            s.avgRating.toFixed(1),
-            s.totalTokens,
-            s.completedCount
-        ])
-
-        const csvContent = [
-            headers.join(','),
-            ...rows.map((r) => r.join(','))
-        ].join('\n')
+        const csvContent = exportStatsCSV(modelStats)
 
         await downloadFile(
             csvContent,
@@ -151,7 +122,7 @@ export function ExportMenu({
         try {
             const { readJsonFile } = await import('@/lib/utils')
             const data = await readJsonFile(file)
-            useAppStore.getState().importData(JSON.stringify(data))
+            await useAppStore.getState().importData(JSON.stringify(data))
             alert('Data restored successfully.')
         } catch (err) {
             console.error('Import failed', err)

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
-import { getProvider } from '@/lib/ai-provider'
-import { generateObject } from 'ai'
 import { z } from 'zod'
-import { LLMModel } from '@/lib/types'
+import { LLMModel, ChatSession } from '@/lib/types'
 
-export const useAutoJudge = (activeModels: LLMModel[], activeSession: any) => {
-    const { models } = useAppStore()
+export const useAutoJudge = (
+    activeModels: LLMModel[],
+    activeSession: ChatSession | undefined
+) => {
+    const models = useAppStore((state) => state.models)
     const [isJudging, setIsJudging] = useState(false)
     const [judgeModelId, setJudgeModelId] = useState<string>('')
     const [judgeStatus, setJudgeStatus] = useState<string | null>(null)
@@ -87,7 +88,11 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
 
             const userPromptContent = `[User Prompt]\n${lastPrompt}\n\n[Model Responses to Evaluate]\n${responsesToJudge.map((r) => `Model ID: ${r.modelId}\nResponse:\n${r.response}`).join('\n\n---\n\n')}`
 
-            const provider = getProvider(judgeModel)
+            const [{ getProvider }, { generateObject }] = await Promise.all([
+                import('@/lib/ai-provider'),
+                import('ai')
+            ])
+            const provider = await getProvider(judgeModel)
 
             const scoresSchema = z.record(
                 z.string(),
@@ -97,29 +102,31 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
             let scores: Record<string, number>
             try {
                 const response = await generateObject({
-                    model: provider(judgeModel.providerId),
+                    model: provider(judgeModel.providerId || judgeModel.id),
+                    allowSystemInMessages: true,
                     messages: [
                         { role: 'system', content: judgePrompt },
                         { role: 'user', content: userPromptContent }
                     ],
                     temperature: 0.1,
-                    headers: judgeModel.apiKey
-                        ? {
-                              Authorization: `Bearer ${judgeModel.apiKey}`
-                          }
-                        : undefined,
                     schema: scoresSchema,
                     abortSignal: controller.signal
                 })
 
                 scores = response.object
-            } catch (apiError: any) {
-                if (apiError.name === 'AbortError') {
-                    throw new Error('Judge request was cancelled')
+            } catch (apiError) {
+                if (
+                    apiError instanceof Error &&
+                    apiError.name === 'AbortError'
+                ) {
+                    throw new Error('Judge request was cancelled', {
+                        cause: apiError
+                    })
                 }
-                console.error('Judge API Error:', apiError)
+                console.error('Judge provider request failed.')
                 throw new Error(
-                    `API Error: ${apiError.message || 'Request failed'}`
+                    'Judge request failed. Check provider settings and network access.',
+                    { cause: apiError }
                 )
             }
 
@@ -163,9 +170,11 @@ You can wrap the JSON in a markdown code block if needed. No other text or expla
                     'Error: Could not match model IDs in judge response'
                 )
             }
-        } catch (e: any) {
-            console.error('Judge error:', e)
-            setJudgeStatus(`Error: ${e.message || 'Failed to judge'}`)
+        } catch (e) {
+            console.error('Judge request failed.')
+            setJudgeStatus(
+                `Error: ${e instanceof Error ? e.message : 'Failed to judge'}`
+            )
         } finally {
             setIsJudging(false)
             setAbortController(null)
