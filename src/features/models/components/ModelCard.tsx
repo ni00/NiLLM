@@ -1,4 +1,4 @@
-import type { HTMLAttributes } from 'react'
+import { memo, type ComponentPropsWithRef } from 'react'
 import { providerLabel } from '@/lib/providers/catalog'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,10 +24,10 @@ interface ModelCardProps {
     onDuplicate: (model: LLMModel) => void
     onDelete: (id: string) => void
     onToggle: (id: string) => void
-    dragHandleProps?: HTMLAttributes<HTMLElement>
+    dragHandleProps?: ComponentPropsWithRef<'button'>
 }
 
-export function ModelCard({
+export const ModelCard = memo(function ModelCard({
     model,
     isActive,
     avgTPS,
@@ -45,12 +45,16 @@ export function ModelCard({
                 <div className="flex items-start justify-between">
                     <div className="space-y-1 flex-1 min-w-0 mr-2">
                         <div className="flex items-center gap-2">
-                            <div
-                                {...dragHandleProps}
-                                className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded-md transition-colors -ml-1"
-                            >
-                                <GripVertical className="h-4 w-4 text-muted-foreground/40" />
-                            </div>
+                            {dragHandleProps && (
+                                <button
+                                    type="button"
+                                    {...dragHandleProps}
+                                    aria-label={`Drag ${model.name}`}
+                                    className="cursor-grab active:cursor-grabbing touch-none p-1 hover:bg-muted rounded-md transition-colors -ml-1 focus-visible:outline-2 focus-visible:outline-primary"
+                                >
+                                    <GripVertical className="h-4 w-4 text-muted-foreground/40" />
+                                </button>
+                            )}
                             <h3
                                 className="text-lg font-semibold tracking-tight text-foreground truncate"
                                 title={model.name}
@@ -58,7 +62,7 @@ export function ModelCard({
                                 {model.name}
                             </h3>
                         </div>
-                        <div className="pl-6">
+                        <div className={dragHandleProps ? 'pl-6' : ''}>
                             <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                                 {providerLabel(model)}
                             </span>
@@ -66,6 +70,8 @@ export function ModelCard({
                     </div>
                     <Switch
                         checked={isActive}
+                        disabled={!model.enabled}
+                        aria-label={`Select ${model.name}`}
                         onCheckedChange={() => onToggle(model.id)}
                         className="scale-75 data-[state=checked]:bg-primary"
                     />
@@ -151,4 +157,4 @@ export function ModelCard({
             </div>
         </Card>
     )
-}
+})

@@ -1,90 +1,15 @@
-import { useState, useMemo, useDeferredValue } from 'react'
+import { useState, useMemo, useDeferredValue, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { ProviderImportDialog } from '@/features/models/components/ProviderImportDialog'
 import { groupModels } from '@/features/models/domain/models'
 import type { ProviderConnection } from '@/lib/providers/discovery'
 import { useAppStore } from '@/lib/store'
-import { Cpu, Plus, FolderInput, Download } from 'lucide-react'
+import { VirtualModelList } from '@/features/models/components/VirtualModelList'
+import { Cpu, Plus, FolderInput, Download, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-    DndContext,
-    closestCenter,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    DragOverlay,
-    defaultDropAnimationSideEffects
-} from '@dnd-kit/core'
-import {
-    SortableContext,
-    sortableKeyboardCoordinates,
-    rectSortingStrategy,
-    useSortable
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { restrictToParentElement } from '@dnd-kit/modifiers'
 import { PageLayout } from '@/features/layout/PageLayout'
 import { useModels } from '@/features/models/hooks/useModels'
-import { ModelCard } from '@/features/models/components/ModelCard'
 import { ModelEditor } from '@/features/models/components/ModelEditor'
-import { LLMModel } from '@/lib/types'
-
-interface SortableModelCardProps {
-    model: LLMModel
-    isActive: boolean
-    stats: {
-        avgTPS: string
-        avgTTFT: string
-        totalTokens: number
-    }
-    onEdit: (model: LLMModel) => void
-    onDuplicate: (model: LLMModel) => void
-    onDelete: (id: string) => void
-    onToggle: (id: string) => void
-}
-
-function SortableModelCard({
-    model,
-    isActive,
-    stats,
-    onEdit,
-    onDuplicate,
-    onDelete,
-    onToggle
-}: SortableModelCardProps) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id: model.id })
-
-    const style = {
-        transform: CSS.Translate.toString(transform),
-        transition,
-        opacity: isDragging ? 0.3 : 1
-    }
-
-    return (
-        <div ref={setNodeRef} style={style} className="h-full">
-            <ModelCard
-                model={model}
-                isActive={isActive}
-                avgTPS={stats.avgTPS}
-                avgTTFT={stats.avgTTFT}
-                totalTokens={stats.totalTokens}
-                onEdit={onEdit}
-                onDuplicate={onDuplicate}
-                onDelete={onDelete}
-                onToggle={onToggle}
-                dragHandleProps={{ ...attributes, ...listeners }}
-            />
-        </div>
-    )
-}
 
 export function ModelsPage() {
     const {
@@ -112,9 +37,9 @@ export function ModelsPage() {
         ProviderConnection | null | false
     >(false)
     const [query, setQuery] = useState('')
+    const [reordering, setReordering] = useState(false)
     const search = useDeferredValue(query.toLowerCase())
     const [notice, setNotice] = useState('')
-    const [limits, setLimits] = useState<Record<string, number>>({})
     const groups = useMemo(
         () =>
             groupModels(
@@ -126,24 +51,32 @@ export function ModelsPage() {
             ),
         [models, search]
     )
-    const [activeId, setActiveId] = useState<string | null>(null)
-
-    const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates
-        })
+    const openProvider = useCallback(
+        (connection: ProviderConnection) => setProviderDialog(connection),
+        []
     )
-
-    const activeModel = activeId ? models.find((m) => m.id === activeId) : null
+    const selectProvider = useAppStore((state) => state.setModelGroupActive)
 
     return (
         <PageLayout
             title="Models"
             description="Manage your LLM providers and configuration."
             icon={Cpu}
+            isScrollable={false}
             actions={
                 <div className="flex items-center gap-2">
+                    <Button
+                        variant={reordering ? 'default' : 'outline'}
+                        aria-pressed={reordering}
+                        aria-label={reordering ? 'Done reordering' : 'Reorder'}
+                        onClick={() => setReordering((value) => !value)}
+                        className="h-9 w-9 px-0 md:w-auto md:px-4 gap-2"
+                    >
+                        <GripVertical className="h-4 w-4" />
+                        <span className="hidden md:inline text-xs">
+                            {reordering ? 'Done reordering' : 'Reorder'}
+                        </span>
+                    </Button>
                     <input
                         type="file"
                         id="import-models"
@@ -203,7 +136,7 @@ export function ModelsPage() {
                 </div>
             }
         >
-            <div className="mb-6 space-y-2">
+            <div className="shrink-0 px-4 md:px-6 pt-4 md:pt-6 pb-4 space-y-2">
                 <Input
                     aria-label="Search configured models"
                     placeholder="Search models or providers…"
@@ -216,160 +149,20 @@ export function ModelsPage() {
                     </p>
                 )}
             </div>
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={(e) => setActiveId(e.active.id as string)}
-                onDragCancel={() => setActiveId(null)}
-                onDragEnd={(e) => {
-                    handleDragEnd(e)
-                    setActiveId(null)
-                }}
-                modifiers={[restrictToParentElement]}
-            >
-                <SortableContext
-                    items={models.map((m: LLMModel) => m.id)}
-                    strategy={rectSortingStrategy}
-                >
-                    <div className="space-y-8">
-                        {groups.map((group) => {
-                            const allSelected = group.models.every((m) =>
-                                activeModelIds.includes(m.id)
-                            )
-                            const limit = limits[group.key] || 24
-                            return (
-                                <section key={group.key} className="space-y-4">
-                                    <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                                        <div className="min-w-0">
-                                            <h2 className="text-lg font-semibold">
-                                                {group.label}{' '}
-                                                <span className="text-xs text-muted-foreground">
-                                                    {group.models.length} models
-                                                    ·{' '}
-                                                    {
-                                                        group.models.filter(
-                                                            (m) =>
-                                                                activeModelIds.includes(
-                                                                    m.id
-                                                                )
-                                                        ).length
-                                                    }{' '}
-                                                    active
-                                                </span>
-                                            </h2>
-                                            {group.endpoint && (
-                                                <p
-                                                    className="text-xs text-muted-foreground truncate max-w-lg"
-                                                    title={group.endpoint}
-                                                >
-                                                    {group.endpoint}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() =>
-                                                    setProviderDialog(
-                                                        group.models[0]
-                                                    )
-                                                }
-                                            >
-                                                Fetch all models
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() =>
-                                                    useAppStore
-                                                        .getState()
-                                                        .setModelGroupActive(
-                                                            group.models.map(
-                                                                (m) => m.id
-                                                            ),
-                                                            !allSelected
-                                                        )
-                                                }
-                                            >
-                                                {allSelected
-                                                    ? 'Deselect provider'
-                                                    : 'Select provider'}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                                        {group.models
-                                            .slice(0, limit)
-                                            .map((model) => (
-                                                <SortableModelCard
-                                                    key={model.id}
-                                                    model={model}
-                                                    isActive={activeModelIds.includes(
-                                                        model.id
-                                                    )}
-                                                    stats={getModelStats(model)}
-                                                    onEdit={handleEditClick}
-                                                    onDuplicate={
-                                                        handleDuplicateModel
-                                                    }
-                                                    onDelete={deleteModel}
-                                                    onToggle={
-                                                        toggleModelActivation
-                                                    }
-                                                />
-                                            ))}
-                                    </div>
-                                    {group.models.length > limit && (
-                                        <Button
-                                            variant="outline"
-                                            onClick={() =>
-                                                setLimits((previous) => ({
-                                                    ...previous,
-                                                    [group.key]: limit + 24
-                                                }))
-                                            }
-                                        >
-                                            Show more (
-                                            {group.models.length - limit}{' '}
-                                            remaining)
-                                        </Button>
-                                    )}
-                                </section>
-                            )
-                        })}
-                        {!groups.length && (
-                            <p className="py-12 text-center text-muted-foreground">
-                                No models match your search.
-                            </p>
-                        )}
-                    </div>
-                </SortableContext>
-
-                <DragOverlay
-                    dropAnimation={{
-                        sideEffects: defaultDropAnimationSideEffects({
-                            styles: {
-                                active: {
-                                    opacity: '0.3'
-                                }
-                            }
-                        })
-                    }}
-                >
-                    {activeId && activeModel ? (
-                        <ModelCard
-                            model={activeModel}
-                            isActive={activeModelIds.includes(activeId)}
-                            {...getModelStats(activeModel)}
-                            onEdit={() => {}}
-                            onDuplicate={() => {}}
-                            onDelete={() => {}}
-                            onToggle={() => {}}
-                        />
-                    ) : null}
-                </DragOverlay>
-            </DndContext>
+            <VirtualModelList
+                groups={groups}
+                reordering={reordering}
+                filterKey={search}
+                activeModelIds={activeModelIds}
+                getModelStats={getModelStats}
+                onEdit={handleEditClick}
+                onDuplicate={handleDuplicateModel}
+                onDelete={deleteModel}
+                onToggle={toggleModelActivation}
+                onDragEnd={handleDragEnd}
+                onFetchProvider={openProvider}
+                onSelectProvider={selectProvider}
+            />
 
             {providerDialog !== false && (
                 <ProviderImportDialog

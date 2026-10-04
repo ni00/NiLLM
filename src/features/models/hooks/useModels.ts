@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { aggregateStatistics } from '@/features/stats/domain/statistics'
@@ -67,11 +67,11 @@ export function useModels() {
         setNewModel({ provider: 'openrouter', enabled: true })
     }
 
-    const handleEditClick = (model: LLMModel) => {
+    const handleEditClick = useCallback((model: LLMModel) => {
         setNewModel(model)
         setEditingModelId(model.id)
         setIsAdding(true)
-    }
+    }, [])
 
     const handleCancel = () => {
         setIsAdding(false)
@@ -79,15 +79,18 @@ export function useModels() {
         setNewModel({ provider: 'openrouter', enabled: true })
     }
 
-    const handleDuplicateModel = (model: LLMModel) => {
-        const duplicated: LLMModel = {
-            ...model,
-            id: crypto.randomUUID(),
-            name: `${model.name} (Copy)`,
-            enabled: true
-        }
-        addModel(duplicated)
-    }
+    const handleDuplicateModel = useCallback(
+        (model: LLMModel) => {
+            const duplicated: LLMModel = {
+                ...model,
+                id: crypto.randomUUID(),
+                name: `${model.name} (Copy)`,
+                enabled: true
+            }
+            addModel(duplicated)
+        },
+        [addModel]
+    )
 
     const statistics = useMemo(
         () =>
@@ -99,23 +102,29 @@ export function useModels() {
             ),
         [models, sessions]
     )
-    const getModelStats = (model: LLMModel) => {
-        const stats = statistics.get(model.id)
-        return {
-            avgTPS: stats?.avgTPS ? stats.avgTPS.toFixed(1) : '-',
-            avgTTFT: stats?.avgTTFT ? stats.avgTTFT.toFixed(0) : '-',
-            totalTokens: stats?.totalTokens || 0
-        }
-    }
+    const getModelStats = useCallback(
+        (model: LLMModel) => {
+            const stats = statistics.get(model.id)
+            return {
+                avgTPS: stats?.avgTPS ? stats.avgTPS.toFixed(1) : '-',
+                avgTTFT: stats?.avgTTFT ? stats.avgTTFT.toFixed(0) : '-',
+                totalTokens: stats?.totalTokens || 0
+            }
+        },
+        [statistics]
+    )
 
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event
-        if (over && active.id !== over.id) {
-            const oldIndex = models.findIndex((m) => m.id === active.id)
-            const newIndex = models.findIndex((m) => m.id === over.id)
-            reorderModels(oldIndex, newIndex)
-        }
-    }
+    const handleDragEnd = useCallback(
+        (event: DragEndEvent) => {
+            const { active, over } = event
+            if (over && active.id !== over.id) {
+                const oldIndex = models.findIndex((m) => m.id === active.id)
+                const newIndex = models.findIndex((m) => m.id === over.id)
+                reorderModels(oldIndex, newIndex)
+            }
+        },
+        [models, reorderModels]
+    )
 
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
