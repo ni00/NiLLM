@@ -38,7 +38,15 @@ export function SettingsPage() {
         }))
     )
     return (
-        <PageLayout title={t('Settings')} icon={Settings}>
+        <PageLayout
+            title={t('Settings')}
+            icon={Settings}
+            footer={
+                <p className="text-center text-xs text-muted-foreground">
+                    NiLLM · {t('Version')} {version}
+                </p>
+            }
+        >
             <div className="grid w-full min-w-0 grid-cols-1 gap-6 pb-6 lg:grid-cols-2 2xl:grid-cols-3">
                 <section className="rounded-xl border p-4 sm:p-6 space-y-6">
                     <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -120,9 +128,6 @@ export function SettingsPage() {
                         />
                     </div>
                 </section>
-                <p className="col-span-full text-xs text-muted-foreground">
-                    NiLLM · {t('Version')} {version}
-                </p>
             </div>
         </PageLayout>
     )

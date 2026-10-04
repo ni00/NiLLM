@@ -158,6 +158,39 @@ test('settings use the available width and adapt card columns to the window', as
         expect(
             await page.evaluate(() => document.documentElement.scrollWidth)
         ).toBeLessThanOrEqual(width)
+        const footer = await page.locator('main footer').evaluate((element) => {
+            const rect = element.getBoundingClientRect()
+            const main = element.closest('main')!
+            const mainRect = main.getBoundingClientRect()
+            const paddingBottom = Number.parseFloat(
+                getComputedStyle(main).paddingBottom
+            )
+            return {
+                center: rect.left + rect.width / 2,
+                expectedCenter: mainRect.left + mainRect.width / 2,
+                bottom: rect.bottom,
+                expectedBottom: mainRect.bottom - paddingBottom,
+                textAlign: getComputedStyle(element.querySelector('p')!)
+                    .textAlign
+            }
+        })
+        expect(Math.abs(footer.center - footer.expectedCenter)).toBeLessThan(1)
+        expect(Math.abs(footer.bottom - footer.expectedBottom)).toBeLessThan(1)
+        expect(footer.textAlign).toBe('center')
     }
     await page.screenshot({ path: 'test-results/settings-wide.png' })
+    await page.setViewportSize({ width: 390, height: 480 })
+    const viewport = page.locator('main [data-slot="scroll-area-viewport"]')
+    expect(
+        await viewport.evaluate(
+            (element) => element.scrollHeight > element.clientHeight
+        )
+    ).toBe(true)
+    await page
+        .getByRole('combobox', { name: 'Concurrent models' })
+        .scrollIntoViewIfNeeded()
+    await expect(
+        page.getByRole('combobox', { name: 'Concurrent models' })
+    ).toBeVisible()
+    await expect(page.locator('main footer')).toBeInViewport()
 })

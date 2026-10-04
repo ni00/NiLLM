@@ -8,6 +8,8 @@ interface PageLayoutProps {
     title: string
     icon?: LucideIcon
     actions?: React.ReactNode
+    /** Optional footer kept below the scrolling content. */
+    footer?: React.ReactNode
     children?: React.ReactNode
     className?: string
     /**
@@ -27,6 +29,7 @@ export function PageLayout({
     title,
     icon,
     actions,
+    footer,
     children,
     className,
     isScrollable = true,
@@ -71,6 +74,11 @@ export function PageLayout({
                 >
                     {children}
                 </div>
+            )}
+            {footer && (
+                <footer className="shrink-0 px-4 pt-2 pb-4 md:px-6 md:pb-6">
+                    {footer}
+                </footer>
             )}
         </div>
     )
