@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import { storeHydration } from '@/lib/store'
 
 import { Layout } from '@/features/layout/Layout'
+import { mainRoutes } from '@/app/navigation'
 
 const createAppRouter = () =>
     createBrowserRouter([
@@ -15,37 +16,10 @@ const createAppRouter = () =>
             element: <Layout />,
             HydrateFallback: LoadingView,
             children: [
-                {
-                    path: '/',
-                    lazy: () => import('@/pages/home')
-                },
-                {
-                    path: '/stats',
-                    lazy: () => import('@/pages/stats')
-                },
-                {
-                    path: '/experiments',
-                    lazy: () => import('@/pages/experiments')
-                },
+                ...mainRoutes(),
                 {
                     path: '/experiments/:runId',
                     lazy: () => import('@/pages/experiment-detail')
-                },
-                {
-                    path: '/tests',
-                    lazy: () => import('@/pages/tests')
-                },
-                {
-                    path: '/models',
-                    lazy: () => import('@/pages/models')
-                },
-                {
-                    path: '/prompts',
-                    lazy: () => import('@/pages/prompts')
-                },
-                {
-                    path: '/settings',
-                    lazy: () => import('@/pages/settings')
                 },
                 {
                     path: '*',

@@ -32,6 +32,7 @@ const DEFAULT_CONFIG: GenerationConfig = {
 
 export type AppLanguage = 'en' | 'zh' | 'ja'
 export type AppTheme = 'system' | 'light' | 'dark'
+export type AppDensity = 'comfortable' | 'compact'
 
 export interface ConfigSlice {
     globalConfig: GenerationConfig
@@ -42,6 +43,8 @@ export interface ConfigSlice {
     setBenchmarkLanguage: (language: AppLanguage | null) => void
     theme: AppTheme
     setTheme: (theme: AppTheme) => void
+    density: AppDensity
+    setDensity: (density: AppDensity) => void
 }
 
 export const createConfigSlice: StateCreator<AppState, [], [], ConfigSlice> = (
@@ -51,6 +54,7 @@ export const createConfigSlice: StateCreator<AppState, [], [], ConfigSlice> = (
     language: 'en',
     benchmarkLanguage: null,
     theme: 'system',
+    density: 'comfortable',
     // Scalars assign directly (clearing an optional field unsets it); nested
     // timeout/telemetry fold through mergeGenerationConfig so sibling fields
     // never get frozen by a partial nested update.
@@ -67,5 +71,6 @@ export const createConfigSlice: StateCreator<AppState, [], [], ConfigSlice> = (
 
     setLanguage: (language) => set({ language }),
     setBenchmarkLanguage: (benchmarkLanguage) => set({ benchmarkLanguage }),
-    setTheme: (theme) => set({ theme })
+    setTheme: (theme) => set({ theme }),
+    setDensity: (density) => set({ density })
 })

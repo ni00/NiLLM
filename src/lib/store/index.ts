@@ -98,11 +98,11 @@ export const createAppState: StateCreator<AppState> = (set, get, api) => ({
                 experimentRuns: state.experimentRuns,
                 globalConfig: state.globalConfig,
                 activeModelIds: state.activeModelIds,
-                activeSessionId: state.activeSessionId,
                 testSetOrder: state.testSetOrder,
                 language: state.language,
                 benchmarkLanguage: state.benchmarkLanguage,
                 theme: state.theme,
+                density: state.density,
                 arenaColumns: state.arenaColumns,
                 arenaSortBy: state.arenaSortBy
             }

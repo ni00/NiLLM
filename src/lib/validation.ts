@@ -327,6 +327,7 @@ const backupContentSchema = z
         language: z.enum(['en', 'zh', 'ja']).optional(),
         benchmarkLanguage: z.enum(['en', 'zh', 'ja']).nullable().optional(),
         theme: z.enum(['system', 'light', 'dark']).optional(),
+        density: z.enum(['comfortable', 'compact']).optional(),
         arenaColumns: finite.int().min(0).max(5).optional(),
         arenaSortBy: z
             .enum(['default', 'name', 'ttft', 'tps', 'rating'])

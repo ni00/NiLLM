@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { FlaskConical, Plus, Trash2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useShallow } from 'zustand/react/shallow'
@@ -43,6 +43,14 @@ export function ExperimentsPage() {
     )
     const [creating, setCreating] = useState(false)
     const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    useEffect(() => {
+        if (searchParams.get('new') === '1') {
+            setCreating(true)
+            setSearchParams({}, { replace: true })
+        }
+    }, [searchParams, setSearchParams])
 
     return (
         <PageLayout

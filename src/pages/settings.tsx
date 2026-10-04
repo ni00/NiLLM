@@ -3,10 +3,10 @@ import { useShallow } from 'zustand/react/shallow'
 import { PageLayout } from '@/features/layout/PageLayout'
 import { SelectDropdown } from '@/components/ui/select-dropdown'
 import { Label } from '@/components/ui/label'
-import { useAppStore } from '@/lib/store'
-import type { AppLanguage, AppTheme } from '@/lib/store/config'
 import { useI18n } from '@/lib/i18n'
 import { version } from '../../package.json'
+import { useAppStore } from '@/lib/store'
+import type { AppLanguage, AppTheme, AppDensity } from '@/lib/store/config'
 
 const languages = [
     { value: 'en', label: 'English' },
@@ -21,6 +21,8 @@ export function SettingsPage() {
         setLanguage,
         theme,
         setTheme,
+        density,
+        setDensity,
         benchmarkLanguage,
         setBenchmarkLanguage,
         globalConfig,
@@ -31,6 +33,8 @@ export function SettingsPage() {
             setLanguage: state.setLanguage,
             theme: state.theme,
             setTheme: state.setTheme,
+            density: state.density,
+            setDensity: state.setDensity,
             benchmarkLanguage: state.benchmarkLanguage,
             setBenchmarkLanguage: state.setBenchmarkLanguage,
             globalConfig: state.globalConfig,
@@ -103,6 +107,23 @@ export function SettingsPage() {
                                 })
                             )}
                             onChange={(value) => setTheme(value as AppTheme)}
+                        />
+                    </div>
+                    <div className="grid min-w-0 gap-2 sm:grid-cols-2 sm:items-center">
+                        <Label>{t('Density')}</Label>
+                        <SelectDropdown
+                            ariaLabel={t('Density')}
+                            value={density}
+                            options={[
+                                {
+                                    value: 'comfortable',
+                                    label: t('Comfortable')
+                                },
+                                { value: 'compact', label: t('Compact') }
+                            ]}
+                            onChange={(value) =>
+                                setDensity(value as AppDensity)
+                            }
                         />
                     </div>
                 </section>

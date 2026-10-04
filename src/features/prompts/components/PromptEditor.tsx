@@ -3,7 +3,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { X, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog'
 import type { PromptForm } from '../hooks/usePrompts'
 
 interface PromptEditorProps {
@@ -24,7 +32,6 @@ export function PromptEditor({
     onChange
 }: PromptEditorProps) {
     const t = useI18n()
-    if (!isOpen) return null
 
     const extractedVars =
         editForm.content
@@ -43,20 +50,22 @@ export function PromptEditor({
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="w-full max-w-2xl bg-card border shadow-2xl rounded-xl flex flex-col max-h-[90vh] animate-in zoom-in-95">
-                <div className="p-4 border-b flex justify-between items-center bg-muted/20">
-                    <h3 className="font-semibold">
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-w-2xl flex flex-col max-h-[90vh]">
+                <DialogHeader>
+                    <DialogTitle>
                         {editingId ? t('Edit Template') : t('New Template')}
-                    </h3>
-                    <Button variant="ghost" size="icon" onClick={onClose}>
-                        <X className="h-5 w-5" />
-                    </Button>
-                </div>
-                <div className="p-6 overflow-y-auto space-y-4">
+                    </DialogTitle>
+                    <DialogDescription>
+                        {t('Edit the prompt template and its variables.')}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1">
                     <div className="space-y-2">
-                        <Label>{t('Title')}</Label>
+                        <Label htmlFor="prompt-title">{t('Title')}</Label>
                         <Input
+                            id="prompt-title"
                             value={editForm.title}
                             onChange={(e) =>
                                 onChange({ ...editForm, title: e.target.value })
@@ -65,12 +74,13 @@ export function PromptEditor({
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>{t('Content')}</Label>
+                        <Label htmlFor="prompt-content">{t('Content')}</Label>
                         <div className="text-xs text-muted-foreground mb-1">
                             {t('Use')} <code>{'{{variable}}'}</code>{' '}
                             {t('to define variables.')}
                         </div>
                         <Textarea
+                            id="prompt-content"
                             value={editForm.content}
                             onChange={(e) =>
                                 onChange({
@@ -97,15 +107,20 @@ export function PromptEditor({
                                 const match = editForm.variables.find(
                                     (v) => v.name === vName
                                 )
+                                const inputId = `prompt-var-${vName}`
                                 return (
                                     <div
                                         key={vName}
                                         className="grid grid-cols-[100px_1fr] gap-2 items-center"
                                     >
-                                        <span className="text-xs font-mono font-medium text-right pr-2">
+                                        <Label
+                                            htmlFor={inputId}
+                                            className="text-xs font-mono font-medium text-right pr-2"
+                                        >
                                             {vName}
-                                        </span>
+                                        </Label>
                                         <Input
+                                            id={inputId}
                                             value={match?.description || ''}
                                             onChange={(e) =>
                                                 updateVariableDescription(
@@ -125,7 +140,8 @@ export function PromptEditor({
                         </div>
                     )}
                 </div>
-                <div className="p-4 border-t bg-muted/20 flex justify-end gap-2">
+
+                <DialogFooter>
                     <Button variant="ghost" onClick={onClose}>
                         {t('Cancel')}
                     </Button>
@@ -135,8 +151,8 @@ export function PromptEditor({
                     >
                         <Save className="h-4 w-4 mr-2" /> {t('Save')}
                     </Button>
-                </div>
-            </div>
-        </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }

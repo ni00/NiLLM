@@ -68,6 +68,26 @@ export const messages = {
         zh: '统计',
         ja: '統計'
     },
+    Experiments: {
+        zh: '实验',
+        ja: '実験'
+    },
+    Workspace: {
+        zh: '工作区',
+        ja: 'ワークスペース'
+    },
+    Assets: {
+        zh: '资产',
+        ja: 'アセット'
+    },
+    Preferences: {
+        zh: '偏好',
+        ja: '環境設定'
+    },
+    More: {
+        zh: '更多',
+        ja: 'その他'
+    },
     Performance: {
         zh: '性能统计',
         ja: 'パフォーマンス'
@@ -798,9 +818,13 @@ export const messages = {
         zh: '滚动到底部',
         ja: '末尾に移動'
     },
-    'Generating response...': {
-        zh: '正在生成回答…',
-        ja: '回答を生成中…'
+    'Generating…': {
+        zh: '生成中…',
+        ja: '生成中…'
+    },
+    'No text output': {
+        zh: '无文本输出',
+        ja: 'テキスト出力なし'
     },
     'Thinking...': {
         zh: '思考中…',
@@ -917,6 +941,10 @@ export const messages = {
     'Write a story about {{topic}} in the style of {{author}}...': {
         zh: '以 {{author}} 的风格写一个关于 {{topic}} 的故事…',
         ja: '{{author}} の作風で {{topic}} の物語を書いてください…'
+    },
+    'Edit the prompt template and its variables.': {
+        zh: '编辑提示词模板与变量。',
+        ja: 'プロンプトテンプレートと変数を編集します。'
     },
     'to define variables.': {
         zh: '来定义变量。',
@@ -1498,5 +1526,169 @@ export const messages = {
         ja: '評価結果のモデル ID を照合できません'
     },
     Cancelled: { zh: '已取消', ja: 'キャンセルしました' },
-    '{count} chars': { zh: '{count} 个字符', ja: '{count} 文字' }
+    '{count} chars': { zh: '{count} 个字符', ja: '{count} 文字' },
+    Commands: { zh: '命令', ja: 'コマンド' },
+    'Search commands...': {
+        zh: '搜索命令…',
+        ja: 'コマンドを検索…'
+    },
+    'No matching commands': {
+        zh: '没有匹配的命令',
+        ja: '一致するコマンドがありません'
+    },
+    'New Experiment': { zh: '新建实验', ja: '新規実験' },
+    'Keyboard Shortcuts': {
+        zh: '键盘快捷键',
+        ja: 'キーボードショートカット'
+    },
+    'Open command menu': {
+        zh: '打开命令菜单',
+        ja: 'コマンドメニューを開く'
+    },
+    'Send message': { zh: '发送消息', ja: 'メッセージを送信' },
+    'Close dialog': { zh: '关闭对话框', ja: 'ダイアログを閉じる' },
+    'No experiments yet': { zh: '还没有实验', ja: '実験はまだありません' },
+    'Create or import a test set first, then run it as an experiment.': {
+        zh: '请先创建或导入测试集，再作为实验运行。',
+        ja: 'まずテストセットを作成またはインポートしてから、実験として実行してください。'
+    },
+    'Pick a test set and compare models under identical, independent conditions.':
+        {
+            zh: '选择测试集，在完全相同的独立条件下对比模型。',
+            ja: 'テストセットを選び、同一の独立した条件でモデルを比較します。'
+        },
+    tasks: { zh: '任务', ja: 'タスク' },
+    executed: { zh: '已执行', ja: '実行済み' },
+    'Delete this experiment?': {
+        zh: '删除这个实验？',
+        ja: 'この実験を削除しますか？'
+    },
+    'All recorded attempts and parameters will be removed. This cannot be undone.':
+        {
+            zh: '所有已记录的尝试和参数都会被删除，且无法恢复。',
+            ja: '記録されたすべての試行とパラメータが削除され、元に戻せません。'
+        },
+    'Experiment not found': { zh: '实验不存在', ja: '実験が見つかりません' },
+    'Back to experiments': { zh: '返回实验列表', ja: '実験一覧に戻る' },
+    'Continue pending tasks': {
+        zh: '继续待执行任务',
+        ja: '未実行タスクを再開'
+    },
+    'Retry failed tasks': { zh: '重跑失败任务', ja: '失敗タスクを再実行' },
+    'Deleting…': { zh: '删除中…', ja: '削除中…' },
+    Executed: { zh: '已执行', ja: '実行済み' },
+    'Disabling a model does not change this run; pause or cancel it first.': {
+        zh: '禁用模型不会改变本实验；请先暂停或取消实验。',
+        ja: 'モデルを無効化しても本実験は変更されません。先に一時停止またはキャンセルしてください。'
+    },
+    'Frozen parameters': { zh: '冻结参数', ja: '固定パラメータ' },
+    'Case × Model': { zh: '用例 × 模型', ja: 'ケース × モデル' },
+    'All groups': { zh: '全部参数组', ja: 'すべてのグループ' },
+    'Parameter group': { zh: '参数组', ja: 'パラメータグループ' },
+    Repetition: { zh: '重复', ja: '繰り返し' },
+    Repeat: { zh: '重复', ja: '繰り返し' },
+    'Not run': { zh: '未执行', ja: '未実行' },
+    attempts: { zh: '次尝试', ja: '回の試行' },
+    'Configure Experiment': { zh: '配置实验', ja: '実験を設定' },
+    'Each case runs independently per model; conversation history is never shared.':
+        {
+            zh: '每个用例对每个模型独立运行，绝不共享会话历史。',
+            ja: '各ケースはモデルごとに独立して実行され、会話履歴は共有されません。'
+        },
+    'Experiment Name': { zh: '实验名称', ja: '実験名' },
+    'e.g. Nightly regression': {
+        zh: '例如：夜间回归',
+        ja: '例：夜間リグレッション'
+    },
+    'Test Set': { zh: '测试集', ja: 'テストセット' },
+    'No test sets yet': { zh: '还没有测试集', ja: 'テストセットがありません' },
+    'No enabled chat models.': {
+        zh: '没有已启用的对话模型。',
+        ja: '有効なチャットモデルがありません。'
+    },
+    'Add a model': { zh: '添加模型', ja: 'モデルを追加' },
+    Repetitions: { zh: '重复次数', ja: '繰り返し回数' },
+    'Repeat each case with the same parameters to measure variance.': {
+        zh: '以相同参数重复每个用例，用于测量波动。',
+        ja: '同じパラメータで各ケースを繰り返し、ばらつきを測定します。'
+    },
+    'Planned calls': { zh: '计划调用数', ja: '予定呼び出し数' },
+    'cases × models × groups × repeats': {
+        zh: '用例 × 模型 × 参数组 × 重复',
+        ja: 'ケース × モデル × グループ × 繰り返し'
+    },
+    'Could not create the experiment.': {
+        zh: '无法创建实验。',
+        ja: '実験を作成できませんでした。'
+    },
+    'Creating…': { zh: '创建中…', ja: '作成中…' },
+    'Create Experiment': { zh: '创建实验', ja: '実験を作成' },
+    'Download Full Backup': {
+        zh: '下载完整备份',
+        ja: '完全バックアップをダウンロード'
+    },
+    'A full backup contains every workspace domain: models, sessions, test sets, prompts and experiments.':
+        {
+            zh: '完整备份包含所有工作区数据：模型、会话、测试集、提示词和实验。',
+            ja: '完全バックアップにはすべてのワークスペース領域が含まれます：モデル、セッション、テストセット、プロンプト、実験。'
+        },
+    'Include API keys and endpoints': {
+        zh: '包含 API 密钥和端点',
+        ja: 'APIキーとエンドポイントを含める'
+    },
+    'Secrets stay on this machine unless you explicitly include them. Share carefully.':
+        {
+            zh: '除非明确勾选，密钥不会离开本机。分享时请谨慎。',
+            ja: '明示的に含めない限り、シークレットは本機から出ません。共有時はご注意ください。'
+        },
+    'Download Backup': { zh: '下载备份', ja: 'バックアップをダウンロード' },
+    'Restore is unavailable while local storage is failing.': {
+        zh: '本地存储故障期间无法恢复数据。',
+        ja: 'ローカルストレージに障害がある間は復元できません。'
+    },
+    'Stop running requests before restoring data.': {
+        zh: '恢复数据前请先停止运行中的请求。',
+        ja: 'データを復元する前に実行中のリクエストを停止してください。'
+    },
+    'Restore a backup file': {
+        zh: '恢复备份文件',
+        ja: 'バックアップファイルを復元'
+    },
+    'Clearing is unavailable while local storage is failing.': {
+        zh: '本地存储故障期间无法清理数据。',
+        ja: 'ローカルストレージに障害がある間はクリアできません。'
+    },
+    'Stop running requests first.': {
+        zh: '请先停止运行中的请求。',
+        ja: '先に実行中のリクエストを停止してください。'
+    },
+    'Arena data only: experiments and prompts are kept. Experiments are managed on their own page.':
+        {
+            zh: '仅清理竞技场数据：实验与提示词保留，实验在其页面单独管理。',
+            ja: 'アリーナデータのみ消去：実験とプロンプトは保持され、実験は専用ページで管理されます。'
+        },
+    'Local data could not be read.': {
+        zh: '无法读取本地数据。',
+        ja: 'ローカルデータを読み込めませんでした。'
+    },
+    'Changes are not being saved.': {
+        zh: '更改未被保存。',
+        ja: '変更が保存されていません。'
+    },
+    'Latest changes stay in memory and retry automatically.': {
+        zh: '最新更改保留在内存中，会自动重试写入。',
+        ja: '最新の変更はメモリに保持され、自動的に再試行されます。'
+    },
+    'Download raw storage': {
+        zh: '下载原始存储',
+        ja: '生ストレージをダウンロード'
+    },
+    Density: { zh: '信息密度', ja: '表示密度' },
+    Comfortable: { zh: '宽松', ja: '標準' },
+    Compact: { zh: '紧凑', ja: 'コンパクト' },
+    Failed: { zh: '失败', ja: '失敗' },
+    'Expected answer (optional)': {
+        zh: '预期答案（可选）',
+        ja: '期待する回答（任意）'
+    }
 } as const

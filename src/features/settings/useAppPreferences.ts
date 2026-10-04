@@ -4,6 +4,16 @@ import { useAppStore } from '@/lib/store'
 export function useAppPreferences() {
     const language = useAppStore((state) => state.language)
     const theme = useAppStore((state) => state.theme)
+    const density = useAppStore((state) => state.density)
+
+    useLayoutEffect(() => {
+        // Density only tightens list/table/card spacing; body text size and
+        // touch targets stay untouched either way.
+        document.documentElement.classList.toggle(
+            'density-compact',
+            density === 'compact'
+        )
+    }, [density])
 
     useLayoutEffect(() => {
         document.documentElement.lang = language === 'zh' ? 'zh-CN' : language

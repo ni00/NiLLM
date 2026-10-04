@@ -1,7 +1,7 @@
 import React from 'react'
 import { BenchmarkResult } from '@/lib/types'
 import { PromptHeader } from './result/PromptHeader'
-import { ResponseBody } from './result/ResponseBody'
+import { ResponseBody, displayStatus } from './result/ResponseBody'
 import { RatingBar } from './result/RatingBar'
 import { MetricsBar } from './result/MetricsBar'
 
@@ -45,6 +45,8 @@ export const ResultBlock = React.memo(
             ? { ...res.metrics, ...streaming.metrics }
             : res.metrics
 
+        const status = streaming ? 'pending' : displayStatus(res)
+
         return (
             <div
                 className={`space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ${!isLast ? 'border-l-2 border-muted pl-4 ml-1' : ''}`}
@@ -62,10 +64,11 @@ export const ResultBlock = React.memo(
                             response={effectiveResponse}
                             reasoning={effectiveReasoning}
                             isStreaming={!!streaming}
+                            status={status}
                             error={res.error}
                             onRetry={() => onRetry(res.id)}
                         />
-                        {res.response && (
+                        {status === 'completed' && (
                             <RatingBar
                                 rating={res.rating}
                                 ratingSource={res.ratingSource}

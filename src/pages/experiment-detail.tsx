@@ -25,6 +25,17 @@ import {
 } from '@/components/ui/alert-dialog'
 import { PageLayout } from '@/features/layout/PageLayout'
 import type { BenchmarkResult, ExperimentTask } from '@/lib/types'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
+
+const CASE_PAGE_SIZE = 50
+const MODEL_PAGE_SIZE = 6
 
 const PAGE_SIZE = 50
 
@@ -98,8 +109,20 @@ export function ExperimentDetailPage() {
     const [page, setPage] = useState(0)
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [deleting, setDeleting] = useState(false)
+    const [repeatFilter, setRepeatFilter] = useState(0)
+    const [modelPage, setModelPage] = useState(0)
+    const [openTaskId, setOpenTaskId] = useState<string | null>(null)
 
-    const filteredTasks = useMemo(() => {
+    const matrixTasks = useMemo(() => {
+        if (!run) return []
+        return run.tasks.filter(
+            (task) =>
+                (variantFilter === 'all' || task.variantId === variantFilter) &&
+                task.repeatIndex === repeatFilter
+        )
+    }, [run, variantFilter, repeatFilter])
+
+    const listTasks = useMemo(() => {
         if (!run) return []
         return run.tasks.filter(
             (task) =>
@@ -107,11 +130,39 @@ export function ExperimentDetailPage() {
         )
     }, [run, variantFilter])
 
-    const pageCount = Math.max(1, Math.ceil(filteredTasks.length / PAGE_SIZE))
+    const pageCount = Math.max(
+        1,
+        Math.ceil((run?.testSet.cases.length ?? 0) / CASE_PAGE_SIZE)
+    )
     const safePage = Math.min(page, pageCount - 1)
-    const visibleTasks = filteredTasks.slice(
-        safePage * PAGE_SIZE,
-        safePage * PAGE_SIZE + PAGE_SIZE
+    const visibleCases = run
+        ? run.testSet.cases.slice(
+              safePage * CASE_PAGE_SIZE,
+              safePage * CASE_PAGE_SIZE + CASE_PAGE_SIZE
+          )
+        : []
+    const modelPageCount = Math.max(
+        1,
+        Math.ceil((run?.models.length ?? 0) / MODEL_PAGE_SIZE)
+    )
+    const safeModelPage = Math.min(modelPage, modelPageCount - 1)
+    const visibleModels = run
+        ? run.models.slice(
+              safeModelPage * MODEL_PAGE_SIZE,
+              safeModelPage * MODEL_PAGE_SIZE + MODEL_PAGE_SIZE
+          )
+        : []
+    const taskFor = (caseId: string, modelId: string) =>
+        matrixTasks.find(
+            (task) => task.caseId === caseId && task.modelId === modelId
+        )
+    const openTask = run?.tasks.find((task) => task.id === openTaskId) ?? null
+
+    const listPageCount = Math.max(1, Math.ceil(listTasks.length / PAGE_SIZE))
+    const safeListPage = Math.min(page, listPageCount - 1)
+    const visibleTasks = listTasks.slice(
+        safeListPage * PAGE_SIZE,
+        safeListPage * PAGE_SIZE + PAGE_SIZE
     )
 
     if (!run) {
@@ -295,25 +346,149 @@ export function ExperimentDetailPage() {
 
                 <div className="rounded-xl border bg-card p-4 space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h3 className="text-sm font-semibold">{t('Tasks')}</h3>
-                        <select
-                            value={variantFilter}
-                            onChange={(event) => {
-                                setVariantFilter(event.target.value)
-                                setPage(0)
-                            }}
-                            className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
-                            aria-label={t('Parameter group')}
-                        >
-                            <option value="all">{t('All groups')}</option>
-                            {run.variants.map((variant) => (
-                                <option key={variant.id} value={variant.id}>
-                                    {variant.name}
-                                </option>
-                            ))}
-                        </select>
+                        <h3 className="text-sm font-semibold">
+                            {t('Case × Model')}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <select
+                                value={variantFilter}
+                                onChange={(event) => {
+                                    setVariantFilter(event.target.value)
+                                    setPage(0)
+                                    setModelPage(0)
+                                }}
+                                className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+                                aria-label={t('Parameter group')}
+                            >
+                                <option value="all">{t('All groups')}</option>
+                                {run.variants.map((variant) => (
+                                    <option key={variant.id} value={variant.id}>
+                                        {variant.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                value={repeatFilter}
+                                onChange={(event) => {
+                                    setRepeatFilter(
+                                        parseInt(event.target.value)
+                                    )
+                                    setPage(0)
+                                }}
+                                className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+                                aria-label={t('Repetition')}
+                            >
+                                {Array.from(
+                                    { length: run.repetitions },
+                                    (_, index) => (
+                                        <option key={index} value={index}>
+                                            {t('Repeat')} {index + 1}
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </div>
                     </div>
-                    <div className="space-y-2">
+
+                    {/* Matrix (md+): one cell per case×model. */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-xs border-separate border-spacing-0">
+                            <thead>
+                                <tr>
+                                    <th className="sticky left-0 z-10 bg-card text-left font-medium text-muted-foreground p-1 min-w-48">
+                                        {t('Case')}
+                                    </th>
+                                    {visibleModels.map((model) => (
+                                        <th
+                                            key={model.id}
+                                            className="text-left font-medium text-muted-foreground p-1 min-w-32 max-w-48 truncate"
+                                            title={model.name}
+                                        >
+                                            {model.name}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {visibleCases.map((testCase, rowIndex) => (
+                                    <tr key={testCase.id}>
+                                        <th
+                                            scope="row"
+                                            className="sticky left-0 z-10 bg-card text-left font-normal text-muted-foreground p-1 truncate max-w-64"
+                                            title={testCase.prompt}
+                                        >
+                                            {safePage * CASE_PAGE_SIZE +
+                                                rowIndex +
+                                                1}
+                                            . {testCase.prompt}
+                                        </th>
+                                        {visibleModels.map((model) => {
+                                            const task = taskFor(
+                                                testCase.id,
+                                                model.id
+                                            )
+                                            const status = task
+                                                ? attemptStatus(task)
+                                                : ('not-run' as const)
+                                            return (
+                                                <td
+                                                    key={model.id}
+                                                    className="p-0.5"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        disabled={!task}
+                                                        onClick={() =>
+                                                            task &&
+                                                            setOpenTaskId(
+                                                                task.id
+                                                            )
+                                                        }
+                                                        className={`w-full h-8 min-w-8 rounded-md border text-[10px] font-semibold uppercase tracking-wide transition-colors flex items-center justify-center gap-1 ${
+                                                            status ===
+                                                            'completed'
+                                                                ? 'border-success/40 bg-success/10 text-success'
+                                                                : status ===
+                                                                    'error'
+                                                                  ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                                                                  : status ===
+                                                                      'cancelled'
+                                                                    ? 'border-border bg-muted/40 text-muted-foreground'
+                                                                    : status ===
+                                                                        'pending'
+                                                                      ? 'border-primary/40 bg-primary/5 text-primary'
+                                                                      : 'border-dashed border-border/60 text-muted-foreground/60'
+                                                        } disabled:cursor-default`}
+                                                        title={
+                                                            task
+                                                                ? `${model.name}: ${status}`
+                                                                : t('Not run')
+                                                        }
+                                                    >
+                                                        {status === 'not-run'
+                                                            ? '·'
+                                                            : status ===
+                                                                'completed'
+                                                              ? '✓'
+                                                              : status ===
+                                                                  'error'
+                                                                ? '!'
+                                                                : status ===
+                                                                    'cancelled'
+                                                                  ? '⨯'
+                                                                  : '…'}
+                                                    </button>
+                                                </td>
+                                            )
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Compact list for small screens. */}
+                    <div className="md:hidden space-y-2">
                         {visibleTasks.map((task) => {
                             const status = attemptStatus(task)
                             const testCase = run.testSet.cases.find(
@@ -322,24 +497,21 @@ export function ExperimentDetailPage() {
                             const model = run.models.find(
                                 (m) => m.id === task.modelId
                             )
-                            const variant = run.variants.find(
-                                (v) => v.id === task.variantId
-                            )
                             return (
-                                <div
+                                <button
                                     key={task.id}
-                                    className="rounded-lg border p-2 text-xs space-y-1"
+                                    type="button"
+                                    onClick={() => setOpenTaskId(task.id)}
+                                    className="w-full text-left rounded-lg border p-2 text-xs space-y-1 hover:bg-muted/40"
                                 >
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span
                                             className={
-                                                status === 'not-run'
-                                                    ? 'text-muted-foreground'
-                                                    : status === 'completed'
-                                                      ? 'text-emerald-600 dark:text-emerald-400'
-                                                      : status === 'error'
-                                                        ? 'text-destructive'
-                                                        : 'text-muted-foreground'
+                                                status === 'completed'
+                                                    ? 'text-success'
+                                                    : status === 'error'
+                                                      ? 'text-destructive'
+                                                      : 'text-muted-foreground'
                                             }
                                         >
                                             {status === 'not-run'
@@ -349,57 +521,120 @@ export function ExperimentDetailPage() {
                                         <span className="text-muted-foreground">
                                             r{task.repeatIndex + 1}
                                         </span>
-                                        {variant && <span>{variant.name}</span>}
                                         {model && (
                                             <span className="font-medium">
                                                 {model.name}
                                             </span>
                                         )}
-                                        <span className="truncate flex-1 italic text-muted-foreground">
-                                            {testCase?.prompt}
-                                        </span>
                                     </div>
-                                    {task.attempts.length > 0 && (
-                                        <div className="space-y-1 pl-2 border-l border-border/60 ml-1">
-                                            {task.attempts.map(
-                                                (attempt, index) => (
-                                                    <AttemptView
-                                                        key={attempt.id}
-                                                        attempt={attempt}
-                                                        index={index}
-                                                    />
-                                                )
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                                    <div className="truncate italic text-muted-foreground">
+                                        {testCase?.prompt}
+                                    </div>
+                                </button>
                             )
                         })}
                     </div>
-                    {pageCount > 1 && (
-                        <div className="flex items-center justify-between text-xs">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={safePage === 0}
-                                onClick={() => setPage(safePage - 1)}
-                            >
-                                {t('Previous')}
-                            </Button>
-                            <span className="tabular-nums">
-                                {safePage + 1} / {pageCount}
-                            </span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={safePage >= pageCount - 1}
-                                onClick={() => setPage(safePage + 1)}
-                            >
-                                {t('Next')}
-                            </Button>
+
+                    {(pageCount > 1 || modelPageCount > 1) && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={safePage === 0}
+                                    onClick={() => setPage(safePage - 1)}
+                                >
+                                    {t('Previous')}
+                                </Button>
+                                <span className="tabular-nums">
+                                    {safePage + 1} / {pageCount}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={safePage >= pageCount - 1}
+                                    onClick={() => setPage(safePage + 1)}
+                                >
+                                    {t('Next')}
+                                </Button>
+                            </div>
+                            {modelPageCount > 1 && (
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={safeModelPage === 0}
+                                        onClick={() =>
+                                            setModelPage(safeModelPage - 1)
+                                        }
+                                    >
+                                        {t('Models')} ‹
+                                    </Button>
+                                    <span className="tabular-nums">
+                                        {safeModelPage + 1} / {modelPageCount}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={
+                                            safeModelPage >= modelPageCount - 1
+                                        }
+                                        onClick={() =>
+                                            setModelPage(safeModelPage + 1)
+                                        }
+                                    >
+                                        {t('Models')} ›
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
+
+                {openTask && (
+                    <Dialog
+                        open={openTaskId !== null}
+                        onOpenChange={(open) => !open && setOpenTaskId(null)}
+                    >
+                        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+                            <DialogHeader>
+                                <DialogTitle>
+                                    {run.models.find(
+                                        (m) => m.id === openTask.modelId
+                                    )?.name ?? openTask.modelId}
+                                </DialogTitle>
+                                <DialogDescription>
+                                    {run.variants.find(
+                                        (v) => v.id === openTask.variantId
+                                    )?.name ?? ''}{' '}
+                                    · {t('Repeat')} {openTask.repeatIndex + 1} ·{' '}
+                                    {openTask.attempts.length} {t('attempts')}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="flex-1 min-h-0">
+                                <div className="space-y-2">
+                                    <div className="text-xs italic text-muted-foreground rounded-md border bg-muted/20 p-2 select-text">
+                                        {run.testSet.cases.find(
+                                            (c) => c.id === openTask.caseId
+                                        )?.prompt ?? ''}
+                                    </div>
+                                    {openTask.attempts.length === 0 && (
+                                        <div className="text-xs text-muted-foreground">
+                                            {t('Not run')}
+                                        </div>
+                                    )}
+                                    {openTask.attempts.map((attempt, index) => (
+                                        <AttemptView
+                                            key={attempt.id}
+                                            attempt={attempt}
+                                            index={index}
+                                        />
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </div>
 
             <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>

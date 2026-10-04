@@ -11,6 +11,7 @@ import {
 import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { abortAllTasks } from '@/features/benchmark/engine'
+import { isSendShortcut } from '@/features/layout/useGlobalHotkeys'
 import { MentionPicker } from './MentionPicker'
 import { AttachmentPreview } from './AttachmentPreview'
 
@@ -181,6 +182,11 @@ export const ArenaInput = ({
                 setMentionQuery(null)
                 return
             }
+        }
+        if (isSendShortcut(e.nativeEvent)) {
+            e.preventDefault()
+            if (!e.nativeEvent.isComposing) onSend()
+            return
         }
         onKeyDown(e)
     }

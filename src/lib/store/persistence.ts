@@ -33,6 +33,7 @@ export const metaStateKeys = [
     'language',
     'benchmarkLanguage',
     'theme',
+    'density',
     'arenaColumns',
     'arenaSortBy'
 ] as const

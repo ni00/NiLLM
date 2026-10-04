@@ -3,7 +3,15 @@ import { providerOptions } from '@/lib/providers/catalog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Cpu } from 'lucide-react'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog'
 import { SelectDropdown } from '@/components/ui/select-dropdown'
 import type { LLMModel } from '@/lib/types'
 
@@ -25,40 +33,32 @@ export function ModelEditor({
     onChange
 }: ModelEditorProps) {
     const t = useI18n()
-    if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-2xl max-h-[calc(100vh-2rem)] bg-card border border-border/50 shadow-2xl rounded-xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
-                {/* Fixed Header */}
-                <div className="p-6 pb-4 flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <h2 className="text-2xl font-bold tracking-tight">
-                                {editingId
-                                    ? t('Edit Model')
-                                    : t('Add New Model')}
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                {t('Configure your')} {modelData.provider}{' '}
-                                {t('adapter settings.')}
-                            </p>
-                        </div>
-                        <div className="p-2 rounded-full bg-primary/10 text-primary">
-                            <Cpu className="h-5 w-5" />
-                        </div>
-                    </div>
-                </div>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-w-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+                <DialogHeader>
+                    <DialogTitle>
+                        {editingId ? t('Edit Model') : t('Add New Model')}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {t('Configure your')} {modelData.provider}{' '}
+                        {t('adapter settings.')}
+                    </DialogDescription>
+                </DialogHeader>
 
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto px-6">
-                    <div className="grid gap-6">
+                <ScrollArea className="flex-1 min-h-0">
+                    <div className="p-1 grid gap-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+                                <Label
+                                    htmlFor="model-name"
+                                    className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70"
+                                >
                                     {t('Display Name')}
                                 </Label>
                                 <Input
+                                    id="model-name"
                                     className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all"
                                     placeholder={t('e.g. GPT-4 Turbo')}
                                     value={modelData.name || ''}
@@ -119,10 +119,14 @@ export function ModelEditor({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+                                <Label
+                                    htmlFor="model-provider-id"
+                                    className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70"
+                                >
                                     {t('Model ID')}
                                 </Label>
                                 <Input
+                                    id="model-provider-id"
                                     className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all font-mono text-xs"
                                     placeholder={'e.g. openai/gpt-4'}
                                     value={modelData.providerId || ''}
@@ -153,10 +157,14 @@ export function ModelEditor({
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+                            <Label
+                                htmlFor="model-base-url"
+                                className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70"
+                            >
                                 {t('Base URL (Optional override)')}
                             </Label>
                             <Input
+                                id="model-base-url"
                                 className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all font-mono text-xs"
                                 placeholder="https://api.example.com/v1"
                                 value={modelData.baseURL || ''}
@@ -170,10 +178,14 @@ export function ModelEditor({
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+                            <Label
+                                htmlFor="model-api-key"
+                                className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70"
+                            >
                                 {t('API Key (Optional override)')}
                             </Label>
                             <Input
+                                id="model-api-key"
                                 type="password"
                                 className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all"
                                 placeholder={'sk-...'}
@@ -187,10 +199,9 @@ export function ModelEditor({
                             />
                         </div>
                     </div>
-                </div>
+                </ScrollArea>
 
-                {/* Fixed Footer */}
-                <div className="p-6 pt-4 flex justify-end gap-3 flex-shrink-0 border-t border-border/30">
+                <DialogFooter>
                     <Button
                         variant="ghost"
                         onClick={onClose}
@@ -206,8 +217,8 @@ export function ModelEditor({
                             ? t('Update Configuration')
                             : t('Save Model')}
                     </Button>
-                </div>
-            </div>
-        </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }
