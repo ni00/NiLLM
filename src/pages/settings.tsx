@@ -39,13 +39,13 @@ export function SettingsPage() {
     )
     return (
         <PageLayout title={t('Settings')} icon={Settings}>
-            <div className="w-full max-w-3xl space-y-6 pb-6">
+            <div className="grid w-full min-w-0 grid-cols-1 gap-6 pb-6 lg:grid-cols-2 2xl:grid-cols-3">
                 <section className="rounded-xl border p-4 sm:p-6 space-y-6">
                     <h2 className="flex items-center gap-2 text-lg font-semibold">
                         <Languages className="h-5 w-5" />
                         {t('Language')}
                     </h2>
-                    <div className="grid gap-2 sm:grid-cols-[1fr_240px] sm:items-center">
+                    <div className="grid min-w-0 gap-2 sm:grid-cols-2 sm:items-center">
                         <Label>{t('Interface language')}</Label>
                         <SelectDropdown
                             ariaLabel={t('Interface language')}
@@ -56,7 +56,7 @@ export function SettingsPage() {
                             }
                         />
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-[1fr_240px] sm:items-center">
+                    <div className="grid min-w-0 gap-2 sm:grid-cols-2 sm:items-center">
                         <Label>{t('Built-in test language')}</Label>
                         <SelectDropdown
                             ariaLabel={t('Built-in test language')}
@@ -83,7 +83,7 @@ export function SettingsPage() {
                         <Palette className="h-5 w-5" />
                         {t('Appearance')}
                     </h2>
-                    <div className="grid gap-2 sm:grid-cols-[1fr_240px] sm:items-center">
+                    <div className="grid min-w-0 gap-2 sm:grid-cols-2 sm:items-center">
                         <Label>{t('Theme')}</Label>
                         <SelectDropdown
                             ariaLabel={t('Theme')}
@@ -103,7 +103,7 @@ export function SettingsPage() {
                         <Gauge className="h-5 w-5" />
                         {t('Generation')}
                     </h2>
-                    <div className="grid gap-2 sm:grid-cols-[1fr_240px] sm:items-center">
+                    <div className="grid min-w-0 gap-2 sm:grid-cols-2 sm:items-center">
                         <Label>{t('Concurrent models')}</Label>
                         <SelectDropdown
                             ariaLabel={t('Concurrent models')}
@@ -120,7 +120,7 @@ export function SettingsPage() {
                         />
                     </div>
                 </section>
-                <p className="text-xs text-muted-foreground">
+                <p className="col-span-full text-xs text-muted-foreground">
                     NiLLM · {t('Version')} {version}
                 </p>
             </div>

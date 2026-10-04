@@ -106,3 +106,58 @@ test('mobile settings fit the viewport and system theme follows changes', async 
     ).toBeVisible()
     await page.screenshot({ path: 'test-results/settings-mobile.png' })
 })
+
+test('settings use the available width and adapt card columns to the window', async ({
+    page
+}) => {
+    await page.goto('/settings')
+    const cards = page.locator('main section')
+    await expect(cards).toHaveCount(3)
+    for (const [width, columns] of [
+        [390, 1],
+        [1280, 2],
+        [2560, 3]
+    ]) {
+        await page.setViewportSize({ width, height: 1000 })
+        await expect
+            .poll(async () =>
+                cards.first().evaluate((card) => {
+                    const grid = card.parentElement!
+                    return getComputedStyle(grid).gridTemplateColumns.split(' ')
+                        .length
+                })
+            )
+            .toBe(columns)
+        const dimensions = await cards.first().evaluate((card) => {
+            const grid = card.parentElement!
+            const gridRect = grid.getBoundingClientRect()
+            const viewport = grid.closest('[data-slot="scroll-area-viewport"]')!
+            const viewportRect = viewport.getBoundingClientRect()
+            const panels = Array.from(grid.querySelectorAll('section')).map(
+                (panel) => panel.getBoundingClientRect()
+            )
+            const style = getComputedStyle(grid)
+            const gap = Number.parseFloat(style.columnGap)
+            const columnCount = style.gridTemplateColumns.split(' ').length
+            return {
+                unusedWidth: viewportRect.width - gridRect.width,
+                cardWidth: panels[0].width,
+                expectedWidth:
+                    (gridRect.width - gap * (columnCount - 1)) / columnCount,
+                rightEdge: Math.max(...panels.map((panel) => panel.right)),
+                gridRight: gridRect.right
+            }
+        })
+        expect(dimensions.unusedWidth).toBeLessThanOrEqual(48)
+        expect(
+            Math.abs(dimensions.cardWidth - dimensions.expectedWidth)
+        ).toBeLessThan(1)
+        expect(
+            Math.abs(dimensions.rightEdge - dimensions.gridRight)
+        ).toBeLessThan(1)
+        expect(
+            await page.evaluate(() => document.documentElement.scrollWidth)
+        ).toBeLessThanOrEqual(width)
+    }
+    await page.screenshot({ path: 'test-results/settings-wide.png' })
+})
