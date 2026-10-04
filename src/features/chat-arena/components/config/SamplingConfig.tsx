@@ -3,8 +3,14 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { ConfigSlider } from '../ConfigSlider'
 import { SectionHeader, ConfigSectionProps } from './SectionHeader'
+import { FieldOverride } from './FieldOverride'
 
-export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
+export function SamplingConfig({
+    config,
+    onChange,
+    sources,
+    onResetField
+}: ConfigSectionProps) {
     const t = useI18n()
     return (
         <div className="space-y-6">
@@ -20,6 +26,13 @@ export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
                     step={0.1}
                     onChange={(v) => onChange({ temperature: v })}
                     labels={['Precise', 'Creative']}
+                    override={
+                        <FieldOverride
+                            path="temperature"
+                            sources={sources}
+                            onResetField={onResetField}
+                        />
+                    }
                 />
 
                 <ConfigSlider
@@ -31,13 +44,27 @@ export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
                     step={0.01}
                     onChange={(v) => onChange({ topP: v })}
                     labels={['Focused', 'Diverse']}
+                    override={
+                        <FieldOverride
+                            path="topP"
+                            sources={sources}
+                            onResetField={onResetField}
+                        />
+                    }
                 />
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2.5">
-                        <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                            {t('Top K')}
-                        </Label>
+                        <div className="flex items-center gap-1.5">
+                            <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
+                                {t('Top K')}
+                            </Label>
+                            <FieldOverride
+                                path="topK"
+                                sources={sources}
+                                onResetField={onResetField}
+                            />
+                        </div>
                         <Input
                             type="number"
                             placeholder={t('Auto')}
@@ -53,9 +80,16 @@ export function SamplingConfig({ config, onChange }: ConfigSectionProps) {
                         />
                     </div>
                     <div className="space-y-2.5">
-                        <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                            {t('Min P')}
-                        </Label>
+                        <div className="flex items-center gap-1.5">
+                            <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
+                                {t('Min P')}
+                            </Label>
+                            <FieldOverride
+                                path="minP"
+                                sources={sources}
+                                onResetField={onResetField}
+                            />
+                        </div>
                         <Input
                             type="number"
                             step="0.01"

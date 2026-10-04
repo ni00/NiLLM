@@ -1,8 +1,14 @@
 import { useI18n } from '@/lib/i18n'
 import { ConfigSlider } from '../ConfigSlider'
 import { SectionHeader, ConfigSectionProps } from './SectionHeader'
+import { FieldOverride } from './FieldOverride'
 
-export function PenaltiesConfig({ config, onChange }: ConfigSectionProps) {
+export function PenaltiesConfig({
+    config,
+    onChange,
+    sources,
+    onResetField
+}: ConfigSectionProps) {
     const t = useI18n()
     return (
         <div className="space-y-6">
@@ -17,6 +23,13 @@ export function PenaltiesConfig({ config, onChange }: ConfigSectionProps) {
                     max={2}
                     step={0.1}
                     onChange={(v) => onChange({ frequencyPenalty: v })}
+                    override={
+                        <FieldOverride
+                            path="frequencyPenalty"
+                            sources={sources}
+                            onResetField={onResetField}
+                        />
+                    }
                 />
                 <ConfigSlider
                     label={t('Presence Penalty')}
@@ -26,6 +39,13 @@ export function PenaltiesConfig({ config, onChange }: ConfigSectionProps) {
                     max={2}
                     step={0.1}
                     onChange={(v) => onChange({ presencePenalty: v })}
+                    override={
+                        <FieldOverride
+                            path="presencePenalty"
+                            sources={sources}
+                            onResetField={onResetField}
+                        />
+                    }
                 />
             </div>
         </div>

@@ -9,6 +9,14 @@ import {
     PopoverTrigger
 } from '@/components/ui/popover'
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog'
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -56,6 +64,14 @@ export function ExportMenu({
     const t = useI18n()
     const [confirmClearAll, setConfirmClearAll] = useState(false)
     const [importing, setImporting] = useState(false)
+    const [importStatus, setImportStatus] = useState('')
+    const [backupOpen, setBackupOpen] = useState(false)
+    const [includeSecrets, setIncludeSecrets] = useState(false)
+    const isProcessing = useAppStore((state) => state.isProcessing)
+    const isJudging = useAppStore((state) => state.isJudging)
+    const persistenceState = useAppStore((state) => state.persistenceState)
+    const busy = isProcessing || isJudging
+    const storageBroken = persistenceState === 'error'
 
     const handleExport = async () => {
         const timestamp = new Date().toISOString()
@@ -103,13 +119,14 @@ export function ExportMenu({
     }
 
     const handleExportGlobal = async () => {
-        const json = useAppStore.getState().exportData()
+        const json = useAppStore.getState().exportData({ includeSecrets })
         try {
             const data = JSON.parse(json)
             await downloadJson(
                 data,
                 `nillm-backup-${new Date().toISOString().slice(0, 10)}.json`
             )
+            setBackupOpen(false)
         } catch (e) {
             console.error('Export failed', e)
         }
@@ -121,14 +138,17 @@ export function ExportMenu({
         const file = e.target.files?.[0]
         if (!file) return
         setImporting(true)
+        setImportStatus('')
         try {
             const { readJsonFile } = await import('@/lib/utils')
             const data = await readJsonFile(file)
             await useAppStore.getState().importData(JSON.stringify(data))
-            alert(t('Data restored successfully.'))
+            setImportStatus(t('Data restored successfully.'))
         } catch (err) {
             console.error('Import failed', err)
-            alert(t('Failed to import data'))
+            setImportStatus(
+                err instanceof Error ? err.message : t('Failed to import data')
+            )
         } finally {
             setImporting(false)
             e.target.value = ''
@@ -144,23 +164,44 @@ export function ExportMenu({
                 accept=".json"
                 onChange={handleImportGlobal}
             />
-            <Button
-                variant="outline"
-                onClick={() =>
-                    document.getElementById('import-global')?.click()
-                }
-                disabled={importing}
-                className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 active:scale-95 transition-all"
-            >
-                <History className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span className="hidden md:inline text-xs font-medium">
-                    {importing ? t('Restoring...') : t('Restore')}
-                </span>
-            </Button>
+            <div className="relative">
+                <Button
+                    variant="outline"
+                    onClick={() =>
+                        document.getElementById('import-global')?.click()
+                    }
+                    disabled={importing || busy || storageBroken}
+                    title={
+                        storageBroken
+                            ? t(
+                                  'Restore is unavailable while local storage is failing.'
+                              )
+                            : busy
+                              ? t(
+                                    'Stop running requests before restoring data.'
+                                )
+                              : t('Restore a backup file')
+                    }
+                    className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 active:scale-95 transition-all"
+                >
+                    <History className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <span className="hidden md:inline text-xs font-medium">
+                        {importing ? t('Restoring...') : t('Restore')}
+                    </span>
+                </Button>
+                {importStatus && (
+                    <span
+                        role="status"
+                        className="absolute top-full right-0 mt-1 text-[11px] whitespace-nowrap text-muted-foreground"
+                    >
+                        {importStatus}
+                    </span>
+                )}
+            </div>
 
             <Button
                 variant="outline"
-                onClick={handleExportGlobal}
+                onClick={() => setBackupOpen(true)}
                 className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 active:scale-95 transition-all"
             >
                 <Database className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -202,6 +243,50 @@ export function ExportMenu({
                 </PopoverContent>
             </Popover>
 
+            <Dialog open={backupOpen} onOpenChange={setBackupOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{t('Download Full Backup')}</DialogTitle>
+                        <DialogDescription>
+                            {t(
+                                'A full backup contains every workspace domain: models, sessions, test sets, prompts and experiments.'
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <label className="flex items-start gap-3 rounded-lg border p-3 text-sm cursor-pointer hover:bg-muted/40">
+                        <input
+                            type="checkbox"
+                            checked={includeSecrets}
+                            onChange={(event) =>
+                                setIncludeSecrets(event.target.checked)
+                            }
+                            className="mt-0.5 accent-primary"
+                        />
+                        <span>
+                            <span className="font-medium">
+                                {t('Include API keys and endpoints')}
+                            </span>
+                            <span className="block text-xs text-muted-foreground mt-0.5">
+                                {t(
+                                    'Secrets stay on this machine unless you explicitly include them. Share carefully.'
+                                )}
+                            </span>
+                        </span>
+                    </label>
+                    <DialogFooter>
+                        <Button
+                            variant="ghost"
+                            onClick={() => setBackupOpen(false)}
+                        >
+                            {t('Cancel')}
+                        </Button>
+                        <Button onClick={handleExportGlobal}>
+                            {t('Download Backup')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <AlertDialog
                 open={confirmClearAll}
                 onOpenChange={setConfirmClearAll}
@@ -209,6 +294,16 @@ export function ExportMenu({
                 <Button
                     variant="outline"
                     onClick={() => setConfirmClearAll(true)}
+                    disabled={busy || storageBroken}
+                    title={
+                        storageBroken
+                            ? t(
+                                  'Clearing is unavailable while local storage is failing.'
+                              )
+                            : busy
+                              ? t('Stop running requests first.')
+                              : undefined
+                    }
                     className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 active:scale-95 transition-all hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
                 >
                     <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
@@ -239,6 +334,11 @@ export function ExportMenu({
                             <p className="text-xs text-muted-foreground/70 leading-relaxed">
                                 {t(
                                     'Once confirmed, this data cannot be recovered. Please ensure you have backed up any critical reports.'
+                                )}
+                            </p>
+                            <p className="text-xs text-muted-foreground/70 leading-relaxed">
+                                {t(
+                                    'Arena data only: experiments and prompts are kept. Experiments are managed on their own page.'
                                 )}
                             </p>
                         </div>

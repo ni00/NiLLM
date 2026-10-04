@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { aggregateStatistics } from '@/features/stats/domain/statistics'
-import { parseModels } from '../domain/models'
+import { parseModels, modelSchema } from '@/lib/validation'
 import { useAppStore } from '@/lib/store'
 import { LLMModel } from '@/lib/types'
 
@@ -54,16 +54,44 @@ export function useModels() {
             updateModel(editingModelId, newModel)
             setEditingModelId(null)
         } else {
-            addModel({
+            // New models keep every submitted field (mode/config/pricing/
+            // capabilities included) instead of a hand-picked subset that
+            // would silently drop them.
+            const candidate: LLMModel = {
                 id: crypto.randomUUID(),
                 name: newModel.name,
-                provider: newModel.provider || 'openrouter',
-                providerName: newModel.providerName,
-                providerId: newModel.providerId,
-                apiKey: newModel.apiKey,
-                baseURL: newModel.baseURL,
-                enabled: true
-            })
+                provider:
+                    (newModel.provider as LLMModel['provider']) || 'openrouter',
+                enabled: true,
+                ...(newModel.providerName !== undefined && {
+                    providerName: newModel.providerName
+                }),
+                ...(newModel.providerId !== undefined && {
+                    providerId: newModel.providerId
+                }),
+                ...(newModel.apiKey !== undefined && {
+                    apiKey: newModel.apiKey
+                }),
+                ...(newModel.baseURL !== undefined && {
+                    baseURL: newModel.baseURL
+                }),
+                ...(newModel.mode !== undefined && { mode: newModel.mode }),
+                ...(newModel.config !== undefined && {
+                    config: newModel.config
+                }),
+                ...(newModel.pricing !== undefined && {
+                    pricing: newModel.pricing
+                }),
+                ...(newModel.capabilities !== undefined && {
+                    capabilities: newModel.capabilities
+                })
+            }
+            try {
+                addModel(modelSchema.parse(candidate))
+            } catch {
+                alert(t('Invalid model data. Check the JSON format.'))
+                return
+            }
         }
         setIsAdding(false)
         setNewModel({ provider: 'openrouter', enabled: true })

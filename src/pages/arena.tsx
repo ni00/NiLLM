@@ -7,7 +7,6 @@ import { ModelColumn } from '@/features/chat-arena/components/ModelColumn'
 import { ArenaSettings } from '@/features/chat-arena/components/ArenaSettings'
 import { JudgePanel } from '@/features/chat-arena/components/JudgePanel'
 import { ModelEditDialog } from '@/features/chat-arena/components/ModelEditDialog'
-import { useQueueProcessor } from '@/features/chat-arena/hooks/useQueueProcessor'
 import { useAutoJudge } from '@/features/chat-arena/hooks/useAutoJudge'
 import { useArenaState } from '@/features/chat-arena/hooks/useArenaState'
 import { useArenaMetrics } from '@/features/chat-arena/hooks/useArenaMetrics'
@@ -35,12 +34,6 @@ import {
     useArenaColumns,
     useArenaSortBy
 } from '@/lib/hooks/useStoreSelectors'
-import { useStreamingActive } from '@/lib/hooks/usePageVisibility'
-import {
-    pauseStreamingUI,
-    resumeStreamingUI
-} from '@/features/benchmark/engine'
-
 export function ArenaPage() {
     const t = useI18n()
     const models = useModels()
@@ -163,17 +156,6 @@ export function ArenaPage() {
         [models, activeModelIds]
     )
     const activeSession = sessions.find((s) => s.id === activeSessionId)
-
-    useQueueProcessor()
-
-    const { isStreamingActive } = useStreamingActive('/')
-    useEffect(() => {
-        if (isStreamingActive) {
-            resumeStreamingUI()
-        } else {
-            pauseStreamingUI()
-        }
-    }, [isStreamingActive])
 
     const {
         isJudging,

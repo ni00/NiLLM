@@ -32,7 +32,7 @@ interface TestSetCardProps {
     onExport: (set: TestSet) => void
     onDelete: (id: string) => void
     onRun: (set: TestSet) => void
-    onRunSingle: (prompt: string) => void
+    onRunSingle: (testCase: TestSet['cases'][number], testSet: TestSet) => void
     dragHandleProps?: HTMLAttributes<HTMLElement>
 }
 
@@ -139,7 +139,7 @@ export function TestSetCard({
                         <div
                             key={c.id}
                             className="group/item flex items-center justify-between gap-2 text-xs bg-background/50 p-2 rounded-md hover:bg-background border border-transparent hover:border-border transition-all cursor-pointer overflow-hidden"
-                            onClick={() => onRunSingle(c.prompt)}
+                            onClick={() => onRunSingle(c, testSet)}
                         >
                             <span className="truncate flex-1 italic text-muted-foreground">
                                 {'“'}

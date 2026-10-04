@@ -116,16 +116,27 @@ export const QueuePopover = () => {
                                             '[Image]'
                                         )}
                                     </div>
-                                    <div className="text-xs text-muted-foreground mt-0.5 flex gap-2">
-                                        <span>
-                                            {item.paused
-                                                ? t('Paused')
-                                                : index === 0 &&
-                                                    !item.paused &&
-                                                    isProcessing
-                                                  ? t('Processing...')
-                                                  : t('Pending')}
-                                        </span>
+                                    <div className="text-xs text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
+                                        {item.error ? (
+                                            <span className="text-destructive">
+                                                {t('Failed')}: {item.error}
+                                            </span>
+                                        ) : (
+                                            <span>
+                                                {item.paused
+                                                    ? t('Paused')
+                                                    : index === 0 &&
+                                                        !item.paused &&
+                                                        isProcessing
+                                                      ? t('Processing...')
+                                                      : t('Pending')}
+                                            </span>
+                                        )}
+                                        {item.retry && (
+                                            <span className="text-primary">
+                                                {t('Retry')}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex gap-1 self-center">

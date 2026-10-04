@@ -1,7 +1,11 @@
 import { create, type StateCreator } from 'zustand'
-import { attachPersistence } from './persistence'
+import {
+    attachPersistence,
+    applyImportedData,
+    persistenceFor
+} from './persistence'
 import { cancelAllStreams } from '../streaming/cancellation'
-
+import { parseBackup } from '../validation'
 import { ModelsSlice, createModelsSlice } from './models'
 import { SessionsSlice, createSessionsSlice } from './sessions'
 import { TestSetsSlice, createTestSetsSlice } from './testSets'
@@ -10,7 +14,13 @@ import { StreamingSlice, createStreamingSlice } from './streaming'
 import { PromptsSlice, createPromptsSlice } from './prompts'
 import { ConfigSlice, createConfigSlice } from './config'
 import { ArenaSlice, createArenaSlice } from './arena'
+import { ExperimentsSlice, createExperimentsSlice } from './experiments'
 import { indexedDBStorage } from './indexeddb-storage'
+import type { LLMModel } from '@/lib/types'
+
+export interface ExportDataOptions {
+    includeSecrets?: boolean
+}
 
 export type AppState = ModelsSlice &
     SessionsSlice &
@@ -19,11 +29,42 @@ export type AppState = ModelsSlice &
     StreamingSlice &
     PromptsSlice &
     ConfigSlice &
-    ArenaSlice & {
-        exportData: () => string
+    ArenaSlice &
+    ExperimentsSlice & {
+        persistenceState: 'loading' | 'ready' | 'error'
+        persistenceError?: { operation: 'read' | 'write'; message: string }
+        retryPersistence: () => void
+        downloadStorageDump: () => void
+        exportData: (options?: ExportDataOptions) => string
         importData: (data: string) => Promise<void>
         stopAll: () => void
     }
+
+/** Strips credentials, query and hash from an endpoint for shared backups. */
+function sanitizeBaseURL(baseURL: string): string {
+    try {
+        const url = new URL(baseURL)
+        url.username = ''
+        url.password = ''
+        url.search = ''
+        url.hash = ''
+        return url.href.replace(/\/$/, '')
+    } catch {
+        return baseURL
+    }
+}
+
+function sanitizeModels(models: LLMModel[]): LLMModel[] {
+    return models.map((model) => ({
+        ...model,
+        apiKey: undefined,
+        ...(model.baseURL !== undefined && {
+            baseURL: sanitizeBaseURL(model.baseURL)
+        })
+    }))
+}
+
+// The persistence controller for a store lives in the persistence registry.
 
 export const createAppState: StateCreator<AppState> = (set, get, api) => ({
     ...createModelsSlice(set, get, api),
@@ -34,57 +75,77 @@ export const createAppState: StateCreator<AppState> = (set, get, api) => ({
     ...createPromptsSlice(set, get, api),
     ...createConfigSlice(set, get, api),
     ...createArenaSlice(set, get, api),
-    exportData: (): string => {
+    ...createExperimentsSlice(set, get, api),
+    persistenceState: 'loading',
+    retryPersistence: () => {
+        void persistenceFor(api)?.retry()
+    },
+    downloadStorageDump: () => {
+        void persistenceFor(api)?.downloadDump()
+    },
+    exportData: (options): string => {
         const state = get()
+        const includeSecrets = options?.includeSecrets === true
         return JSON.stringify({
-            models: state.models,
-            sessions: state.sessions,
-            testSets: state.testSets,
-            promptTemplates: state.promptTemplates,
-            globalConfig: state.globalConfig,
-            language: state.language,
-            benchmarkLanguage: state.benchmarkLanguage,
-            theme: state.theme
+            schemaVersion: 1,
+            state: {
+                models: includeSecrets
+                    ? state.models
+                    : sanitizeModels(state.models),
+                sessions: state.sessions,
+                testSets: state.testSets,
+                promptTemplates: state.promptTemplates,
+                experimentRuns: state.experimentRuns,
+                globalConfig: state.globalConfig,
+                activeModelIds: state.activeModelIds,
+                activeSessionId: state.activeSessionId,
+                testSetOrder: state.testSetOrder,
+                language: state.language,
+                benchmarkLanguage: state.benchmarkLanguage,
+                theme: state.theme,
+                arenaColumns: state.arenaColumns,
+                arenaSortBy: state.arenaSortBy
+            }
         })
     },
     importData: async (json: string) => {
+        const state = get()
+        if (state.isProcessing || state.isJudging)
+            throw new Error(
+                'Cannot restore data while requests are running. Stop them first.'
+            )
+        let data
         try {
-            const { parseBackup } = await import('../validation')
-            const data = parseBackup(JSON.parse(json))
-            set((state) => ({
-                models: data.models || state.models,
-                activeModelIds: state.activeModelIds.filter((id) =>
-                    (data.models || state.models).some(
-                        (model) => model.id === id && model.enabled
-                    )
-                ),
-                activeSessionId: (data.sessions || state.sessions).some(
-                    (session) => session.id === state.activeSessionId
-                )
-                    ? state.activeSessionId
-                    : null,
-                sessions: data.sessions || state.sessions,
-                testSets: data.testSets || state.testSets,
-                promptTemplates: data.promptTemplates || state.promptTemplates,
-                globalConfig: data.globalConfig || state.globalConfig,
-                language: data.language ?? state.language,
-                benchmarkLanguage:
-                    data.benchmarkLanguage !== undefined
-                        ? data.benchmarkLanguage
-                        : state.benchmarkLanguage,
-                theme: data.theme ?? state.theme
-            }))
+            data = parseBackup(JSON.parse(json))
         } catch {
             throw new Error(
                 'Invalid backup format. No application data was changed.'
             )
         }
+        const own = persistenceFor(api)
+        if (own) {
+            // Storage commits first; a failure leaves the workspace untouched.
+            await own.importValidated(data)
+            return
+        }
+        // Stores without attached persistence (tests) only update memory.
+        applyImportedData((partial) => set(partial), get(), data)
     },
     stopAll: () => {
+        // Cancel in-flight provider streams first so active tasks settle;
+        // isProcessing is released by the single processor afterwards.
         cancelAllStreams()
+        for (const run of get().experimentRuns) {
+            if (
+                run.status === 'queued' ||
+                run.status === 'running' ||
+                run.status === 'paused'
+            ) {
+                void get().cancelExperiment(run.id)
+            }
+        }
         set({
             messageQueue: [],
-            isProcessing: false,
             streamingData: {}
         })
     }
@@ -104,6 +165,7 @@ if (typeof window !== 'undefined') {
 }
 
 export { indexedDBStorage }
+export type { AppStorage } from './indexeddb-storage'
 export type {
     ModelsSlice,
     SessionsSlice,
@@ -112,6 +174,7 @@ export type {
     StreamingSlice,
     PromptsSlice,
     ConfigSlice,
-    ArenaSlice
+    ArenaSlice,
+    ExperimentsSlice
 }
 export type { QueueItem } from './queue'

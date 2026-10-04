@@ -6,15 +6,84 @@ import {
     Cpu,
     Box,
     BookTemplate,
-    Settings
+    Settings,
+    DatabaseZap,
+    RotateCcw,
+    FileDown
 } from 'lucide-react'
 import { useAppPreferences } from '@/features/settings/useAppPreferences'
+import { useQueueProcessor } from '@/features/chat-arena/hooks/useQueueProcessor'
+import { usePageVisibility } from '@/lib/hooks/usePageVisibility'
+import {
+    pauseStreamingUI,
+    resumeStreamingUI
+} from '@/features/benchmark/streaming-ui'
+import { useAppStore } from '@/lib/store'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+
+function StorageFailureBanner() {
+    const t = useI18n()
+    const persistenceState = useAppStore((s) => s.persistenceState)
+    const persistenceError = useAppStore((s) => s.persistenceError)
+    const retry = useAppStore((s) => s.retryPersistence)
+    const dump = useAppStore((s) => s.downloadStorageDump)
+    if (persistenceState !== 'error' || !persistenceError) return null
+    const isRead = persistenceError.operation === 'read'
+    return (
+        <div
+            role="alert"
+            className="flex flex-wrap items-center gap-2 border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-xs text-foreground"
+        >
+            <DatabaseZap className="h-4 w-4 text-destructive shrink-0" />
+            <span className="font-medium">
+                {isRead
+                    ? t('Local data could not be read.')
+                    : t('Changes are not being saved.')}
+            </span>
+            <span className="text-muted-foreground truncate flex-1 min-w-40">
+                {persistenceError.message}
+            </span>
+            {!isRead && (
+                <span className="text-muted-foreground">
+                    {t(
+                        'Latest changes stay in memory and retry automatically.'
+                    )}
+                </span>
+            )}
+            <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 text-xs"
+                onClick={retry}
+            >
+                <RotateCcw className="h-3.5 w-3.5" />
+                {t('Retry')}
+            </Button>
+            {isRead && (
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={dump}
+                >
+                    <FileDown className="h-3.5 w-3.5" />
+                    {t('Download raw storage')}
+                </Button>
+            )}
+        </div>
+    )
+}
 
 export function Layout() {
     const t = useI18n()
     useAppPreferences()
     const location = useLocation()
+    // Single scheduler mount: work continues on every route.
+    useQueueProcessor()
+    const visible = usePageVisibility()
+    if (!visible) pauseStreamingUI()
+    else resumeStreamingUI()
 
     const navItems = [
         { icon: Layers, label: t('Arena'), path: '/' },
@@ -43,6 +112,7 @@ export function Layout() {
                             <Link
                                 key={item.path}
                                 to={item.path}
+                                aria-current={isActive ? 'page' : undefined}
                                 className={cn(
                                     'flex flex-col items-center justify-center p-2 md:px-1 md:w-full rounded-md transition-all gap-1 hover:bg-muted/50 flex-1 md:flex-none',
                                     item.path === '/settings' && 'md:mt-auto',
@@ -64,6 +134,7 @@ export function Layout() {
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden pb-16 md:pb-0">
+                <StorageFailureBanner />
                 <Outlet />
             </main>
         </div>

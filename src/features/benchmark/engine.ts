@@ -1,77 +1,53 @@
-import { useAppStore } from '../../lib/store'
-import { BenchmarkResult, Message } from '../../lib/types'
-
-import { runWorkerStream } from './worker-stream'
+import { runConcurrent } from './concurrency'
+import { resolveGenerationConfig } from './config'
+import { captureModelSnapshot } from './snapshots'
+import { runWorkerStream, type StreamOutcome } from './worker-stream'
+import { scheduleStreamingUpdate, abortStreamingUI } from './streaming-ui'
 import {
     cancelAllStreams,
+    registerStreamCancellation,
     streamGeneration
 } from '@/lib/streaming/cancellation'
+import { useAppStore } from '@/lib/store'
+import {
+    BenchmarkResult,
+    LLMModel,
+    Message,
+    RequestSnapshot
+} from '@/lib/types'
 
-let pendingUpdates: Record<string, Partial<BenchmarkResult>> = {}
-let rafId: number | null = null
-let isPaused = false
-
-function scheduleFlush() {
-    if (rafId === null && !isPaused) {
-        rafId = requestAnimationFrame(flushUpdates)
+/** Runs one streamed request; the caller owns the initial result record. */
+async function executeStream(
+    sessionId: string,
+    modelId: string,
+    executionModel: LLMModel,
+    messages: Message[],
+    resultId: string
+): Promise<StreamOutcome> {
+    const controller = new AbortController()
+    const unregister = registerStreamCancellation(() => controller.abort())
+    try {
+        const outcome = await runWorkerStream({
+            model: executionModel,
+            messages,
+            resultId,
+            onUpdate: (update) => scheduleStreamingUpdate(resultId, update),
+            signal: controller.signal
+        })
+        scheduleStreamingUpdate(resultId, null)
+        const store = useAppStore.getState()
+        store.updateResult(sessionId, modelId, resultId, {
+            response: outcome.response,
+            reasoning: outcome.reasoning,
+            metrics: outcome.metrics,
+            status: outcome.status,
+            error: outcome.error
+        })
+        store.clearStreamingData(resultId)
+        return outcome
+    } finally {
+        unregister()
     }
-}
-
-function flushUpdates() {
-    rafId = null
-    if (isPaused) return
-
-    const store = useAppStore.getState()
-    if (Object.keys(pendingUpdates).length > 0) {
-        store.setBatchedStreamingData(pendingUpdates)
-        pendingUpdates = {}
-    }
-    if (Object.keys(pendingUpdates).length > 0 && !isPaused) {
-        rafId = requestAnimationFrame(flushUpdates)
-    }
-}
-
-export function pauseStreamingUI() {
-    isPaused = true
-    if (rafId !== null) {
-        cancelAnimationFrame(rafId)
-        rafId = null
-    }
-}
-
-export function resumeStreamingUI() {
-    const wasPaused = isPaused
-    isPaused = false
-    if (wasPaused && Object.keys(pendingUpdates).length > 0) {
-        scheduleFlush()
-    }
-}
-
-export function getPendingUpdatesCount(): number {
-    return Object.keys(pendingUpdates).length
-}
-
-function scheduleUpdate(id: string, update: Partial<BenchmarkResult> | null) {
-    if (update) {
-        pendingUpdates[id] = update
-        scheduleFlush()
-    } else delete pendingUpdates[id]
-}
-
-async function runConcurrent<T>(
-    items: T[],
-    concurrency: number,
-    task: (item: T) => Promise<void>
-) {
-    let index = 0
-    await Promise.all(
-        Array.from(
-            { length: Math.min(concurrency, items.length) },
-            async () => {
-                while (index < items.length) await task(items[index++])
-            }
-        )
-    )
 }
 
 export async function broadcastMessage(
@@ -132,14 +108,35 @@ export async function broadcastMessage(
         if (generation !== streamGeneration()) return
         const resultId = crypto.randomUUID()
 
-        const mergedConfig = {
-            ...store.globalConfig,
-            ...model.config
-        }
+        const resolved = resolveGenerationConfig(
+            useAppStore.getState().globalConfig,
+            model.config
+        )
 
-        const modelWithMergedConfig = {
-            ...model,
-            config: mergedConfig
+        // Snapshots are captured before dispatch so digest time never lands
+        // in provider TTFT; a broken endpoint fails only this model.
+        let snapshot: RequestSnapshot
+        try {
+            const modelSnapshot = await captureModelSnapshot(model)
+            snapshot = {
+                schemaVersion: 1,
+                model: modelSnapshot,
+                parameters: resolved,
+                context: 'conversation',
+                capturedAt: Date.now()
+            }
+        } catch {
+            useAppStore.getState().addResult(sessionId, model.id, {
+                id: resultId,
+                modelId: model.id,
+                prompt: processedPrompt,
+                response: '',
+                metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
+                timestamp: Date.now(),
+                status: 'error',
+                error: 'Invalid model endpoint configuration.'
+            })
+            return
         }
 
         const history: Message[] = []
@@ -153,13 +150,10 @@ export async function broadcastMessage(
         }
 
         const messages: Message[] = []
-        if (model.config?.systemPrompt ?? store.globalConfig.systemPrompt) {
+        if (resolved.requested.systemPrompt) {
             messages.push({
                 role: 'system',
-                content:
-                    model.config?.systemPrompt ??
-                    store.globalConfig.systemPrompt ??
-                    ''
+                content: resolved.requested.systemPrompt
             })
         }
 
@@ -172,17 +166,17 @@ export async function broadcastMessage(
             response: '',
             metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
             timestamp: Date.now(),
-            status: 'pending'
+            status: 'pending',
+            requestSnapshot: snapshot
         }
-        store.addResult(sessionId, model.id, initialResult)
+        useAppStore.getState().addResult(sessionId, model.id, initialResult)
 
-        // Run streaming via worker
-        await runWorkerStream(
-            modelWithMergedConfig,
-            messages,
-            resultId,
+        await executeStream(
             sessionId,
-            scheduleUpdate
+            model.id,
+            { ...model, config: resolved.effective },
+            messages,
+            resultId
         )
     })
 
@@ -191,9 +185,7 @@ export async function broadcastMessage(
 
 export function abortAllTasks() {
     cancelAllStreams()
-    pendingUpdates = {}
-    if (rafId !== null) cancelAnimationFrame(rafId)
-    rafId = null
+    abortStreamingUI()
 }
 
 export async function retryResult(
@@ -214,13 +206,36 @@ export async function retryResult(
 
     const resultToRetry = modelResults[resultIndex]
 
-    store.updateResult(sessionId, modelId, resultId, {
+    const resolved = resolveGenerationConfig(
+        useAppStore.getState().globalConfig,
+        model.config
+    )
+
+    let snapshot: RequestSnapshot | undefined
+    try {
+        snapshot = {
+            schemaVersion: 1,
+            model: await captureModelSnapshot(model),
+            parameters: resolved,
+            context: 'conversation',
+            capturedAt: Date.now()
+        }
+    } catch {
+        useAppStore.getState().updateResult(sessionId, modelId, resultId, {
+            status: 'error',
+            error: 'Invalid model endpoint configuration.'
+        })
+        return
+    }
+
+    useAppStore.getState().updateResult(sessionId, modelId, resultId, {
         error: undefined,
         response: '',
         reasoning: undefined,
         status: 'pending',
         metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        requestSnapshot: snapshot
     })
 
     const historyResults = modelResults.slice(0, resultIndex)
@@ -233,31 +248,19 @@ export async function retryResult(
     })
 
     const messages: Message[] = []
-    if (model.config?.systemPrompt ?? store.globalConfig.systemPrompt) {
+    if (resolved.requested.systemPrompt) {
         messages.push({
             role: 'system',
-            content:
-                model.config?.systemPrompt ??
-                store.globalConfig.systemPrompt ??
-                ''
+            content: resolved.requested.systemPrompt
         })
     }
     messages.push(...history, { role: 'user', content: resultToRetry.prompt })
 
-    const mergedConfig = {
-        ...store.globalConfig,
-        ...model.config
-    }
-    const modelWithMergedConfig = {
-        ...model,
-        config: mergedConfig
-    }
-
-    await runWorkerStream(
-        modelWithMergedConfig,
-        messages,
-        resultId,
+    await executeStream(
         sessionId,
-        scheduleUpdate
+        model.id,
+        { ...model, config: resolved.effective },
+        messages,
+        resultId
     )
 }

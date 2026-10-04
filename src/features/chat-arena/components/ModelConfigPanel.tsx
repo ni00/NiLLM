@@ -2,9 +2,13 @@ import { useI18n } from '@/lib/i18n'
 import React from 'react'
 import { Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { GenerationConfig, LLMModel } from '@/lib/types'
+import { GenerationConfig, GenerationConfigPatch, LLMModel } from '@/lib/types'
+import {
+    mergeConfigPatch,
+    resetConfigField,
+    resolveGenerationConfig
+} from '@/features/benchmark/config'
 import { ConfigEditor } from './ConfigEditor'
-
 export interface ModelConfigPanelProps {
     model: LLMModel
     globalConfig: GenerationConfig
@@ -20,6 +24,16 @@ export const ModelConfigPanel = React.memo(
         onStartEditingDetails
     }: ModelConfigPanelProps) => {
         const t = useI18n()
+        const resolved = resolveGenerationConfig(globalConfig, model.config)
+        const patch = model.config ?? {}
+
+        const applyPatch = (incoming: GenerationConfigPatch) => {
+            const next = mergeConfigPatch(patch, incoming)
+            onUpdateModel(model.id, {
+                config: Object.keys(next).length > 0 ? next : undefined
+            })
+        }
+
         return (
             <div className="flex flex-col h-full bg-muted/5">
                 <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
@@ -48,15 +62,18 @@ export const ModelConfigPanel = React.memo(
                         </div>
                         <div className="bg-muted/5 rounded-xl border p-4">
                             <ConfigEditor
-                                config={{
-                                    ...globalConfig,
-                                    ...model.config
-                                }}
-                                onChange={(newConfig) =>
+                                config={resolved.requested}
+                                onChange={applyPatch}
+                                sources={resolved.sources}
+                                onResetField={(path) => {
+                                    const next = resetConfigField(patch, path)
                                     onUpdateModel(model.id, {
-                                        config: newConfig
+                                        config:
+                                            Object.keys(next).length > 0
+                                                ? next
+                                                : undefined
                                     })
-                                }
+                                }}
                             />
                         </div>
                     </div>

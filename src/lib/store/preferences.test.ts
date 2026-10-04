@@ -2,18 +2,31 @@ import { createStore } from 'zustand/vanilla'
 import { describe, expect, it } from 'vitest'
 import { createAppState } from './index'
 import { attachPersistence } from './persistence'
+import type { AppStorage } from './indexeddb-storage'
+
+const legacyStorage = (raw: string): AppStorage => ({
+    getItem: async (name) => (name === 'nillm-storage' ? raw : null),
+    setItem: async () => {},
+    removeItem: async () => {},
+    readMany: async (keys) =>
+        Object.fromEntries(
+            keys.map((key) => [key, key === 'nillm-storage' ? raw : null])
+        ),
+    commit: async () => {},
+    dump: async () => ({})
+})
 
 describe('application preferences', () => {
     it('restores old snapshots and preserves their language and content', async () => {
         const store = createStore(createAppState)
-        const persistence = attachPersistence(store, {
-            getItem: async () =>
+        const persistence = attachPersistence(
+            store,
+            legacyStorage(
                 JSON.stringify({
                     state: { language: 'ja', promptTemplates: [] }
-                }),
-            setItem: () => {},
-            removeItem: () => {}
-        })
+                })
+            )
+        )
         await persistence.hydrated
         expect(store.getState()).toMatchObject({
             language: 'ja',

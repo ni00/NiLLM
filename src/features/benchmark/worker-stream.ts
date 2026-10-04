@@ -1,4 +1,3 @@
-import { useAppStore } from '@/lib/store'
 import type {
     BenchmarkMetrics,
     BenchmarkResult,
@@ -6,33 +5,41 @@ import type {
     Message
 } from '@/lib/types'
 import type { StreamEvent } from '@/lib/streaming/protocol'
-import { registerStreamCancellation } from '@/lib/streaming/cancellation'
 
-export function runWorkerStream(
-    model: LLMModel,
-    messages: Message[],
-    resultId: string,
-    sessionId: string,
-    schedule: (id: string, update: Partial<BenchmarkResult> | null) => void
-) {
-    const store = useAppStore.getState()
+export interface StreamOutcome {
+    response: string
+    reasoning?: string
+    metrics: BenchmarkMetrics
+    status: 'completed' | 'error' | 'cancelled'
+    error?: string
+}
+
+export interface RunWorkerStreamOptions {
+    model: LLMModel
+    messages: Message[]
+    resultId: string
+    /** Streaming progress for transient UI state; never a durable write. */
+    onUpdate: (update: Partial<BenchmarkResult>) => void
+    /** Pre-cancelled signals never spawn a worker. */
+    signal?: AbortSignal
+}
+
+/**
+ * Pure executor around the generation worker: no store access, callers own
+ * the initial result and the single durable write after the outcome settles.
+ * Keeps the two-tier connect/read timeouts, sanitized error strings and
+ * single-settle semantics; cancellation preserves partial output.
+ */
+export function runWorkerStream({
+    model,
+    messages,
+    resultId,
+    onUpdate,
+    signal
+}: RunWorkerStreamOptions): Promise<StreamOutcome> {
     const connectMs = model.config?.connectTimeout ?? 15000
     const readMs = model.config?.readTimeout ?? 30000
-    return new Promise<void>((resolve) => {
-        let worker: Worker
-        try {
-            worker = new Worker(
-                new URL('../../lib/workers/stream.worker.ts', import.meta.url),
-                { type: 'module' }
-            )
-        } catch {
-            store.updateResult(sessionId, model.id, resultId, {
-                status: 'error',
-                error: 'Could not start generation worker.'
-            })
-            resolve()
-            return
-        }
+    return new Promise<StreamOutcome>((resolve) => {
         let response = '',
             reasoning = '',
             settled = false
@@ -42,32 +49,51 @@ export function runWorkerStream(
             totalDuration: 0,
             tokenCount: 0
         }
-        let readTimer: ReturnType<typeof setTimeout> | undefined
+        // Mutable cleanup registry: finish() may run before late
+        // initializations, so every handle lives here instead of a TDZ-prone
+        // const binding.
+        const cleanup: {
+            connectTimer?: ReturnType<typeof setTimeout>
+            readTimer?: ReturnType<typeof setTimeout>
+            unregisterSignal?: () => void
+        } = {}
+        let worker: Worker | undefined
         const finish = (
-            status: 'completed' | 'error' | 'cancelled',
+            status: StreamOutcome['status'],
             error?: string
-        ) => {
+        ): void => {
             if (settled) return
             settled = true
-            clearTimeout(connectTimer)
-            clearTimeout(readTimer)
-            worker.terminate()
-            unregister()
-            schedule(resultId, null)
-            store.updateResult(sessionId, model.id, resultId, {
+            clearTimeout(cleanup.connectTimer)
+            clearTimeout(cleanup.readTimer)
+            cleanup.unregisterSignal?.()
+            worker?.terminate()
+            resolve({
                 response,
                 reasoning: reasoning || undefined,
                 metrics,
                 status,
                 error
             })
-            store.clearStreamingData(resultId)
-            resolve()
         }
-        const unregister = registerStreamCancellation(() =>
+        if (signal?.aborted) {
             finish('cancelled', 'Generation cancelled.')
-        )
-        const connectTimer = setTimeout(
+            return
+        }
+        try {
+            worker = new Worker(
+                new URL('../../lib/workers/stream.worker.ts', import.meta.url),
+                { type: 'module' }
+            )
+        } catch {
+            finish('error', 'Could not start generation worker.')
+            return
+        }
+        const onAbort = () => finish('cancelled', 'Generation cancelled.')
+        signal?.addEventListener('abort', onAbort)
+        cleanup.unregisterSignal = () =>
+            signal?.removeEventListener('abort', onAbort)
+        cleanup.connectTimer = setTimeout(
             () =>
                 finish(
                     'error',
@@ -85,9 +111,9 @@ export function runWorkerStream(
                 finish('completed')
                 return
             }
-            clearTimeout(connectTimer)
-            clearTimeout(readTimer)
-            readTimer = setTimeout(
+            clearTimeout(cleanup.connectTimer)
+            clearTimeout(cleanup.readTimer)
+            cleanup.readTimer = setTimeout(
                 () =>
                     finish(
                         'error',
@@ -103,7 +129,7 @@ export function runWorkerStream(
                     finish('completed')
                     return
                 }
-                schedule(resultId, {
+                onUpdate({
                     response,
                     reasoning: reasoning || undefined,
                     metrics

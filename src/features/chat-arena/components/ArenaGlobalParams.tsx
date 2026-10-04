@@ -2,12 +2,12 @@ import { useI18n } from '@/lib/i18n'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import React from 'react'
-import { GenerationConfig } from '@/lib/types'
+import { GenerationConfig, GlobalConfigUpdate } from '@/lib/types'
 import { ConfigEditor } from './ConfigEditor'
 
 export interface ArenaGlobalParamsProps {
     config: GenerationConfig
-    onChange: (config: GenerationConfig) => void
+    onChange: (updates: GlobalConfigUpdate) => void
 }
 
 export const ArenaGlobalParams = React.memo(
@@ -40,7 +40,7 @@ export const ArenaGlobalParams = React.memo(
                                 value >= 1 &&
                                 value <= 16
                             )
-                                onChange({ ...config, maxConcurrent: value })
+                                onChange({ maxConcurrent: value })
                         }}
                         className="w-24"
                     />

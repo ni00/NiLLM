@@ -7,6 +7,7 @@ import { PageLayout } from '@/features/layout/PageLayout'
 import { useTestSets } from '@/features/tests/hooks/useTestSets'
 import { TestSetCard } from '@/features/tests/components/TestSetCard'
 import { TestSetEditor } from '@/features/tests/components/TestSetEditor'
+import { ExperimentConfigDialog } from '@/features/experiments/components/ExperimentConfigDialog'
 import { LanguageSelector } from '@/features/tests/components/LanguageSelector'
 import { EmptyState } from '@/features/tests/components/EmptyState'
 import {
@@ -39,7 +40,7 @@ interface SortableTestSetCardProps {
     onExport: (set: TestSet) => void
     onDelete: (id: string) => void
     onRun: (set: TestSet) => void
-    onRunSingle: (prompt: string) => void
+    onRunSingle: (testCase: TestSet['cases'][number], testSet: TestSet) => void
 }
 
 function SortableTestSetCard({ testSet, ...props }: SortableTestSetCardProps) {
@@ -74,7 +75,6 @@ export function TestsPage() {
     const {
         fileInputRef,
         isImporting,
-        runningSetId,
         isEditing,
         editingSetId,
         editForm,
@@ -97,7 +97,9 @@ export function TestsPage() {
         setIsEditing,
         setEditForm,
         testSetOrder,
-        setTestSetOrder
+        setTestSetOrder,
+        experimentTestSet,
+        closeExperimentDialog
     } = useTestSets()
 
     const [activeId, setActiveId] = useState<string | null>(null)
@@ -218,7 +220,7 @@ export function TestsPage() {
                                             key={set.id}
                                             testSet={set}
                                             isStored={isStored}
-                                            isRunning={runningSetId === set.id}
+                                            isRunning={false}
                                             onEdit={openEditModal}
                                             onExport={handleExport}
                                             onDelete={deleteTestSet}
@@ -244,7 +246,7 @@ export function TestsPage() {
                                 <TestSetCard
                                     testSet={activeSet}
                                     isStored={true}
-                                    isRunning={runningSetId === activeSet.id}
+                                    isRunning={false}
                                     onEdit={() => {}}
                                     onExport={() => {}}
                                     onDelete={() => {}}
@@ -255,7 +257,6 @@ export function TestsPage() {
                         </DragOverlay>
                     </DndContext>
                 </div>
-
                 {!storedSets.length && (
                     <EmptyState onImport={handleImportClick} />
                 )}
@@ -269,15 +270,18 @@ export function TestsPage() {
                 onSave={saveTestSet}
                 onAddCase={addCase}
                 onRemoveCase={removeCase}
-                onUpdateCase={(id, text) => {
-                    if (id === 'name') {
-                        setEditForm((prev) => ({ ...prev, name: text }))
-                    } else {
-                        updateCase(id, text)
-                    }
-                }}
+                onUpdateCase={updateCase}
+                onNameChange={(name) =>
+                    setEditForm((prev) => ({ ...prev, name }))
+                }
                 onMoveCase={moveCase}
                 onRunSingle={handleRunSingle}
+            />
+
+            <ExperimentConfigDialog
+                open={experimentTestSet !== null}
+                onClose={closeExperimentDialog}
+                initialTestSet={experimentTestSet ?? undefined}
             />
         </PageLayout>
     )

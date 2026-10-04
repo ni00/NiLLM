@@ -1,5 +1,4 @@
 import { useAppStore } from '@/lib/store'
-import { retryResult } from '@/features/benchmark/engine'
 
 // State selectors
 export const useModels = () => useAppStore((state) => state.models)
@@ -27,8 +26,10 @@ export const useArenaSortBy = () => useAppStore((state) => state.arenaSortBy)
 export const useSetPendingPrompt = () =>
     useAppStore((state) => state.setPendingPrompt)
 export const useAddToQueue = () => useAppStore((state) => state.addToQueue)
-export const useAddBatchToQueue = () =>
-    useAppStore((state) => state.addBatchToQueue)
+export const useAddRetryToQueue = () =>
+    useAppStore((state) => state.addRetryToQueue)
+export const useFailQueueItem = () =>
+    useAppStore((state) => state.failQueueItem)
 export const useRemoveFromQueue = () =>
     useAppStore((state) => state.removeFromQueue)
 export const useSetProcessing = () =>
@@ -93,7 +94,19 @@ export const useClearAllResults = () =>
 export const useClearModelResults = () =>
     useAppStore((state) => state.clearModelResults)
 export const useExportData = () => useAppStore((state) => state.exportData)
-export const useImportData = () => useAppStore((state) => state.importData)
 
-// Engine function (not a store action, re-exported for convenience)
-export { retryResult as useRetryResult }
+export const useExperimentRuns = () =>
+    useAppStore((state) => state.experimentRuns)
+export const useCreateExperiment = () =>
+    useAppStore((state) => state.createExperiment)
+export const usePauseExperiment = () =>
+    useAppStore((state) => state.pauseExperiment)
+export const useResumeExperiment = () =>
+    useAppStore((state) => state.resumeExperiment)
+export const useCancelExperiment = () =>
+    useAppStore((state) => state.cancelExperiment)
+export const useRetryFailedExperiment = () =>
+    useAppStore((state) => state.retryFailedExperiment)
+export const useDeleteExperiment = () =>
+    useAppStore((state) => state.deleteExperiment)
+export const useImportData = () => useAppStore((state) => state.importData)

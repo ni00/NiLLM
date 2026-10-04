@@ -17,12 +17,12 @@ import { cn } from '@/lib/utils'
 import {
     useUpdateModel,
     useActiveSessionId,
-    useUpdateResult
+    useUpdateResult,
+    useAddRetryToQueue
 } from '@/lib/hooks/useStoreSelectors'
 import { ResultBlock } from './ResultBlock'
 import { ModelColumnStats } from './ModelColumnStats'
 import { ModelConfigPanel } from './ModelConfigPanel'
-import { retryResult } from '@/features/benchmark/engine'
 
 interface ModelColumnProps {
     model: LLMModel
@@ -76,6 +76,7 @@ export const ModelColumn = React.memo(
         const updateModel = useUpdateModel()
         const activeSessionId = useActiveSessionId()
         const updateResult = useUpdateResult()
+        const addRetryToQueue = useAddRetryToQueue()
         const scrollRef = useRef<HTMLDivElement>(null)
 
         // Initialize from map or default to true
@@ -94,13 +95,15 @@ export const ModelColumn = React.memo(
             followStateMap.set(model.id, isFollowing)
         }, [isFollowing, model.id])
 
+        // Retries join the same queue as broadcasts: the single processor
+        // decides when the network request actually starts.
         const handleRetry = React.useCallback(
             (resultId: string) => {
                 if (activeSessionId) {
-                    retryResult(activeSessionId, model.id, resultId)
+                    addRetryToQueue(activeSessionId, model.id, resultId)
                 }
             },
-            [activeSessionId, model.id]
+            [activeSessionId, model.id, addRetryToQueue]
         )
 
         const handleRate = React.useCallback(

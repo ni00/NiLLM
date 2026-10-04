@@ -533,6 +533,10 @@ export const messages = {
         zh: '覆盖全局生成设置。',
         ja: '共通の生成設定を上書きします。'
     },
+    'Reset to inherited': {
+        zh: '恢复继承',
+        ja: '継承に戻す'
+    },
     'Concurrent models': {
         zh: '并发模型数',
         ja: '同時実行モデル数'

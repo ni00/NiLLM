@@ -3,14 +3,11 @@ import { z } from 'zod'
 import { useState, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
-import { useNavigate } from 'react-router'
-import { TestSet } from '@/lib/types'
-
-const getStoreState = () => useAppStore.getState()
+import { TestCase, TestSet } from '@/lib/types'
 
 export interface TestSetForm {
     name: string
-    cases: { id: string; prompt: string }[]
+    cases: TestCase[]
 }
 
 export function useTestSets() {
@@ -19,12 +16,7 @@ export function useTestSets() {
         addTestSet,
         deleteTestSet,
         updateTestSet,
-
         setTestSetOrder,
-        createSession,
-        activeModelIds,
-        addToQueue,
-        addBatchToQueue,
         language,
         setLanguage,
         testSets: storedSets,
@@ -35,21 +27,14 @@ export function useTestSets() {
             deleteTestSet: state.deleteTestSet,
             updateTestSet: state.updateTestSet,
             setTestSetOrder: state.setTestSetOrder,
-            createSession: state.createSession,
-            activeModelIds: state.activeModelIds,
-            addToQueue: state.addToQueue,
-            addBatchToQueue: state.addBatchToQueue,
             language: state.benchmarkLanguage ?? state.language,
             setLanguage: state.setBenchmarkLanguage,
             testSets: state.testSets,
             testSetOrder: state.testSetOrder
         }))
     )
-    const navigate = useNavigate()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isImporting, setIsImporting] = useState(false)
-    const [runningSetId, setRunningSetId] = useState<string | null>(null)
-    const isRunningRef = useRef(false)
 
     const [isEditing, setIsEditing] = useState(false)
     const [editingSetId, setEditingSetId] = useState<string | null>(null)
@@ -57,12 +42,15 @@ export function useTestSets() {
         name: '',
         cases: []
     })
+    const [experimentTestSet, setExperimentTestSet] = useState<TestSet | null>(
+        null
+    )
 
     const openCreateModal = () => {
         setEditingSetId(null)
         setEditForm({
             name: '',
-            cases: [{ id: crypto.randomUUID(), prompt: '' }]
+            cases: [{ id: crypto.randomUUID(), prompt: '', expected: '' }]
         })
         setIsEditing(true)
     }
@@ -71,7 +59,12 @@ export function useTestSets() {
         setEditingSetId(set.id)
         setEditForm({
             name: set.name,
-            cases: set.cases.map((c) => ({ id: c.id, prompt: c.prompt }))
+            // Expected answers ride along the form so editing never drops them.
+            cases: set.cases.map((c) => ({
+                id: c.id,
+                prompt: c.prompt,
+                expected: c.expected
+            }))
         })
         setIsEditing(true)
     }
@@ -87,7 +80,8 @@ export function useTestSets() {
                 name: editForm.name,
                 cases: validCases.map((c) => ({
                     id: c.id,
-                    prompt: c.prompt
+                    prompt: c.prompt,
+                    ...(c.expected !== undefined && { expected: c.expected })
                 }))
             }
 
@@ -106,7 +100,8 @@ export function useTestSets() {
                 name: editForm.name,
                 cases: validCases.map((c) => ({
                     id: crypto.randomUUID(),
-                    prompt: c.prompt
+                    prompt: c.prompt,
+                    ...(c.expected !== undefined && { expected: c.expected })
                 })),
                 createdAt: Date.now()
             })
@@ -117,7 +112,10 @@ export function useTestSets() {
     const addCase = () => {
         setEditForm((prev) => ({
             ...prev,
-            cases: [...prev.cases, { id: crypto.randomUUID(), prompt: '' }]
+            cases: [
+                ...prev.cases,
+                { id: crypto.randomUUID(), prompt: '', expected: '' }
+            ]
         }))
     }
 
@@ -128,11 +126,11 @@ export function useTestSets() {
         }))
     }
 
-    const updateCase = (id: string, text: string) => {
+    const updateCase = (id: string, updates: Partial<TestCase>) => {
         setEditForm((prev) => ({
             ...prev,
             cases: prev.cases.map((c) =>
-                c.id === id ? { ...c, prompt: text } : c
+                c.id === id ? { ...c, ...updates } : c
             )
         }))
     }
@@ -179,13 +177,6 @@ export function useTestSets() {
                 })
                 .parse(await readJsonFile(file))
 
-            if (!data.name || !Array.isArray(data.cases)) {
-                alert(
-                    "Invalid format. Expected JSON with 'name' and 'cases' array."
-                )
-                return
-            }
-
             const newSet: TestSet = {
                 id: crypto.randomUUID(),
                 name: data.name,
@@ -215,69 +206,22 @@ export function useTestSets() {
         )
     }
 
-    const handleRunTest = async (testSet: TestSet) => {
-        if (isRunningRef.current) return
-        if (activeModelIds.length === 0) {
-            alert(
-                t('Please select at least one active model in the Arena first.')
-            )
-            return
-        }
-
-        isRunningRef.current = true
-        setRunningSetId(testSet.id)
-
-        try {
-            const store = getStoreState()
-            const currentSessionId = store.activeSessionId
-            const currentSession = store.sessions.find(
-                (s) => s.id === currentSessionId
-            )
-
-            const sessionId =
-                currentSessionId &&
-                currentSession?.title?.startsWith('Batch Run:')
-                    ? currentSessionId
-                    : createSession(
-                          `Batch Run: ${testSet.name}`,
-                          activeModelIds
-                      )
-
-            addBatchToQueue(
-                testSet.cases.map((testCase) => ({
-                    prompt: testCase.prompt,
-                    sessionId
-                }))
-            )
-
-            navigate('/')
-        } finally {
-            isRunningRef.current = false
-            setRunningSetId(null)
-        }
+    // Batch and single-case runs both open the experiment configuration
+    // dialog; nothing is silently pushed into the ordinary arena queue.
+    const handleRunTest = (testSet: TestSet) => {
+        setExperimentTestSet(testSet)
     }
 
-    const handleRunSingle = async (prompt: string) => {
-        if (isRunningRef.current) return
-        if (activeModelIds.length === 0) {
-            alert(
-                t('Please select at least one active model in the Arena first.')
-            )
-            return
-        }
-        isRunningRef.current = true
-        try {
-            navigate('/')
-            addToQueue(prompt)
-        } finally {
-            isRunningRef.current = false
-        }
+    const handleRunSingle = (testCase: TestCase, testSet: TestSet) => {
+        setExperimentTestSet({
+            ...testSet,
+            cases: [testCase]
+        })
     }
 
     return {
         fileInputRef,
         isImporting,
-        runningSetId,
         isEditing,
         editingSetId,
         editForm,
@@ -300,6 +244,8 @@ export function useTestSets() {
         setIsEditing,
         setEditForm,
         testSetOrder,
-        setTestSetOrder
+        setTestSetOrder,
+        experimentTestSet,
+        closeExperimentDialog: () => setExperimentTestSet(null)
     }
 }

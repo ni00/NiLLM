@@ -10,6 +10,7 @@ export {
     type StreamingSlice,
     type PromptsSlice,
     type ConfigSlice,
-    type ArenaSlice,
+    type ExperimentsSlice,
+    type AppStorage,
     type QueueItem
 } from './store/index'

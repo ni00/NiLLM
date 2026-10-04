@@ -10,6 +10,8 @@ interface ConfigSliderProps {
     step: number
     onChange: (val: number) => void
     labels?: [string, string]
+    /** Optional control rendered beside the label (e.g. inherit-reset). */
+    override?: React.ReactNode
 }
 
 export const ConfigSlider = React.memo(
@@ -21,17 +23,21 @@ export const ConfigSlider = React.memo(
         max,
         step,
         onChange,
-        labels
+        labels,
+        override
     }: ConfigSliderProps) => (
         <div className="space-y-3">
             {label && (
                 <div className="flex justify-between items-end">
-                    <Label
-                        htmlFor={id}
-                        className="text-xs font-semibold opacity-70 uppercase tracking-wider"
-                    >
-                        {label}
-                    </Label>
+                    <div className="flex items-center gap-1.5">
+                        <Label
+                            htmlFor={id}
+                            className="text-xs font-semibold opacity-70 uppercase tracking-wider"
+                        >
+                            {label}
+                        </Label>
+                        {override}
+                    </div>
                     <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded leading-none">
                         {typeof value === 'number'
                             ? value.toFixed(step >= 0.1 ? 1 : 2)

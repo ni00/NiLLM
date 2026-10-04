@@ -1,6 +1,7 @@
 import type { AppState } from './index'
 import { StateCreator } from 'zustand'
-import { GenerationConfig } from '@/lib/types'
+import { mergeGenerationConfig } from '@/features/benchmark/config'
+import { GenerationConfig, GlobalConfigUpdate } from '@/lib/types'
 
 const DEFAULT_CONFIG: GenerationConfig = {
     maxConcurrent: 4,
@@ -34,7 +35,7 @@ export type AppTheme = 'system' | 'light' | 'dark'
 
 export interface ConfigSlice {
     globalConfig: GenerationConfig
-    updateGlobalConfig: (updates: Partial<GenerationConfig>) => void
+    updateGlobalConfig: (updates: GlobalConfigUpdate) => void
     language: AppLanguage
     setLanguage: (lang: AppLanguage) => void
     benchmarkLanguage: AppLanguage | null
@@ -50,11 +51,19 @@ export const createConfigSlice: StateCreator<AppState, [], [], ConfigSlice> = (
     language: 'en',
     benchmarkLanguage: null,
     theme: 'system',
-
+    // Scalars assign directly (clearing an optional field unsets it); nested
+    // timeout/telemetry fold through mergeGenerationConfig so sibling fields
+    // never get frozen by a partial nested update.
     updateGlobalConfig: (updates) =>
-        set((state) => ({
-            globalConfig: { ...state.globalConfig, ...updates }
-        })),
+        set((state) => {
+            const { timeout, telemetry, ...scalars } = updates
+            return {
+                globalConfig: mergeGenerationConfig(
+                    { ...state.globalConfig, ...scalars },
+                    { timeout, telemetry }
+                )
+            }
+        }),
 
     setLanguage: (language) => set({ language }),
     setBenchmarkLanguage: (benchmarkLanguage) => set({ benchmarkLanguage }),

@@ -1,5 +1,9 @@
 import { useI18n } from '@/lib/i18n'
-import { createBrowserRouter, RouterProvider } from 'react-router'
+import {
+    createBrowserRouter,
+    RouterProvider,
+    type DataRouter
+} from 'react-router'
 import { useState, useEffect } from 'react'
 import { storeHydration } from '@/lib/store'
 
@@ -18,6 +22,14 @@ const createAppRouter = () =>
                 {
                     path: '/stats',
                     lazy: () => import('@/pages/stats')
+                },
+                {
+                    path: '/experiments',
+                    lazy: () => import('@/pages/experiments')
+                },
+                {
+                    path: '/experiments/:runId',
+                    lazy: () => import('@/pages/experiment-detail')
                 },
                 {
                     path: '/tests',
@@ -56,9 +68,7 @@ function LoadingView() {
 }
 
 export default function AppRouter() {
-    const [router, setRouter] = useState<ReturnType<
-        typeof createAppRouter
-    > | null>(null)
+    const [router, setRouter] = useState<DataRouter | null>(null)
     useEffect(() => {
         let active = true
         void storeHydration.then(() => {
