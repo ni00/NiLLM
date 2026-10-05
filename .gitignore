@@ -40,3 +40,7 @@ src-tauri/gen/android/keystore.properties
 *.tsbuildinfo
 playwright-report/
 test-results/
+
+# Local workspace exports
+nillm-backup-*.json
+nillm-storage-dump-*.json

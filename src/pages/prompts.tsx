@@ -28,6 +28,16 @@ import { VariableFiller } from '@/features/prompts/components/VariableFiller'
 import { EmptyPrompts } from '@/features/prompts/components/EmptyPrompts'
 import { PromptTemplate } from '@/lib/types'
 import { useState } from 'react'
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogAction,
+    AlertDialogCancel
+} from '@/components/ui/alert-dialog'
 
 interface SortablePromptCardProps {
     template: PromptTemplate
@@ -67,6 +77,12 @@ function SortablePromptCard({ template, ...props }: SortablePromptCardProps) {
 export function PromptsPage() {
     const t = useI18n()
     const {
+        deletingId,
+        setDeletingId,
+        confirmDelete,
+        fileInputRef,
+        handleImportClick,
+        feedback,
         promptTemplates,
         isEditing,
         editingId,
@@ -113,28 +129,30 @@ export function PromptsPage() {
             icon={BookTemplate}
             actions={
                 <div className="flex gap-2">
-                    <div className="relative">
-                        <input
-                            type="file"
-                            onChange={handleImport}
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                            accept=".json"
-                            title={t('Import JSON Template')}
-                        />
-                        <Button
-                            variant="outline"
-                            className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
-                        >
-                            <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                            <span className="hidden md:inline text-xs font-medium">
-                                {t('Import')}
-                            </span>
-                        </Button>
-                    </div>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImport}
+                        className="hidden"
+                        accept=".json"
+                        aria-label={t('Import JSON Template')}
+                    />
+                    <Button
+                        variant="outline"
+                        onClick={handleImportClick}
+                        aria-label={t('Import JSON Template')}
+                        className="min-h-11 min-w-11 px-0 md:w-auto md:px-4 group gap-2"
+                    >
+                        <FolderInput className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="hidden md:inline text-sm font-medium">
+                            {t('Import')}
+                        </span>
+                    </Button>
                     <Button
                         variant="outline"
                         onClick={handleCreate}
-                        className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
+                        aria-label={t('Create')}
+                        className="min-h-11 min-w-11 px-0 md:w-auto md:px-4 group gap-2"
                     >
                         <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <span className="hidden md:inline text-xs font-medium">
@@ -144,6 +162,14 @@ export function PromptsPage() {
                 </div>
             }
         >
+            {feedback && !isUsing && (
+                <p
+                    role={feedback.error ? 'alert' : 'status'}
+                    className={`mb-4 text-sm ${feedback.error ? 'text-destructive' : 'text-muted-foreground'}`}
+                >
+                    {feedback.message}
+                </p>
+            )}
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -171,7 +197,7 @@ export function PromptsPage() {
                         ))}
                         {promptTemplates.length === 0 && (
                             <EmptyPrompts
-                                onImport={() => {}}
+                                onImport={handleImportClick}
                                 onCreate={handleCreate}
                             />
                         )}
@@ -215,6 +241,7 @@ export function PromptsPage() {
                 variableValues={variableValues}
                 selectedModelId={selectedModelId}
                 isGenerating={isGenerating}
+                feedback={feedback}
                 models={models}
                 onClose={() => setIsUsing(false)}
                 onUse={handleFillAndUse}
@@ -224,6 +251,32 @@ export function PromptsPage() {
                 }
                 onSelectModel={setSelectedModelId}
             />
+            <AlertDialog
+                open={deletingId !== null}
+                onOpenChange={(open) => !open && setDeletingId(null)}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {t('Delete Template')}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t(
+                                'Are you sure you want to delete this template?'
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {t('Delete')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </PageLayout>
     )
 }

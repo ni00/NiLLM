@@ -1,11 +1,5 @@
-/**
- * Bounded cursor loop shared by arena broadcasts and experiment runners.
- *
- * Task failures that are legitimate outcomes must be represented by the task
- * itself (never thrown). An unexpected throw records the first error, stops
- * claiming new items, and only rethrows after every in-flight task has
- * settled — no fail-fast `Promise.all` that strands background requests.
- */
+/** Bound parallel dispatch; on an unexpected error stop claiming items and
+ * wait for in-flight tasks before rethrowing. Expected failures are task outcomes. */
 export async function runConcurrent<T>(
     items: readonly T[],
     concurrency: number,

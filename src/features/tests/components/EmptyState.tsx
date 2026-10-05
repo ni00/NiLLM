@@ -1,26 +1,36 @@
 import { useI18n } from '@/lib/i18n'
 import { FolderInput } from 'lucide-react'
+import { EmptyState as AssetEmptyState } from '@/components/ui/empty-state'
+import { Button } from '@/components/ui/button'
 
 interface EmptyStateProps {
     onImport: () => void
+    onCreate: () => void
 }
 
-export function EmptyState({ onImport }: EmptyStateProps) {
+export function EmptyState({ onImport, onCreate }: EmptyStateProps) {
     const t = useI18n()
     return (
-        <div
-            className="flex flex-col items-center justify-center p-12 bg-muted/10 border-2 border-dashed rounded-xl cursor-pointer hover:bg-muted/20 transition-colors"
-            onClick={onImport}
-        >
-            <FolderInput className="h-10 w-10 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-semibold text-muted-foreground">
-                {t('Import Custom Tests')}
-            </h3>
-            <p className="text-sm text-muted-foreground/60 max-w-xs text-center mt-2">
-                {t(
-                    'Drag and drop your JSON benchmark files here to run custom evaluations.'
-                )}
-            </p>
-        </div>
+        <AssetEmptyState
+            icon={FolderInput}
+            title={t('Create your own test set')}
+            description={t(
+                'Built-in test sets are available above. Create or import a custom set for your evaluations.'
+            )}
+            actions={
+                <>
+                    <Button
+                        className="min-h-11"
+                        variant="outline"
+                        onClick={onImport}
+                    >
+                        {t('Import Custom Tests')}
+                    </Button>
+                    <Button className="min-h-11" onClick={onCreate}>
+                        {t('Create')}
+                    </Button>
+                </>
+            }
+        />
     )
 }

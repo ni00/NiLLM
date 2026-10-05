@@ -20,6 +20,7 @@ export function ConstraintsConfig({
     config,
     onChange,
     sources,
+    idPrefix,
     onResetField
 }: ConfigSectionProps) {
     const t = useI18n()
@@ -31,7 +32,7 @@ export function ConstraintsConfig({
                 <div className="space-y-2.5">
                     <div className="flex items-center gap-1.5">
                         <Label
-                            htmlFor="maxTokens"
+                            htmlFor={`${idPrefix}-maxTokens`}
                             className="text-xs font-bold opacity-60 uppercase tracking-tight"
                         >
                             {t('Max Tokens')}
@@ -43,7 +44,7 @@ export function ConstraintsConfig({
                         />
                     </div>
                     <Input
-                        id="maxTokens"
+                        id={`${idPrefix}-maxTokens`}
                         type="number"
                         step="100"
                         value={config.maxTokens ?? 100000}
@@ -57,7 +58,10 @@ export function ConstraintsConfig({
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2.5">
                         <div className="flex items-center gap-1.5">
-                            <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
+                            <Label
+                                htmlFor={`${idPrefix}-seed`}
+                                className="text-xs font-bold opacity-60 uppercase tracking-tight"
+                            >
                                 {t('Seed')}
                             </Label>
                             <FieldOverride
@@ -67,6 +71,7 @@ export function ConstraintsConfig({
                             />
                         </div>
                         <Input
+                            id={`${idPrefix}-seed`}
                             type="number"
                             placeholder={t('Random')}
                             value={config.seed ?? ''}
@@ -78,7 +83,10 @@ export function ConstraintsConfig({
                     </div>
                     <div className="space-y-2.5">
                         <div className="flex items-center gap-1.5">
-                            <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
+                            <Label
+                                htmlFor={`${idPrefix}-repetitionPenalty`}
+                                className="text-xs font-bold opacity-60 uppercase tracking-tight"
+                            >
                                 {t('Repetition Penalty')}
                             </Label>
                             <FieldOverride
@@ -88,6 +96,7 @@ export function ConstraintsConfig({
                             />
                         </div>
                         <Input
+                            id={`${idPrefix}-repetitionPenalty`}
                             type="number"
                             step="0.01"
                             placeholder="1.0"
@@ -106,7 +115,10 @@ export function ConstraintsConfig({
 
                 <div className="space-y-2.5">
                     <div className="flex items-center gap-1.5">
-                        <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
+                        <Label
+                            htmlFor={`${idPrefix}-stopSequences`}
+                            className="text-xs font-bold opacity-60 uppercase tracking-tight"
+                        >
                             {t('Stop Sequences')}
                         </Label>
                         <FieldOverride
@@ -116,6 +128,7 @@ export function ConstraintsConfig({
                         />
                     </div>
                     <Input
+                        id={`${idPrefix}-stopSequences`}
                         placeholder={'e.g. \\n, USER, END'}
                         value={config.stopSequences?.join(', ') || ''}
                         onChange={(e) =>

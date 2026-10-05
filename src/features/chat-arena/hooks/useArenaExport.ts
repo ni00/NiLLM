@@ -1,40 +1,46 @@
-import { LLMModel, BenchmarkResult } from '@/lib/types'
+import type { LLMModel, BenchmarkResult, ChatSession } from '@/lib/types'
 import { downloadFile } from '@/lib/utils'
+
+async function loadReportTools() {
+    const [{ buildReportDocument }, { exportReportMarkdown }] =
+        await Promise.all([
+            import('@/features/stats/domain/report'),
+            import('@/features/stats/domain/export')
+        ])
+    return { buildReportDocument, exportReportMarkdown }
+}
 
 export function useArenaExport(
     activeModels: LLMModel[],
-    activeSession:
-        | { id: string; results: Record<string, BenchmarkResult[]> }
-        | undefined
+    activeSession: ChatSession | undefined
 ) {
     const handleExportAll = async () => {
         if (!activeSession || activeModels.length === 0) return
+        const { buildReportDocument, exportReportMarkdown } =
+            await loadReportTools()
 
-        let fullContent = `# Arena Export - ${new Date().toLocaleString()}\n`
-        fullContent += `Session ID: ${activeSession.id}\n\n`
-
-        activeModels.forEach((model) => {
-            const results = activeSession.results[model.id] || []
-            if (results.length === 0) return
-
-            const provider = model.providerName || model.provider
-            fullContent += `## Model: ${model.name} (${provider})\n\n`
-
-            results.forEach((res, idx) => {
-                const timestamp = new Date(res.timestamp).toLocaleString()
-                fullContent += `### Q${idx + 1} (${timestamp})\n\n`
-                fullContent += `**PROMPT:**\n${res.prompt}\n\n`
-                fullContent += `**RESPONSE:**\n${res.response}\n\n`
-                if (res.rating) {
-                    fullContent += `**RATING:** ${res.rating.toFixed(1)} (${res.ratingSource === 'ai' ? 'AI Judge' : 'Human Judge'})\n`
-                }
-                if (res.metrics) {
-                    fullContent += `**METRICS:** TTFT: ${res.metrics.ttft}ms | SPD: ${res.metrics.tps.toFixed(1)}t/s | TIME: ${(res.metrics.totalDuration / 1000).toFixed(2)}s | TOKS: ${res.metrics.tokenCount}\n`
-                }
-                fullContent += `\n---\n\n`
-            })
-            fullContent += `\n\n`
-        })
+        const fullContent = exportReportMarkdown(
+            buildReportDocument(
+                {
+                    source: 'arena',
+                    models: activeModels,
+                    sessions: [
+                        {
+                            ...activeSession,
+                            results: Object.fromEntries(
+                                activeModels.map((model) => [
+                                    model.id,
+                                    activeSession.results[model.id] ?? []
+                                ])
+                            )
+                        }
+                    ],
+                    filter: {}
+                },
+                { includeContent: true, includeReasoning: false },
+                Date.now()
+            )
+        )
 
         await downloadFile(
             fullContent,
@@ -47,24 +53,25 @@ export function useArenaExport(
         model: LLMModel,
         results: BenchmarkResult[]
     ) => {
-        if (results.length === 0) return
+        if (!activeSession || results.length === 0) return
+        const { buildReportDocument, exportReportMarkdown } =
+            await loadReportTools()
 
-        const content = results
-            .map((res, idx) => {
-                const timestamp = new Date(res.timestamp).toLocaleString()
-                let md = `### Q${idx + 1} (${timestamp})\n\n**PROMPT:**\n${res.prompt}\n\n**RESPONSE:**\n${res.response}\n\n`
-                if (res.rating) {
-                    md += `**RATING:** ${res.rating.toFixed(1)} (${res.ratingSource === 'ai' ? 'AI Judge' : 'Human Judge'})\n`
-                }
-                if (res.metrics) {
-                    md += `**METRICS:** TTFT: ${res.metrics.ttft}ms | SPD: ${res.metrics.tps.toFixed(1)}t/s | TIME: ${(res.metrics.totalDuration / 1000).toFixed(2)}s | TOKS: ${res.metrics.tokenCount}\n`
-                }
-                return md + '\n---\n'
-            })
-            .join('\n')
-
+        const fullContent = exportReportMarkdown(
+            buildReportDocument(
+                {
+                    source: 'arena',
+                    models: [model],
+                    sessions: [
+                        { ...activeSession, results: { [model.id]: results } }
+                    ],
+                    filter: {}
+                },
+                { includeContent: true, includeReasoning: false },
+                Date.now()
+            )
+        )
         const provider = model.providerName || model.provider
-        const fullContent = `# ${model.name} (${provider}) Chat History\n\n${content}`
 
         await downloadFile(
             fullContent,

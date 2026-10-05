@@ -3,20 +3,14 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 
-// https://vitejs.dev/config/
 export default defineConfig({
     plugins: [react(), tailwindcss()],
 
-    // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-    //
-    // 1. prevent vite from obscuring rust errors
     clearScreen: false,
-    // 2. tauri expects a fixed port, fail if that port is not available
     server: {
         port: 1420,
         strictPort: true,
         watch: {
-            // 3. tell vite to ignore watching `src-tauri`
             ignored: ['**/src-tauri/**']
         }
     },
@@ -29,9 +23,26 @@ export default defineConfig({
     // Imports in model workers must remain separate from the application entry.
     worker: { format: 'es' },
 
-    // Shadcn UI
+    // Discover worker dependencies before the first request, so lazy parser
+    // imports cannot trigger a development reload in the middle of a stream.
+    optimizeDeps: {
+        entries: [
+            'index.html',
+            'src/lib/workers/stream.worker.ts',
+            'src/features/chat-arena/markdown/markdown.worker.ts'
+        ]
+    },
+
     resolve: {
         alias: {
+            // The browser export uses document; Markdown workers need the
+            // package's DOM-free entity decoder in development and builds.
+            'decode-named-character-reference': fileURLToPath(
+                new URL(
+                    './node_modules/decode-named-character-reference/index.js',
+                    import.meta.url
+                )
+            ),
             '@': fileURLToPath(new URL('./src', import.meta.url)),
             react: fileURLToPath(
                 new URL('./node_modules/react', import.meta.url)

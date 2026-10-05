@@ -1,20 +1,44 @@
-import type { StreamRequest, StreamEvent } from '../streaming/protocol'
-import { streamModel } from '../streaming/stream'
-import {
-    generateImage,
-    buildImageResponse,
-    extractPromptFromMessages
-} from './imageGeneration'
+import type {
+    GenerationWorkerRequest,
+    StreamEvent
+} from '../streaming/protocol'
+import { DecisionError } from '@/features/decisions/errors'
 
-const emit = (event: StreamEvent) => self.postMessage(event)
-self.onmessage = async ({ data }: MessageEvent<StreamRequest>) => {
-    const { model, messages, resultId } = data
+const requests = new Map<string, AbortController>()
+self.onmessage = async ({ data }: MessageEvent<GenerationWorkerRequest>) => {
+    if (data.type === 'cancel') {
+        requests.get(data.requestId)?.abort()
+        return
+    }
+    const { model, messages, resultId, requestId } = data
+    const controller = new AbortController()
+    requests.set(requestId, controller)
+    const emit = (event: StreamEvent) =>
+        self.postMessage({ ...event, requestId })
     try {
-        if (model.mode === 'image') {
+        if (model.mode === 'decision' || model.provider === 'typesafe') {
+            const { executeDecision } =
+                await import('@/features/decisions/execute')
+            controller.signal.throwIfAborted()
+            await executeDecision(
+                model,
+                messages,
+                resultId,
+                emit,
+                controller.signal
+            )
+        } else if (model.mode === 'image') {
+            const {
+                generateImage,
+                buildImageResponse,
+                extractPromptFromMessages
+            } = await import('./imageGeneration')
+            controller.signal.throwIfAborted()
             const start = performance.now()
             const { text, imageUrls } = await generateImage(
                 model,
-                extractPromptFromMessages(messages)
+                extractPromptFromMessages(messages),
+                controller.signal
             )
             const duration = performance.now() - start
             emit({
@@ -29,10 +53,19 @@ self.onmessage = async ({ data }: MessageEvent<StreamRequest>) => {
                 },
                 isFinal: true
             })
-        } else await streamModel(model, messages, resultId, emit)
+        } else {
+            const { streamModel } = await import('../streaming/stream')
+            controller.signal.throwIfAborted()
+            await streamModel(
+                model,
+                messages,
+                resultId,
+                emit,
+                controller.signal
+            )
+        }
         emit({ type: 'done', resultId })
     } catch (error) {
-        // Never post SDK error objects: request headers may contain credentials.
         const status =
             error && typeof error === 'object' && 'statusCode' in error
                 ? error.statusCode
@@ -41,9 +74,13 @@ self.onmessage = async ({ data }: MessageEvent<StreamRequest>) => {
             type: 'error',
             resultId,
             error:
-                typeof status === 'number'
-                    ? `Provider request failed (HTTP ${status}).`
-                    : 'Generation failed. Check provider settings, network access and timeouts.'
+                error instanceof DecisionError
+                    ? error.message
+                    : typeof status === 'number'
+                      ? `Provider request failed (HTTP ${status}).`
+                      : 'Generation failed. Check provider settings, network access and timeouts.'
         })
+    } finally {
+        requests.delete(requestId)
     }
 }

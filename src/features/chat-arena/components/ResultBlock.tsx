@@ -1,5 +1,6 @@
 import React from 'react'
 import { BenchmarkResult } from '@/lib/types'
+import { useAppStore } from '@/lib/store'
 import { PromptHeader } from './result/PromptHeader'
 import { ResponseBody, displayStatus } from './result/ResponseBody'
 import { RatingBar } from './result/RatingBar'
@@ -7,9 +8,9 @@ import { MetricsBar } from './result/MetricsBar'
 
 export interface ResultBlockProps {
     res: BenchmarkResult
-    streaming?: Partial<BenchmarkResult>
     showContent: boolean
     isLast: boolean
+    lastElementRef?: (node: HTMLDivElement | null) => void
     onToggle: (id: string) => void
     onRate: (score: number) => void
     onRetry: (id: string) => void
@@ -23,14 +24,18 @@ export interface ResultBlockProps {
 export const ResultBlock = React.memo(
     ({
         res,
-        streaming,
         showContent,
         isLast,
+        lastElementRef,
         onToggle,
         onRate,
         onRetry,
         metricsRanges
     }: ResultBlockProps) => {
+        // Other chunks leave this selector stable; shared metric ranges may
+        // still update independently.
+        const streaming = useAppStore((state) => state.streamingData[res.id])
+
         const effectiveResponse =
             streaming?.response !== undefined
                 ? streaming.response
@@ -49,6 +54,8 @@ export const ResultBlock = React.memo(
 
         return (
             <div
+                ref={isLast ? lastElementRef : undefined}
+                data-result-id={res.id}
                 className={`space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ${!isLast ? 'border-l-2 border-muted pl-4 ml-1' : ''}`}
             >
                 <PromptHeader
@@ -61,6 +68,9 @@ export const ResultBlock = React.memo(
                 {showContent && (
                     <>
                         <ResponseBody
+                            isDecision={
+                                res.requestSnapshot?.model.mode === 'decision'
+                            }
                             response={effectiveResponse}
                             reasoning={effectiveReasoning}
                             isStreaming={!!streaming}
@@ -80,6 +90,9 @@ export const ResultBlock = React.memo(
 
                 {effectiveMetrics && (
                     <MetricsBar
+                        isDecision={
+                            res.requestSnapshot?.model.mode === 'decision'
+                        }
                         metrics={effectiveMetrics}
                         ranges={metricsRanges}
                     />

@@ -10,10 +10,11 @@ import {
 } from '@/lib/hooks/useStoreSelectors'
 import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { abortAllTasks } from '@/features/benchmark/engine'
 import { isSendShortcut } from '@/features/layout/useGlobalHotkeys'
 import { MentionPicker } from './MentionPicker'
 import { AttachmentPreview } from './AttachmentPreview'
+import { DecisionComposer } from '@/features/decisions/DecisionComposer'
+import { decisionRequestSchema } from '@/features/decisions/domain'
 
 interface ArenaInputProps {
     input: string
@@ -45,7 +46,22 @@ export const ArenaInput = ({
     const stopAll = useStopAll()
     const models = useModels()
     const activeModelIds = useActiveModelIds()
-    const activeModels = models.filter((m) => activeModelIds.includes(m.id))
+    const activeModels = models.filter(
+        (m) => m.enabled && activeModelIds.includes(m.id)
+    )
+    const isDecision = activeModels.some((m) => m.mode === 'decision')
+    const mixedModes =
+        isDecision && activeModels.some((m) => m.mode !== 'decision')
+    let decisionValid = false
+    if (isDecision && input.trim()) {
+        try {
+            decisionValid = decisionRequestSchema.safeParse(
+                JSON.parse(input)
+            ).success
+        } catch {
+            /* Inline feedback below. */
+        }
+    }
 
     const [mentionQuery, setMentionQuery] = useState<string | null>(null)
     const [mentionIndex, setMentionIndex] = useState(0)
@@ -141,6 +157,10 @@ export const ArenaInput = ({
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const newVal = e.target.value
         setInput(newVal)
+        if (isDecision) {
+            setMentionQuery(null)
+            return
+        }
 
         const cursor = e.target.selectionStart
         const textBeforeCursor = newVal.substring(0, cursor)
@@ -158,6 +178,15 @@ export const ArenaInput = ({
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.nativeEvent.isComposing) return
+        if (
+            e.key === 'Enter' &&
+            document.querySelector(
+                '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], dialog[open]'
+            )
+        ) {
+            return
+        }
         if (mentionQuery !== null && filteredModels.length > 0) {
             if (e.key === 'ArrowUp') {
                 e.preventDefault()
@@ -185,7 +214,7 @@ export const ArenaInput = ({
         }
         if (isSendShortcut(e.nativeEvent)) {
             e.preventDefault()
-            if (!e.nativeEvent.isComposing) onSend()
+            onSend()
             return
         }
         onKeyDown(e)
@@ -260,7 +289,6 @@ export const ArenaInput = ({
     const handleClearContext = () => {
         stopAll()
         clearActiveSession()
-        abortAllTasks()
     }
 
     return (
@@ -286,7 +314,38 @@ export const ArenaInput = ({
                     aria-hidden="true"
                 />
 
-                {mentionQuery !== null && (
+                {isDecision && (
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                        <DecisionComposer input={input} onApply={setInput} />
+                        <span>
+                            {t(
+                                'Decision requests are independent; conversation history is excluded.'
+                            )}
+                        </span>
+                        {mixedModes && (
+                            <span role="alert" className="text-destructive">
+                                {t(
+                                    'Set every selected model to Decision mode for a comparable task.'
+                                )}
+                            </span>
+                        )}
+                        {!mixedModes && input.trim() && !decisionValid && (
+                            <span role="alert" className="text-destructive">
+                                {t(
+                                    'Decision input must be valid JSON with state and typed questions.'
+                                )}
+                            </span>
+                        )}
+                        {attachments.length > 0 && (
+                            <span role="alert" className="text-destructive">
+                                {t(
+                                    'Decision input uses text or JSON state. Remove file attachments before sending.'
+                                )}
+                            </span>
+                        )}
+                    </div>
+                )}
+                {!isDecision && mentionQuery !== null && (
                     <MentionPicker
                         models={filteredModels}
                         selectedIndex={mentionIndex}
@@ -323,11 +382,15 @@ export const ArenaInput = ({
                         onChange={handleChange}
                         onKeyDown={handleKeyDown}
                         placeholder={
-                            attachments.length > 0
-                                ? t('Add a message...')
-                                : t(
-                                      'Send a message to all models... (Use @ to mention models)'
+                            isDecision
+                                ? t(
+                                      'Enter a decision task with state and questions, or use the decision editor.'
                                   )
+                                : attachments.length > 0
+                                  ? t('Add a message...')
+                                  : t(
+                                        'Send a message to all models... (Use @ to mention models)'
+                                    )
                         }
                         className={cn(
                             'min-h-[80px] max-h-[200px] resize-none shadow-sm rounded-xl p-3',
@@ -361,6 +424,7 @@ export const ArenaInput = ({
                             onClick={() => fileInputRef.current?.click()}
                             className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
                             title={t('Attach files')}
+                            disabled={isDecision}
                         >
                             <Paperclip className="w-4 h-4" />
                         </Button>
@@ -392,9 +456,13 @@ export const ArenaInput = ({
                         </span>
                         <Button
                             onClick={onSend}
+                            aria-label={t('Send message')}
                             disabled={
-                                isProcessing ||
-                                (!input.trim() && attachments.length === 0)
+                                isDecision
+                                    ? !decisionValid ||
+                                      mixedModes ||
+                                      attachments.length > 0
+                                    : !input.trim() && attachments.length === 0
                             }
                             className="h-8 w-8 p-0 rounded-full shadow-md"
                             size="icon"

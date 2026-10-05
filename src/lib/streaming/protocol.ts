@@ -5,6 +5,10 @@ export interface StreamRequest {
     messages: Message[]
     resultId: string
 }
+export type GenerationWorkerRequest =
+    | (StreamRequest & { type: 'generate'; requestId: string })
+    | { type: 'cancel'; requestId: string }
+export type GenerationWorkerEvent = StreamEvent & { requestId: string }
 export type StreamEvent =
     | { type: 'start' | 'done'; resultId: string }
     | { type: 'error'; resultId: string; error: string }

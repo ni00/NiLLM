@@ -1,4 +1,5 @@
 import type { BenchmarkMetrics, LLMModel } from '@/lib/types'
+import { usageMetrics, type TokenUsage } from '@/lib/usage'
 
 export function estimateTokens(text: string): number {
     const cjk =
@@ -6,36 +7,46 @@ export function estimateTokens(text: string): number {
     return Math.ceil(cjk * 1.5 + (text.length - cjk) / 4)
 }
 
+/** Count deltas once, without retaining or rescanning the response. */
+export function createTokenCounter() {
+    let length = 0,
+        cjk = 0
+    return {
+        add(text: string) {
+            length += text.length
+            for (let index = 0; index < text.length; index++) {
+                const char = text.charCodeAt(index)
+                if (
+                    (char >= 0x3400 && char <= 0x9fff) ||
+                    (char >= 0x3040 && char <= 0x30ff) ||
+                    (char >= 0xac00 && char <= 0xd7af)
+                )
+                    cjk++
+            }
+        },
+        count: () => Math.ceil(cjk * 1.5 + (length - cjk) / 4)
+    }
+}
+
 export function streamMetrics(
     start: number,
     now: number,
     firstToken: number | undefined,
     estimatedTokens: number,
-    usage?: {
-        inputTokens?: number
-        outputTokens?: number
-        reasoningTokens?: number
-    },
+    usage?: TokenUsage,
     pricing?: LLMModel['pricing']
 ): BenchmarkMetrics {
-    const apiTokens = usage?.outputTokens
+    const measured = usageMetrics(usage, pricing)
+    const apiTokens = measured.outputTokens
     const tokenCount = apiTokens !== undefined ? apiTokens : estimatedTokens
     const generationSeconds =
         firstToken !== undefined ? (now - firstToken) / 1000 : 0
-    const cost =
-        pricing && usage?.inputTokens !== undefined && apiTokens !== undefined
-            ? (usage.inputTokens * pricing.input + apiTokens * pricing.output) /
-              1e6
-            : undefined
     return {
         ttft: firstToken !== undefined ? Math.max(0, firstToken - start) : 0,
         tps: generationSeconds > 0 ? tokenCount / generationSeconds : 0,
         totalDuration: Math.max(0, now - start),
         tokenCount,
-        inputTokens: usage?.inputTokens,
-        outputTokens: apiTokens,
-        reasoningTokens: usage?.reasoningTokens,
-        tokenSource: apiTokens !== undefined ? 'api' : 'estimated',
-        cost
+        ...measured,
+        tokenSource: apiTokens !== undefined ? 'api' : 'estimated'
     }
 }

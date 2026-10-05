@@ -5,6 +5,7 @@ import {
     persistenceFor
 } from './persistence'
 import { cancelAllStreams } from '../streaming/cancellation'
+import { abortStreamingUI } from '@/features/benchmark/streaming-ui'
 import { parseBackup } from '../validation'
 import { ModelsSlice, createModelsSlice } from './models'
 import { SessionsSlice, createSessionsSlice } from './sessions'
@@ -16,7 +17,7 @@ import { ConfigSlice, createConfigSlice } from './config'
 import { ArenaSlice, createArenaSlice } from './arena'
 import { ExperimentsSlice, createExperimentsSlice } from './experiments'
 import { indexedDBStorage } from './indexeddb-storage'
-import type { LLMModel } from '@/lib/types'
+import { sanitizeModels } from '@/lib/providers/export'
 
 export interface ExportDataOptions {
     includeSecrets?: boolean
@@ -39,30 +40,6 @@ export type AppState = ModelsSlice &
         importData: (data: string) => Promise<void>
         stopAll: () => void
     }
-
-/** Strips credentials, query and hash from an endpoint for shared backups. */
-function sanitizeBaseURL(baseURL: string): string {
-    try {
-        const url = new URL(baseURL)
-        url.username = ''
-        url.password = ''
-        url.search = ''
-        url.hash = ''
-        return url.href.replace(/\/$/, '')
-    } catch {
-        return baseURL
-    }
-}
-
-function sanitizeModels(models: LLMModel[]): LLMModel[] {
-    return models.map((model) => ({
-        ...model,
-        apiKey: undefined,
-        ...(model.baseURL !== undefined && {
-            baseURL: sanitizeBaseURL(model.baseURL)
-        })
-    }))
-}
 
 // The persistence controller for a store lives in the persistence registry.
 
@@ -95,9 +72,11 @@ export const createAppState: StateCreator<AppState> = (set, get, api) => ({
                 sessions: state.sessions,
                 testSets: state.testSets,
                 promptTemplates: state.promptTemplates,
+                parameterPresets: state.parameterPresets,
                 experimentRuns: state.experimentRuns,
                 globalConfig: state.globalConfig,
                 activeModelIds: state.activeModelIds,
+                activeSessionId: state.activeSessionId,
                 testSetOrder: state.testSetOrder,
                 language: state.language,
                 benchmarkLanguage: state.benchmarkLanguage,
@@ -135,6 +114,7 @@ export const createAppState: StateCreator<AppState> = (set, get, api) => ({
         // Cancel in-flight provider streams first so active tasks settle;
         // isProcessing is released by the single processor afterwards.
         cancelAllStreams()
+        abortStreamingUI()
         for (const run of get().experimentRuns) {
             if (
                 run.status === 'queued' ||

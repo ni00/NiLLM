@@ -20,7 +20,6 @@ export async function downloadFile(
             const { save } = await import('@tauri-apps/plugin-dialog')
             const { writeTextFile } = await import('@tauri-apps/plugin-fs')
 
-            // Determine extension from fileName
             const extension = fileName.split('.').pop() || 'txt'
             const filterName = extension.toUpperCase()
 

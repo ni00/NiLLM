@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual'
 import { Link, useParams } from 'react-router'
 import {
     ArrowLeft,
     FlaskConical,
+    BarChart3,
+    Gavel,
     Pause,
     Play,
     Square,
@@ -13,6 +16,8 @@ import { useI18n } from '@/lib/i18n'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -24,60 +29,202 @@ import {
     AlertDialogTitle
 } from '@/components/ui/alert-dialog'
 import { PageLayout } from '@/features/layout/PageLayout'
-import type { BenchmarkResult, ExperimentTask } from '@/lib/types'
+import type { BenchmarkResult, ExperimentTask, TestCase } from '@/lib/types'
 import {
     Dialog,
     DialogContent,
+    DialogBody,
     DialogDescription,
     DialogHeader,
     DialogTitle
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { RatingBar } from '@/features/chat-arena/components/result/RatingBar'
+import {
+    ResponseBody,
+    displayStatus
+} from '@/features/chat-arena/components/result/ResponseBody'
+import {
+    buildJudgingGroups,
+    summarizeJudgeCost,
+    summarizeScoringCoverage,
+    useExperimentJudging
+} from '@/features/experiments/hooks/useExperimentJudging'
+import { resultStatus } from '@/features/stats/domain/statistics'
+import { formatUSD } from '@/features/stats/domain/export'
 
-const CASE_PAGE_SIZE = 50
 const MODEL_PAGE_SIZE = 6
 
-const PAGE_SIZE = 50
+/** Keep all records; window lists only above this threshold. */
+const VIRTUAL_THRESHOLD = 50
+const VIRTUAL_OVERSCAN = 6
+const MATRIX_ROW_ESTIMATE = 36
+const TASK_CARD_ESTIMATE = 68
+const ATTEMPT_ESTIMATE = 48
 
 function attemptStatus(task: ExperimentTask) {
     if (task.attempts.length === 0) return 'not-run' as const
-    return task.attempts[task.attempts.length - 1].status ?? 'completed'
+    return resultStatus(task.attempts[task.attempts.length - 1])
 }
 
 function AttemptView({
     attempt,
-    index
+    index,
+    mode,
+    open,
+    onToggle,
+    onRate
 }: {
     attempt: BenchmarkResult
     index: number
+    mode: 'chat' | 'image' | 'decision'
+
+    open: boolean
+    onToggle: () => void
+    onRate: (resultId: string, score: number) => void
 }) {
-    const [open, setOpen] = useState(false)
+    const t = useI18n()
+    const completed = resultStatus(attempt) === 'completed'
+    const rule = mode !== 'image' ? attempt.ruleEvaluation : undefined
+    const judge = mode !== 'image' ? attempt.judgeEvaluation : undefined
     return (
         <div className="rounded-md border bg-background/60 text-xs">
             <button
                 type="button"
-                className="w-full flex items-center justify-between gap-2 p-2 text-left"
-                onClick={() => setOpen((value) => !value)}
+                className="w-full min-h-11 flex items-center justify-between gap-2 p-2 text-left text-sm"
+                onClick={onToggle}
+                aria-expanded={open}
             >
                 <span className="font-medium">
-                    #{index + 1} · {attempt.status}
+                    #{index + 1} · {t(resultStatus(attempt))}
                 </span>
                 <span className="text-muted-foreground tabular-nums">
+                    {mode === 'decision'
+                        ? `${Math.round(attempt.metrics.totalDuration)}ms`
+                        : ''}
                     {attempt.metrics.ttft > 0
-                        ? `TTFT ${Math.round(attempt.metrics.ttft)}ms · ${attempt.metrics.tps.toFixed(1)} TPS`
+                        ? `TTFT ${Math.round(attempt.metrics.ttft)}ms${mode === 'chat' ? ` · ${attempt.metrics.tps.toFixed(1)} TPS` : ''}`
+                        : ''}
+                    {attempt.metrics.cost != null
+                        ? ` · ${formatUSD(attempt.metrics.cost)}`
                         : ''}
                 </span>
             </button>
             {open && (
                 <div className="p-2 pt-0 space-y-2">
-                    {attempt.error && (
-                        <div className="text-destructive">{attempt.error}</div>
-                    )}
-                    {attempt.response && (
-                        <pre className="whitespace-pre-wrap break-words max-h-64 overflow-y-auto text-xs bg-muted/30 rounded p-2 select-text">
-                            {attempt.response}
-                        </pre>
-                    )}
+                    <ResponseBody
+                        isDecision={mode === 'decision'}
+                        response={attempt.response}
+                        reasoning={attempt.reasoning}
+                        isStreaming={false}
+                        status={displayStatus(attempt)}
+                        error={attempt.error}
+                    />
+                    <div className="space-y-1.5 border-t border-border/40 pt-2">
+                        {completed ? (
+                            <>
+                                {rule ? (
+                                    <div
+                                        className={
+                                            rule.passed
+                                                ? 'text-success'
+                                                : 'text-destructive'
+                                        }
+                                    >
+                                        {t('Rule')} ({rule.type}):{' '}
+                                        {rule.passed
+                                            ? t('Passed')
+                                            : t('Failed')}
+                                        {rule.reason
+                                            ? ` — ${t(rule.reason)}`
+                                            : ''}{' '}
+                                        ·{' '}
+                                        <span className="text-muted-foreground">
+                                            {new Date(
+                                                rule.evaluatedAt
+                                            ).toLocaleString()}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="text-muted-foreground">
+                                        {mode === 'image'
+                                            ? t(
+                                                  'Rule scoring is not applicable to image responses.'
+                                              )
+                                            : t(
+                                                  'Rule evaluation: not evaluated'
+                                              )}
+                                    </div>
+                                )}
+                                {judge ? (
+                                    <div className="space-y-1">
+                                        <div className="tabular-nums">
+                                            {t('AI judging')} —{' '}
+                                            {judge.judge.name}: {t('Accuracy')}{' '}
+                                            {judge.accuracy}/5 ·{' '}
+                                            {t('Instruction following')}{' '}
+                                            {judge.instructionFollowing}
+                                            /5 · {t('Completeness')}{' '}
+                                            {judge.completeness}/5 ·{' '}
+                                            <span className="text-muted-foreground">
+                                                {new Date(
+                                                    judge.judgedAt
+                                                ).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div className="italic text-muted-foreground select-text">
+                                            {judge.rationale}
+                                        </div>
+                                        {judge.usage?.cost != null && (
+                                            <div className="text-muted-foreground tabular-nums">
+                                                {t('Judging cost')}:{' '}
+                                                {formatUSD(judge.usage.cost)}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="text-muted-foreground">
+                                        {mode === 'image'
+                                            ? t(
+                                                  'AI judging is not applicable to image responses.'
+                                              )
+                                            : t('AI judging: not evaluated')}
+                                    </div>
+                                )}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <RatingBar
+                                        rating={attempt.rating}
+                                        ratingSource={attempt.ratingSource}
+                                        onRate={(score) =>
+                                            onRate(attempt.id, score)
+                                        }
+                                    />
+                                    {attempt.rating != null && (
+                                        <span className="text-muted-foreground">
+                                            {attempt.ratingSource === 'ai'
+                                                ? t('AI Judge')
+                                                : attempt.ratingSource ===
+                                                    'human'
+                                                  ? t('Human Judge')
+                                                  : t(
+                                                        'Unknown rating source'
+                                                    )}{' '}
+                                            ·{' '}
+                                            {attempt.ratedAt !== undefined
+                                                ? new Date(
+                                                      attempt.ratedAt
+                                                  ).toLocaleString()
+                                                : t('Time unknown')}
+                                        </span>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-muted-foreground">
+                                {t('Scoring not applicable to this attempt')}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -93,7 +240,8 @@ export function ExperimentDetailPage() {
         resumeExperiment,
         cancelExperiment,
         retryFailedExperiment,
-        deleteExperiment
+        deleteExperiment,
+        rateExperimentResult
     } = useAppStore(
         useShallow((state) => ({
             runs: state.experimentRuns,
@@ -101,17 +249,57 @@ export function ExperimentDetailPage() {
             resumeExperiment: state.resumeExperiment,
             cancelExperiment: state.cancelExperiment,
             retryFailedExperiment: state.retryFailedExperiment,
-            deleteExperiment: state.deleteExperiment
+            deleteExperiment: state.deleteExperiment,
+            rateExperimentResult: state.rateExperimentResult
         }))
     )
     const run = runs.find((candidate) => candidate.id === runId)
+    const judging = useExperimentJudging(runId ?? '')
     const [variantFilter, setVariantFilter] = useState('all')
-    const [page, setPage] = useState(0)
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [deleting, setDeleting] = useState(false)
     const [repeatFilter, setRepeatFilter] = useState(0)
     const [modelPage, setModelPage] = useState(0)
     const [openTaskId, setOpenTaskId] = useState<string | null>(null)
+
+    const [openAttemptIds, setOpenAttemptIds] = useState<ReadonlySet<string>>(
+        () => new Set<string>()
+    )
+    const toggleAttempt = useCallback((resultId: string) => {
+        setOpenAttemptIds((previous) => {
+            const next = new Set(previous)
+            if (next.has(resultId)) next.delete(resultId)
+            else next.add(resultId)
+            return next
+        })
+    }, [])
+
+    // Judge exactly the visible variant/repeat selection.
+
+    const scoringVariantIds = useMemo(
+        () =>
+            !run
+                ? []
+                : variantFilter === 'all'
+                  ? run.variants.map((variant) => variant.id)
+                  : [variantFilter],
+        [run, variantFilter]
+    )
+    const judgingGroups = useMemo(
+        () =>
+            run ? buildJudgingGroups(run, scoringVariantIds, repeatFilter) : [],
+        [run, scoringVariantIds, repeatFilter]
+    )
+    const scoringSummary = useMemo(
+        () =>
+            run
+                ? {
+                      coverage: summarizeScoringCoverage(run),
+                      cost: summarizeJudgeCost(run.tasks)
+                  }
+                : null,
+        [run]
+    )
 
     const matrixTasks = useMemo(() => {
         if (!run) return []
@@ -130,17 +318,7 @@ export function ExperimentDetailPage() {
         )
     }, [run, variantFilter])
 
-    const pageCount = Math.max(
-        1,
-        Math.ceil((run?.testSet.cases.length ?? 0) / CASE_PAGE_SIZE)
-    )
-    const safePage = Math.min(page, pageCount - 1)
-    const visibleCases = run
-        ? run.testSet.cases.slice(
-              safePage * CASE_PAGE_SIZE,
-              safePage * CASE_PAGE_SIZE + CASE_PAGE_SIZE
-          )
-        : []
+    const allCases = run?.testSet.cases ?? []
     const modelPageCount = Math.max(
         1,
         Math.ceil((run?.models.length ?? 0) / MODEL_PAGE_SIZE)
@@ -152,18 +330,95 @@ export function ExperimentDetailPage() {
               safeModelPage * MODEL_PAGE_SIZE + MODEL_PAGE_SIZE
           )
         : []
-    const taskFor = (caseId: string, modelId: string) =>
-        matrixTasks.find(
-            (task) => task.caseId === caseId && task.modelId === modelId
-        )
-    const openTask = run?.tasks.find((task) => task.id === openTaskId) ?? null
-
-    const listPageCount = Math.max(1, Math.ceil(listTasks.length / PAGE_SIZE))
-    const safeListPage = Math.min(page, listPageCount - 1)
-    const visibleTasks = listTasks.slice(
-        safeListPage * PAGE_SIZE,
-        safeListPage * PAGE_SIZE + PAGE_SIZE
+    const caseById = useMemo(
+        () => new Map(allCases.map((testCase) => [testCase.id, testCase])),
+        [allCases]
     )
+    const modelById = useMemo(
+        () => new Map((run?.models ?? []).map((model) => [model.id, model])),
+        [run]
+    )
+    const taskByCaseModel = useMemo(() => {
+        const map = new Map<string, Map<string, ExperimentTask>>()
+        for (const task of matrixTasks) {
+            let row = map.get(task.caseId)
+            if (!row) {
+                row = new Map<string, ExperimentTask>()
+                map.set(task.caseId, row)
+            }
+            row.set(task.modelId, task)
+        }
+        return map
+    }, [matrixTasks])
+    const taskFor = useCallback(
+        (caseId: string, modelId: string) =>
+            taskByCaseModel.get(caseId)?.get(modelId),
+        [taskByCaseModel]
+    )
+    const openTask = run?.tasks.find((task) => task.id === openTaskId) ?? null
+    const openModel = openTask ? modelById.get(openTask.modelId) : undefined
+
+    const matrixWindowed = allCases.length > VIRTUAL_THRESHOLD
+    const mobileWindowed = listTasks.length > VIRTUAL_THRESHOLD
+    const attemptWindowed = (openTask?.attempts.length ?? 0) > VIRTUAL_THRESHOLD
+
+    const matrixScrollRef = useRef<HTMLDivElement | null>(null)
+    const mobileScrollRef = useRef<HTMLDivElement | null>(null)
+    // The portal mounts later; publish its viewport through a callback ref.
+
+    const [attemptScrollElement, setAttemptScrollElement] =
+        useState<HTMLDivElement | null>(null)
+
+    const matrixVirtualizer = useVirtualizer<
+        HTMLDivElement,
+        HTMLTableRowElement
+    >({
+        count: matrixWindowed ? allCases.length : 0,
+        getScrollElement: () => matrixScrollRef.current,
+        estimateSize: () => MATRIX_ROW_ESTIMATE,
+        overscan: VIRTUAL_OVERSCAN,
+        useAnimationFrameWithResizeObserver: true,
+        getItemKey: (index) => allCases[index]?.id ?? index,
+        measureElement: (element) => element.getBoundingClientRect().height
+    })
+    const mobileVirtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
+        count: mobileWindowed ? listTasks.length : 0,
+        getScrollElement: () => mobileScrollRef.current,
+        estimateSize: () => TASK_CARD_ESTIMATE,
+        overscan: VIRTUAL_OVERSCAN,
+        useAnimationFrameWithResizeObserver: true,
+        getItemKey: (index) => listTasks[index]?.id ?? index
+    })
+    const attemptVirtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
+        count: attemptWindowed ? (openTask?.attempts.length ?? 0) : 0,
+        getScrollElement: () => attemptScrollElement,
+        estimateSize: () => ATTEMPT_ESTIMATE,
+        overscan: VIRTUAL_OVERSCAN,
+        useAnimationFrameWithResizeObserver: true,
+        getItemKey: (index) => openTask?.attempts[index]?.id ?? index
+    })
+
+    const matrixItems = matrixVirtualizer.getVirtualItems()
+    const matrixPadTop = matrixItems.length > 0 ? matrixItems[0].start : 0
+    const matrixPadBottom =
+        matrixItems.length > 0
+            ? matrixVirtualizer.getTotalSize() -
+              matrixItems[matrixItems.length - 1].end
+            : 0
+    const taskItems = mobileVirtualizer.getVirtualItems()
+    const taskPadTop = taskItems.length > 0 ? taskItems[0].start : 0
+    const taskPadBottom =
+        taskItems.length > 0
+            ? mobileVirtualizer.getTotalSize() -
+              taskItems[taskItems.length - 1].end
+            : 0
+    const attemptItems = attemptVirtualizer.getVirtualItems()
+    const attemptPadTop = attemptItems.length > 0 ? attemptItems[0].start : 0
+    const attemptPadBottom =
+        attemptItems.length > 0
+            ? attemptVirtualizer.getTotalSize() -
+              attemptItems[attemptItems.length - 1].end
+            : attemptVirtualizer.getTotalSize()
 
     if (!run) {
         return (
@@ -198,12 +453,134 @@ export function ExperimentDetailPage() {
         run.status === 'running' ||
         run.status === 'paused'
 
+    const renderMatrixRow = (
+        testCase: TestCase,
+        caseIndex: number,
+        virtual?: VirtualItem
+    ) => (
+        <tr
+            key={testCase.id}
+            {...(virtual
+                ? {
+                      'data-index': virtual.index,
+                      ref: matrixVirtualizer.measureElement
+                  }
+                : {})}
+        >
+            <th
+                scope="row"
+                className="sticky left-0 z-10 bg-card text-left font-normal text-muted-foreground p-1 truncate max-w-64"
+                title={testCase.prompt}
+            >
+                {caseIndex + 1}. {testCase.prompt}
+            </th>
+            {visibleModels.map((model) => {
+                const task = taskFor(testCase.id, model.id)
+                const status = task ? attemptStatus(task) : ('not-run' as const)
+                return (
+                    <td key={model.id} className="p-0.5">
+                        <button
+                            type="button"
+                            disabled={!task}
+                            onClick={() => task && setOpenTaskId(task.id)}
+                            className={`w-full h-8 min-w-8 rounded-md border text-[10px] font-semibold uppercase tracking-wide transition-colors flex items-center justify-center gap-1 ${
+                                status === 'completed'
+                                    ? 'border-success/40 bg-success/10 text-success'
+                                    : status === 'error'
+                                      ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                                      : status === 'cancelled'
+                                        ? 'border-border bg-muted/40 text-muted-foreground'
+                                        : status === 'pending'
+                                          ? 'border-primary/40 bg-primary/5 text-primary'
+                                          : 'border-dashed border-border/60 text-muted-foreground/60'
+                            } disabled:cursor-default`}
+                            title={
+                                task
+                                    ? `${model.name}: ${t(status)}`
+                                    : t('Not run')
+                            }
+                        >
+                            {status === 'not-run'
+                                ? '·'
+                                : status === 'completed'
+                                  ? '✓'
+                                  : status === 'error'
+                                    ? '!'
+                                    : status === 'cancelled'
+                                      ? '⨯'
+                                      : '…'}
+                        </button>
+                    </td>
+                )
+            })}
+        </tr>
+    )
+
+    const renderTaskCard = (task: ExperimentTask) => {
+        const status = attemptStatus(task)
+        const testCase = caseById.get(task.caseId)
+        const model = modelById.get(task.modelId)
+        return (
+            <button
+                key={task.id}
+                type="button"
+                onClick={() => setOpenTaskId(task.id)}
+                className="w-full text-left rounded-lg border p-2 text-xs space-y-1 hover:bg-muted/40"
+            >
+                <div className="flex flex-wrap items-center gap-2">
+                    <span
+                        className={
+                            status === 'completed'
+                                ? 'text-success'
+                                : status === 'error'
+                                  ? 'text-destructive'
+                                  : 'text-muted-foreground'
+                        }
+                    >
+                        {status === 'not-run' ? t('Not run') : t(status)}
+                    </span>
+                    <span className="text-muted-foreground">
+                        r{task.repeatIndex + 1}
+                    </span>
+                    {model && <span className="font-medium">{model.name}</span>}
+                </div>
+                <div className="truncate italic text-muted-foreground">
+                    {testCase?.prompt}
+                </div>
+            </button>
+        )
+    }
+
+    const renderAttempt = (
+        task: ExperimentTask,
+        attempt: BenchmarkResult,
+        index: number
+    ) => (
+        <AttemptView
+            key={attempt.id}
+            attempt={attempt}
+            index={index}
+            mode={openModel?.mode ?? 'chat'}
+            open={openAttemptIds.has(attempt.id)}
+            onToggle={() => toggleAttempt(attempt.id)}
+            onRate={(resultId, score) =>
+                rateExperimentResult(run.id, task.id, resultId, score)
+            }
+        />
+    )
+
     return (
         <PageLayout
             title={run.name}
             icon={FlaskConical}
             actions={
                 <div className="flex flex-wrap gap-2">
+                    <Button asChild variant="outline" size="sm">
+                        <Link to={`/stats?run=${encodeURIComponent(run.id)}`}>
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            {t('View report')}
+                        </Link>
+                    </Button>
                     {run.status === 'running' && (
                         <Button
                             variant="outline"
@@ -268,7 +645,7 @@ export function ExperimentDetailPage() {
                     <div className="flex flex-wrap gap-x-6 gap-y-1">
                         <span>
                             <b className="uppercase tracking-wide">
-                                {run.status}
+                                {t(run.status)}
                             </b>
                         </span>
                         <span className="tabular-nums">
@@ -282,6 +659,22 @@ export function ExperimentDetailPage() {
                             {t('Concurrency')}: {run.maxConcurrent}
                         </span>
                     </div>
+                    {scoringSummary && (
+                        <div className="tabular-nums text-xs text-muted-foreground">
+                            {t('Rule scoring')}:{' '}
+                            {scoringSummary.coverage.ruleCovered}/
+                            {scoringSummary.coverage.eligible} ·{' '}
+                            {t('AI judging')}:{' '}
+                            {scoringSummary.coverage.judgeCovered}/
+                            {scoringSummary.coverage.eligible} ·{' '}
+                            {t('Known judging cost')}:{' '}
+                            {scoringSummary.cost.cost != null
+                                ? formatUSD(scoringSummary.cost.cost)
+                                : '—'}{' '}
+                            ({scoringSummary.cost.scoredCalls}/
+                            {scoringSummary.cost.calls} {t('priced calls')})
+                        </div>
+                    )}
                     {run.error && (
                         <div className="text-destructive text-xs">
                             {run.error}
@@ -296,6 +689,142 @@ export function ExperimentDetailPage() {
                             {t(
                                 'Disabling a model does not change this run; pause or cancel it first.'
                             )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold">
+                            {t('AI judging')}
+                        </h3>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                            {t('Scope')}:{' '}
+                            {variantFilter === 'all'
+                                ? run.variants
+                                      .map((variant) => variant.name)
+                                      .join(' + ')
+                                : (run.variants.find(
+                                      (variant) => variant.id === variantFilter
+                                  )?.name ?? variantFilter)}{' '}
+                            · {t('Repeat')} {repeatFilter + 1} ·{' '}
+                            {t('Estimated judge calls')}: {judgingGroups.length}
+                        </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        {t(
+                            'Each group anonymously compares the latest completed answers of all chat models for one case, parameter group and repeat. Failed, cancelled and unfinished attempts are not scored; image models are excluded.'
+                        )}
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1">
+                            <Label htmlFor="judge-model-select">
+                                {t('Judge model')}
+                            </Label>
+                            <select
+                                id="judge-model-select"
+                                value={judging.judgeModelId}
+                                onChange={(event) =>
+                                    judging.setJudgeModelId(event.target.value)
+                                }
+                                className="h-11 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+                            >
+                                <option value="">
+                                    {t('Select a chat model…')}
+                                </option>
+                                {judging.judgeCandidates.map((model) => (
+                                    <option key={model.id} value={model.id}>
+                                        {model.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="judge-prompt-input">
+                            {t('Judge prompt')}
+                        </Label>
+                        <Textarea
+                            id="judge-prompt-input"
+                            value={judging.judgePrompt}
+                            onChange={(event) =>
+                                judging.setJudgePrompt(event.target.value)
+                            }
+                            className="min-h-24 text-sm"
+                        />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            size="sm"
+                            className="gap-2"
+                            disabled={
+                                judging.isJudging ||
+                                judging.isProcessing ||
+                                judging.judgeModelId.length === 0 ||
+                                judgingGroups.length === 0
+                            }
+                            onClick={() => void judging.start(judgingGroups)}
+                        >
+                            <Gavel className="h-4 w-4" />
+                            {t('Start scoring')}
+                        </Button>
+                        {judging.judgingHere && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2"
+                                onClick={judging.cancel}
+                            >
+                                <Square className="h-4 w-4" />
+                                {t('Stop scoring')}
+                            </Button>
+                        )}
+                        {judging.isJudging && !judging.judgingHere && (
+                            <span className="text-xs text-muted-foreground">
+                                {t('Another judging batch is running.')}
+                            </span>
+                        )}
+                        {judgingGroups.length === 0 && !judging.isJudging && (
+                            <span className="text-xs text-muted-foreground">
+                                {t('No completed answers in this scope yet.')}
+                            </span>
+                        )}
+                    </div>
+                    {judging.progress && (
+                        <div className="text-xs tabular-nums">
+                            {t('Judging…')} {judging.progress.done}/
+                            {judging.progress.total}
+                        </div>
+                    )}
+                    {judging.status?.kind === 'error' && (
+                        <div className="text-xs text-destructive">
+                            {judging.status.code === 'no-judge-model'
+                                ? t(
+                                      'Select an enabled chat model as the judge first.'
+                                  )
+                                : t(
+                                      'Judging stopped before group {index} of {total}: {reason}',
+                                      {
+                                          index: judging.status.index,
+                                          total: judging.status.total,
+                                          reason: t(judging.status.reason)
+                                      }
+                                  )}
+                        </div>
+                    )}
+                    {judging.status?.kind === 'info' && (
+                        <div className="text-xs text-muted-foreground">
+                            {judging.status.code === 'deleted'
+                                ? t(
+                                      'This experiment was deleted; judging stopped. Scores recorded so far were kept.'
+                                  )
+                                : judging.status.code === 'stopped'
+                                  ? t(
+                                        'Judging stopped. Scores recorded so far were kept.'
+                                    )
+                                  : t('Judging finished: {total} scored.', {
+                                        total: judging.status.total
+                                    })}
                         </div>
                     )}
                 </div>
@@ -330,7 +859,7 @@ export function ExperimentDetailPage() {
                                                 .length > 0 && (
                                                 <span className="text-amber-600 dark:text-amber-400">
                                                     {' '}
-                                                    · excluded:{' '}
+                                                    · {t('Not sent')}:{' '}
                                                     {resolved.excludedParameters.join(
                                                         ', '
                                                     )}
@@ -354,7 +883,6 @@ export function ExperimentDetailPage() {
                                 value={variantFilter}
                                 onChange={(event) => {
                                     setVariantFilter(event.target.value)
-                                    setPage(0)
                                     setModelPage(0)
                                 }}
                                 className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
@@ -373,7 +901,6 @@ export function ExperimentDetailPage() {
                                     setRepeatFilter(
                                         parseInt(event.target.value)
                                     )
-                                    setPage(0)
                                 }}
                                 className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
                                 aria-label={t('Repetition')}
@@ -390,203 +917,161 @@ export function ExperimentDetailPage() {
                         </div>
                     </div>
 
-                    {/* Matrix (md+): one cell per case×model. */}
-                    <div className="hidden md:block overflow-x-auto">
-                        <table className="w-full text-xs border-separate border-spacing-0">
-                            <thead>
-                                <tr>
-                                    <th className="sticky left-0 z-10 bg-card text-left font-medium text-muted-foreground p-1 min-w-48">
-                                        {t('Case')}
-                                    </th>
-                                    {visibleModels.map((model) => (
-                                        <th
-                                            key={model.id}
-                                            className="text-left font-medium text-muted-foreground p-1 min-w-32 max-w-48 truncate"
-                                            title={model.name}
-                                        >
-                                            {model.name}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {visibleCases.map((testCase, rowIndex) => (
-                                    <tr key={testCase.id}>
-                                        <th
-                                            scope="row"
-                                            className="sticky left-0 z-10 bg-card text-left font-normal text-muted-foreground p-1 truncate max-w-64"
-                                            title={testCase.prompt}
-                                        >
-                                            {safePage * CASE_PAGE_SIZE +
-                                                rowIndex +
-                                                1}
-                                            . {testCase.prompt}
-                                        </th>
-                                        {visibleModels.map((model) => {
-                                            const task = taskFor(
-                                                testCase.id,
-                                                model.id
-                                            )
-                                            const status = task
-                                                ? attemptStatus(task)
-                                                : ('not-run' as const)
-                                            return (
-                                                <td
+                    <div className="hidden md:block">
+                        {matrixWindowed ? (
+                            <ScrollArea
+                                horizontal
+                                ref={matrixScrollRef}
+                                className="h-[70vh]"
+                            >
+                                <table className="w-full text-xs border-separate border-spacing-0">
+                                    <thead>
+                                        <tr>
+                                            <th className="sticky left-0 top-0 z-30 bg-card text-left font-medium text-muted-foreground p-1 min-w-48">
+                                                {t('Case')}
+                                            </th>
+                                            {visibleModels.map((model) => (
+                                                <th
                                                     key={model.id}
-                                                    className="p-0.5"
+                                                    className="sticky top-0 z-20 bg-card text-left font-medium text-muted-foreground p-1 min-w-32 max-w-48 truncate"
+                                                    title={model.name}
                                                 >
-                                                    <button
-                                                        type="button"
-                                                        disabled={!task}
-                                                        onClick={() =>
-                                                            task &&
-                                                            setOpenTaskId(
-                                                                task.id
-                                                            )
-                                                        }
-                                                        className={`w-full h-8 min-w-8 rounded-md border text-[10px] font-semibold uppercase tracking-wide transition-colors flex items-center justify-center gap-1 ${
-                                                            status ===
-                                                            'completed'
-                                                                ? 'border-success/40 bg-success/10 text-success'
-                                                                : status ===
-                                                                    'error'
-                                                                  ? 'border-destructive/40 bg-destructive/10 text-destructive'
-                                                                  : status ===
-                                                                      'cancelled'
-                                                                    ? 'border-border bg-muted/40 text-muted-foreground'
-                                                                    : status ===
-                                                                        'pending'
-                                                                      ? 'border-primary/40 bg-primary/5 text-primary'
-                                                                      : 'border-dashed border-border/60 text-muted-foreground/60'
-                                                        } disabled:cursor-default`}
-                                                        title={
-                                                            task
-                                                                ? `${model.name}: ${status}`
-                                                                : t('Not run')
-                                                        }
-                                                    >
-                                                        {status === 'not-run'
-                                                            ? '·'
-                                                            : status ===
-                                                                'completed'
-                                                              ? '✓'
-                                                              : status ===
-                                                                  'error'
-                                                                ? '!'
-                                                                : status ===
-                                                                    'cancelled'
-                                                                  ? '⨯'
-                                                                  : '…'}
-                                                    </button>
-                                                </td>
+                                                    {model.name}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr aria-hidden="true">
+                                            <td
+                                                colSpan={
+                                                    visibleModels.length + 1
+                                                }
+                                                style={{
+                                                    height: matrixPadTop,
+                                                    padding: 0,
+                                                    border: 0
+                                                }}
+                                            />
+                                        </tr>
+                                        {matrixItems.map((item) =>
+                                            renderMatrixRow(
+                                                allCases[item.index],
+                                                item.index,
+                                                item
                                             )
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Compact list for small screens. */}
-                    <div className="md:hidden space-y-2">
-                        {visibleTasks.map((task) => {
-                            const status = attemptStatus(task)
-                            const testCase = run.testSet.cases.find(
-                                (c) => c.id === task.caseId
-                            )
-                            const model = run.models.find(
-                                (m) => m.id === task.modelId
-                            )
-                            return (
-                                <button
-                                    key={task.id}
-                                    type="button"
-                                    onClick={() => setOpenTaskId(task.id)}
-                                    className="w-full text-left rounded-lg border p-2 text-xs space-y-1 hover:bg-muted/40"
-                                >
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span
-                                            className={
-                                                status === 'completed'
-                                                    ? 'text-success'
-                                                    : status === 'error'
-                                                      ? 'text-destructive'
-                                                      : 'text-muted-foreground'
-                                            }
-                                        >
-                                            {status === 'not-run'
-                                                ? t('Not run')
-                                                : status}
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                            r{task.repeatIndex + 1}
-                                        </span>
-                                        {model && (
-                                            <span className="font-medium">
-                                                {model.name}
-                                            </span>
                                         )}
-                                    </div>
-                                    <div className="truncate italic text-muted-foreground">
-                                        {testCase?.prompt}
-                                    </div>
-                                </button>
-                            )
-                        })}
+                                        <tr aria-hidden="true">
+                                            <td
+                                                colSpan={
+                                                    visibleModels.length + 1
+                                                }
+                                                style={{
+                                                    height: matrixPadBottom,
+                                                    padding: 0,
+                                                    border: 0
+                                                }}
+                                            />
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </ScrollArea>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs border-separate border-spacing-0">
+                                    <thead>
+                                        <tr>
+                                            <th className="sticky left-0 z-10 bg-card text-left font-medium text-muted-foreground p-1 min-w-48">
+                                                {t('Case')}
+                                            </th>
+                                            {visibleModels.map((model) => (
+                                                <th
+                                                    key={model.id}
+                                                    className="text-left font-medium text-muted-foreground p-1 min-w-32 max-w-48 truncate"
+                                                    title={model.name}
+                                                >
+                                                    {model.name}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {allCases.map((testCase, index) =>
+                                            renderMatrixRow(testCase, index)
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
-                    {(pageCount > 1 || modelPageCount > 1) && (
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="md:hidden">
+                        {mobileWindowed ? (
+                            <ScrollArea
+                                ref={mobileScrollRef}
+                                className="h-[60vh]"
+                            >
+                                <div>
+                                    <div
+                                        aria-hidden="true"
+                                        style={{ height: taskPadTop }}
+                                    />
+                                    {taskItems.map((item) => (
+                                        <div
+                                            key={item.key}
+                                            data-index={item.index}
+                                            ref={
+                                                mobileVirtualizer.measureElement
+                                            }
+                                            className="pb-2"
+                                        >
+                                            {renderTaskCard(
+                                                listTasks[item.index]
+                                            )}
+                                        </div>
+                                    ))}
+                                    <div
+                                        aria-hidden="true"
+                                        style={{ height: taskPadBottom }}
+                                    />
+                                </div>
+                            </ScrollArea>
+                        ) : (
+                            <div className="space-y-2">
+                                {listTasks.map((task) => renderTaskCard(task))}
+                            </div>
+                        )}
+                    </div>
+
+                    {modelPageCount > 1 && (
+                        <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
                             <div className="flex items-center gap-2">
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    disabled={safePage === 0}
-                                    onClick={() => setPage(safePage - 1)}
+                                    disabled={safeModelPage === 0}
+                                    onClick={() =>
+                                        setModelPage(safeModelPage - 1)
+                                    }
                                 >
-                                    {t('Previous')}
+                                    {t('Models')} ‹
                                 </Button>
                                 <span className="tabular-nums">
-                                    {safePage + 1} / {pageCount}
+                                    {safeModelPage + 1} / {modelPageCount}
                                 </span>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    disabled={safePage >= pageCount - 1}
-                                    onClick={() => setPage(safePage + 1)}
+                                    disabled={
+                                        safeModelPage >= modelPageCount - 1
+                                    }
+                                    onClick={() =>
+                                        setModelPage(safeModelPage + 1)
+                                    }
                                 >
-                                    {t('Next')}
+                                    {t('Models')} ›
                                 </Button>
                             </div>
-                            {modelPageCount > 1 && (
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={safeModelPage === 0}
-                                        onClick={() =>
-                                            setModelPage(safeModelPage - 1)
-                                        }
-                                    >
-                                        {t('Models')} ‹
-                                    </Button>
-                                    <span className="tabular-nums">
-                                        {safeModelPage + 1} / {modelPageCount}
-                                    </span>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={
-                                            safeModelPage >= modelPageCount - 1
-                                        }
-                                        onClick={() =>
-                                            setModelPage(safeModelPage + 1)
-                                        }
-                                    >
-                                        {t('Models')} ›
-                                    </Button>
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
@@ -596,7 +1081,7 @@ export function ExperimentDetailPage() {
                         open={openTaskId !== null}
                         onOpenChange={(open) => !open && setOpenTaskId(null)}
                     >
-                        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+                        <DialogContent className="max-w-2xl h-[85dvh]">
                             <DialogHeader>
                                 <DialogTitle>
                                     {run.models.find(
@@ -611,9 +1096,15 @@ export function ExperimentDetailPage() {
                                     {openTask.attempts.length} {t('attempts')}
                                 </DialogDescription>
                             </DialogHeader>
-                            <ScrollArea className="flex-1 min-h-0">
-                                <div className="space-y-2">
-                                    <div className="text-xs italic text-muted-foreground rounded-md border bg-muted/20 p-2 select-text">
+                            <DialogBody ref={setAttemptScrollElement}>
+                                <div
+                                    className={
+                                        attemptWindowed ? '' : 'space-y-2'
+                                    }
+                                >
+                                    <div
+                                        className={`text-xs italic text-muted-foreground rounded-md border bg-muted/20 p-2 select-text${attemptWindowed ? ' mb-2' : ''}`}
+                                    >
                                         {run.testSet.cases.find(
                                             (c) => c.id === openTask.caseId
                                         )?.prompt ?? ''}
@@ -623,15 +1114,51 @@ export function ExperimentDetailPage() {
                                             {t('Not run')}
                                         </div>
                                     )}
-                                    {openTask.attempts.map((attempt, index) => (
-                                        <AttemptView
-                                            key={attempt.id}
-                                            attempt={attempt}
-                                            index={index}
-                                        />
-                                    ))}
+                                    {attemptWindowed ? (
+                                        <>
+                                            <div
+                                                aria-hidden="true"
+                                                style={{
+                                                    height: attemptPadTop
+                                                }}
+                                            />
+                                            {attemptItems.map((item) => (
+                                                <div
+                                                    key={item.key}
+                                                    data-index={item.index}
+                                                    ref={
+                                                        attemptVirtualizer.measureElement
+                                                    }
+                                                    className="pb-2"
+                                                >
+                                                    {renderAttempt(
+                                                        openTask,
+                                                        openTask.attempts[
+                                                            item.index
+                                                        ],
+                                                        item.index
+                                                    )}
+                                                </div>
+                                            ))}
+                                            <div
+                                                aria-hidden="true"
+                                                style={{
+                                                    height: attemptPadBottom
+                                                }}
+                                            />
+                                        </>
+                                    ) : (
+                                        openTask.attempts.map(
+                                            (attempt, index) =>
+                                                renderAttempt(
+                                                    openTask,
+                                                    attempt,
+                                                    index
+                                                )
+                                        )
+                                    )}
                                 </div>
-                            </ScrollArea>
+                            </DialogBody>
                         </DialogContent>
                     </Dialog>
                 )}

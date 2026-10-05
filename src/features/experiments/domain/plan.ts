@@ -6,23 +6,51 @@ import type {
     LLMModel,
     ResolvedGenerationConfig
 } from '@/lib/types'
-import { resolveGenerationConfig } from '@/features/benchmark/config'
+import {
+    applyModelCapabilities,
+    resolveGenerationConfig
+} from '@/features/benchmark/config'
+import {
+    experimentVariantSchema,
+    generationConfigPatchSchema,
+    generationConfigSchema,
+    testSetSchema
+} from '@/lib/validation'
 import { captureModelSnapshot } from '@/features/benchmark/snapshots'
+import { parseDecisionPrompt } from '@/features/decisions/domain'
 
 export const MAX_EXPERIMENT_TASKS = 50000
 
-/**
- * Freezes a draft into a runnable experiment: copied test set, model
- * identities with fingerprints, resolved configs per model×variant and the
- * full task plan (case → variant → repeat → model). Throws with a
- * user-presentable message when the draft cannot produce a valid run.
- */
+/** Freeze inputs, resolved model×variant parameters and the full task plan
+ * in case → variant → repeat → model order; reject invalid drafts. */
 export async function planExperiment(
     draft: ExperimentDraft,
     models: LLMModel[],
     globalConfig: GenerationConfig,
     now: number
 ): Promise<ExperimentRun> {
+    // Copy every mutable input before endpoint fingerprinting yields control.
+    draft = structuredClone(draft)
+    models = structuredClone(models)
+    globalConfig = generationConfigSchema.parse(structuredClone(globalConfig))
+    draft.testSet = testSetSchema.parse(draft.testSet)
+    draft.overrides = generationConfigPatchSchema
+        .strict()
+        .parse(draft.overrides)
+    draft.variants = draft.variants.map((variant) =>
+        experimentVariantSchema.parse({
+            ...variant,
+            id: variant.id.trim(),
+            overrides: generationConfigPatchSchema
+                .strict()
+                .parse(variant.overrides)
+        })
+    )
+    if (
+        new Set(draft.variants.map((variant) => variant.name)).size !==
+        draft.variants.length
+    )
+        throw new Error('Parameter group names must be unique.')
     if (
         draft.repetitions !== Math.floor(draft.repetitions) ||
         draft.repetitions < 1 ||
@@ -46,9 +74,23 @@ export async function planExperiment(
     const cases = draft.testSet.cases.filter((c) => c.prompt.trim().length > 0)
     if (cases.length === 0)
         throw new Error('The test set needs at least one non-empty prompt.')
-    const caseIds = new Set(cases.map((c) => c.id))
-    if (caseIds.size !== cases.length)
-        throw new Error('Case IDs must be unique.')
+    if (selectedModels.some((model) => model.mode === 'decision')) {
+        if (selectedModels.some((model) => model.mode !== 'decision'))
+            throw new Error(
+                'Set every selected model to Decision mode for a comparable task.'
+            )
+        for (const testCase of cases) parseDecisionPrompt(testCase.prompt)
+    } else if (
+        cases.some((testCase) => testCase.evaluation?.type === 'decision')
+    ) {
+        throw new Error('Decision test sets require models in Decision mode.')
+    }
+    const caseIds = new Set(draft.testSet.cases.map((c) => c.id))
+    if (
+        caseIds.size !== draft.testSet.cases.length ||
+        draft.testSet.cases.some((c) => !c.id.trim())
+    )
+        throw new Error('Case IDs must be non-empty and unique.')
     const variantIds = new Set(draft.variants.map((v) => v.id))
     if (variantIds.size !== draft.variants.length)
         throw new Error('Parameter group IDs must be unique.')
@@ -63,7 +105,6 @@ export async function planExperiment(
             `This plan needs ${totalTasks} tasks. Reduce models, groups, repetitions or cases (limit ${MAX_EXPERIMENT_TASKS}).`
         )
 
-    // Snapshots may reject unusable endpoints before anything is scheduled.
     const snapshots = await Promise.all(
         selectedModels.map((model) => captureModelSnapshot(model))
     )
@@ -75,17 +116,19 @@ export async function planExperiment(
     for (const model of selectedModels) {
         configByModelVariant[model.id] = {}
         for (const variant of draft.variants) {
-            configByModelVariant[model.id][variant.id] =
+            configByModelVariant[model.id][variant.id] = applyModelCapabilities(
                 resolveGenerationConfig(
                     globalConfig,
                     model.config,
                     draft.overrides,
                     variant.overrides
-                )
+                ),
+                model.capabilities,
+                model
+            )
         }
     }
 
-    // Dispatch order: case → variant → repeat → model.
     const tasks: ExperimentTask[] = []
     for (const testCase of cases) {
         for (const variant of draft.variants) {

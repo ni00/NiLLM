@@ -19,8 +19,11 @@ export function RatingBar({ rating, ratingSource, onRate }: RatingBarProps) {
                 {[1, 2, 3, 4, 5].map((score) => (
                     <button
                         key={score}
+                        type="button"
+                        aria-label={t('Rate {score} out of 5', { score })}
+                        aria-pressed={rating === score}
                         onClick={() => onRate(score)}
-                        className="focus:outline-none p-1 hover:bg-primary/5 rounded-full transition-all hover:scale-110 active:scale-90"
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-primary/5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         <Star
                             className={`w-4 h-4 transition-all ${(rating || 0) >= score ? getStarColor(rating || 0) : 'text-muted-foreground/20 group-hover/rating:text-primary/20'}`}
@@ -35,7 +38,9 @@ export function RatingBar({ rating, ratingSource, onRate }: RatingBarProps) {
                     <span className="text-xs font-black uppercase tracking-tighter opacity-80 whitespace-nowrap">
                         {ratingSource === 'ai'
                             ? t('AI Judge')
-                            : t('Human Judge')}
+                            : ratingSource === 'human'
+                              ? t('Human Judge')
+                              : t('Unknown rating source')}
                     </span>
                     <span className="text-[14px] font-bold tabular-nums tracking-tight border-l pl-2 ml-0.5 border-current/20 leading-none">
                         {rating.toFixed(1)}

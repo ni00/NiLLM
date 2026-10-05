@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label'
 import React from 'react'
 import { GenerationConfig, GlobalConfigUpdate } from '@/lib/types'
 import { ConfigEditor } from './ConfigEditor'
+import { ParameterPresetControls } from './ParameterPresetControls'
 
 export interface ArenaGlobalParamsProps {
     config: GenerationConfig
@@ -13,6 +14,8 @@ export interface ArenaGlobalParamsProps {
 export const ArenaGlobalParams = React.memo(
     ({ config, onChange }: ArenaGlobalParamsProps) => {
         const t = useI18n()
+        const presetConfig = { ...config }
+        delete presetConfig.maxConcurrent
         return (
             <div className="space-y-4">
                 <div className="space-y-1">
@@ -23,6 +26,10 @@ export const ArenaGlobalParams = React.memo(
                         {t('Adjust sampling and length constraints globally.')}
                     </p>
                 </div>
+                <ParameterPresetControls
+                    config={presetConfig}
+                    onApply={onChange}
+                />
                 <div className="space-y-2 rounded-xl border p-4">
                     <Label htmlFor="max-concurrent">
                         {t('Concurrent models')}
@@ -51,7 +58,22 @@ export const ArenaGlobalParams = React.memo(
                     </p>
                 </div>
                 <div className="p-4 border rounded-xl bg-muted/5">
-                    <ConfigEditor config={config} onChange={onChange} />
+                    <ConfigEditor
+                        config={config}
+                        onChange={onChange}
+                        onResetField={(path) => {
+                            const [group, field] = path.split('.')
+                            if (
+                                (group === 'timeout' ||
+                                    group === 'telemetry') &&
+                                field
+                            ) {
+                                onChange({ [group]: { [field]: undefined } })
+                            } else {
+                                onChange({ [path]: undefined })
+                            }
+                        }}
+                    />
                 </div>
             </div>
         )

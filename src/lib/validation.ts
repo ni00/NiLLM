@@ -1,29 +1,34 @@
 import { z } from 'zod'
-import { SAMPLING_PARAMETERS } from './types'
+import { PROVIDER_IDS, SAMPLING_PARAMETERS } from './types'
+import {
+    parseDecisionPrompt,
+    validateDecisionExpected
+} from '@/features/decisions/domain'
 import type {
     BenchmarkResult,
     ChatSession,
     GenerationConfig,
     GenerationConfigPatch,
     LLMModel,
+    JudgeEvaluation,
     ModelSnapshot,
     PromptTemplate,
     RequestSnapshot,
+    RuleEvaluation,
+    TestCase,
     TestSet
 } from './types'
 
 const finite = z.number().finite()
 const positive = finite.positive()
 const nonnegative = finite.nonnegative()
-const providerEnum = z.enum([
-    'openai',
-    'openrouter',
-    'anthropic',
-    'google',
-    'deepseek',
-    'custom',
-    'other'
-])
+const pricingSchema = z.object({
+    input: nonnegative,
+    output: nonnegative,
+    cacheRead: nonnegative.optional(),
+    cacheWrite: nonnegative.optional()
+})
+const providerEnum = z.enum(PROVIDER_IDS)
 const timeoutPatchSchema = z.object({
     totalMs: positive.optional(),
     stepMs: positive.optional(),
@@ -39,9 +44,15 @@ const telemetryPatchSchema = z.object({
         .optional()
 })
 const capabilitiesSchema = z.object({
+    chatProtocol: z.enum(['openai-compatible', 'anthropic']).optional(),
     vision: z.boolean().optional(),
     unsupportedParameters: z.array(z.enum(SAMPLING_PARAMETERS)).optional()
 })
+const decisionProtocolSchema = z.enum([
+    'structured',
+    'system-one',
+    'openai-responses'
+])
 
 /** Override layer: field-level timeout/telemetry merges, no `maxConcurrent`. */
 export const generationConfigPatchSchema = z.object({
@@ -81,10 +92,15 @@ export const generationConfigSchema = generationConfigPatchSchema.extend({
     telemetry: telemetryFullSchema.optional()
 }) satisfies z.ZodType<GenerationConfig>
 
-/**
- * Effective request payload: all-optional (capability filtering may drop
- * fields) but telemetry, when present, is always fully resolved.
- */
+export const parameterPresetSchema = z.object({
+    id: z.string().min(1),
+    name: z.string().trim().min(1),
+    config: generationConfigPatchSchema.strict(),
+    createdAt: nonnegative,
+    updatedAt: nonnegative
+})
+
+/** Request fields may be absent after capability filtering; telemetry remains fully resolved. */
 const effectiveConfigSchema = generationConfigPatchSchema.extend({
     telemetry: telemetryFullSchema.optional()
 })
@@ -95,8 +111,9 @@ export const modelSnapshotSchema = z.object({
     provider: providerEnum,
     providerName: z.string().optional(),
     providerId: z.string().optional(),
-    mode: z.enum(['chat', 'image']),
-    pricing: z.object({ input: nonnegative, output: nonnegative }).optional(),
+    mode: z.enum(['chat', 'image', 'decision']),
+    decisionProtocol: decisionProtocolSchema.optional(),
+    pricing: pricingSchema.optional(),
     endpoint: z.string().optional(),
     endpointFingerprint: z.string(),
     capabilities: capabilitiesSchema.optional()
@@ -120,10 +137,7 @@ export const requestSnapshotSchema = z.object({
     capturedAt: nonnegative
 }) satisfies z.ZodType<RequestSnapshot>
 
-/**
- * Older builds allowed `model.config.maxConcurrent`; scheduling concurrency is
- * global-only now. Strip the stale field instead of rejecting the whole record.
- */
+/** Drop legacy per-model concurrency instead of rejecting older records. */
 export function stripLegacyModelConcurrency(value: unknown): unknown {
     if (!Array.isArray(value)) return value
     return value.map((model) => {
@@ -144,23 +158,59 @@ export function stripLegacyModelConcurrency(value: unknown): unknown {
 
 export const modelSchema = z.preprocess(
     stripLegacyModelConcurrency,
-    z.object({
-        id: z.string().trim().min(1),
-        name: z.string().trim().min(1),
-        provider: providerEnum,
-        providerId: z.string().optional(),
-        providerName: z.string().optional(),
-        apiKey: z.string().optional(),
-        baseURL: z.string().optional(),
-        enabled: z.boolean(),
-        mode: z.enum(['chat', 'image']).optional(),
-        config: generationConfigPatchSchema.optional(),
-        pricing: z
-            .object({ input: nonnegative, output: nonnegative })
-            .optional(),
-        capabilities: capabilitiesSchema.optional()
-    }) satisfies z.ZodType<LLMModel>
+    z
+        .object({
+            id: z.string().trim().min(1),
+            name: z.string().trim().min(1),
+            provider: providerEnum,
+            providerId: z.string().optional(),
+            providerName: z.string().optional(),
+            apiKey: z.string().optional(),
+            baseURL: z.string().optional(),
+            enabled: z.boolean(),
+            mode: z.enum(['chat', 'image', 'decision']).optional(),
+            decisionProtocol: decisionProtocolSchema.optional(),
+            config: generationConfigPatchSchema.optional(),
+            pricing: pricingSchema.optional(),
+            capabilities: capabilitiesSchema.optional()
+        })
+        .superRefine((model, context) => {
+            if (model.provider === 'typesafe' && model.mode !== 'decision')
+                context.addIssue({
+                    code: 'custom',
+                    path: ['mode'],
+                    message: 'TypeSafe models require decision mode.'
+                })
+        }) satisfies z.ZodType<LLMModel>
 )
+const evaluationTypeSchema = z.enum(['exact', 'contains', 'json', 'decision'])
+export const ruleEvaluationSchema = z.object({
+    type: evaluationTypeSchema,
+    passed: z.boolean(),
+    evaluatedAt: nonnegative,
+    reason: z.string().optional()
+}) satisfies z.ZodType<RuleEvaluation>
+
+const judgeScore = finite.int().min(1).max(5)
+export const judgeEvaluationSchema = z.object({
+    judgeCallId: z.string().min(1),
+    accuracy: judgeScore,
+    instructionFollowing: judgeScore,
+    completeness: judgeScore,
+    rationale: z.string(),
+    judge: modelSnapshotSchema,
+    judgeConfig: effectiveConfigSchema,
+    judgePrompt: z.string(),
+    judgedAt: nonnegative,
+    usage: z
+        .object({
+            inputTokens: nonnegative.optional(),
+            outputTokens: nonnegative.optional(),
+            cost: nonnegative.optional()
+        })
+        .optional()
+}) satisfies z.ZodType<JudgeEvaluation>
+
 export const resultSchema = z.object({
     id: z.string(),
     modelId: z.string(),
@@ -171,6 +221,9 @@ export const resultSchema = z.object({
     error: z.string().optional(),
     rating: finite.min(1).max(5).optional(),
     ratingSource: z.enum(['human', 'ai']).optional(),
+    ratedAt: nonnegative.optional(),
+    ruleEvaluation: ruleEvaluationSchema.optional(),
+    judgeEvaluation: judgeEvaluationSchema.optional(),
     status: z.enum(['pending', 'completed', 'error', 'cancelled']).optional(),
     requestSnapshot: requestSnapshotSchema.optional(),
     experiment: z
@@ -189,6 +242,9 @@ export const resultSchema = z.object({
         outputTokens: nonnegative.optional(),
         reasoningTokens: nonnegative.optional(),
         cost: nonnegative.optional(),
+        costSource: z.enum(['api', 'estimated']).optional(),
+        cacheReadTokens: nonnegative.int().optional(),
+        cacheWriteTokens: nonnegative.int().optional(),
         tokenSource: z.enum(['api', 'estimated']).optional()
     })
 }) satisfies z.ZodType<BenchmarkResult>
@@ -213,16 +269,69 @@ export const promptSchema = z.object({
     createdAt: nonnegative,
     updatedAt: nonnegative
 }) satisfies z.ZodType<PromptTemplate>
+export const testCaseSchema = z
+    .object({
+        id: z.string(),
+        prompt: z.string(),
+        expected: z.string().optional(),
+        evaluation: z
+            .object({
+                type: evaluationTypeSchema,
+                tolerance: nonnegative.optional()
+            })
+            .optional()
+    })
+    .superRefine((testCase, context) => {
+        if (testCase.expected === undefined) {
+            if (testCase.evaluation)
+                context.addIssue({
+                    code: 'custom',
+                    path: ['expected'],
+                    message:
+                        'An expected answer is required for the scoring rule.'
+                })
+            return
+        }
+        const type = testCase.evaluation?.type ?? 'exact'
+        if (type === 'decision') {
+            try {
+                validateDecisionExpected(
+                    parseDecisionPrompt(testCase.prompt),
+                    JSON.parse(testCase.expected)
+                )
+            } catch {
+                context.addIssue({
+                    code: 'custom',
+                    path: ['expected'],
+                    message:
+                        'Decision scoring needs a valid decision prompt and expected values by question ID.'
+                })
+            }
+        }
+        if (type === 'contains' && !testCase.expected.trim())
+            context.addIssue({
+                code: 'custom',
+                path: ['expected'],
+                message:
+                    'Contains scoring requires a non-empty expected answer.'
+            })
+        if (type === 'json') {
+            try {
+                JSON.parse(testCase.expected)
+            } catch {
+                context.addIssue({
+                    code: 'custom',
+                    path: ['expected'],
+                    message: 'The expected answer must be valid JSON.'
+                })
+            }
+        }
+    }) satisfies z.ZodType<TestCase>
+
 export const testSetSchema = z.object({
     id: z.string(),
     name: z.string(),
-    cases: z.array(
-        z.object({
-            id: z.string(),
-            prompt: z.string(),
-            expected: z.string().optional()
-        })
-    ),
+    cases: z.array(testCaseSchema),
     createdAt: nonnegative
 }) satisfies z.ZodType<TestSet>
 
@@ -320,6 +429,7 @@ const backupContentSchema = z
         testSets: z.array(testSetSchema).optional(),
         experimentRuns: z.array(experimentRunSchema).optional(),
         promptTemplates: z.array(promptSchema).optional(),
+        parameterPresets: z.array(parameterPresetSchema).optional(),
         globalConfig: generationConfigSchema.optional(),
         activeModelIds: z.array(z.string()).optional(),
         activeSessionId: z.string().nullable().optional(),

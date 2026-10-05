@@ -21,12 +21,14 @@ export function SectionHeader({ title }: SectionHeaderProps) {
 }
 
 export interface ConfigSectionProps {
+    /** Unique DOM scope; field paths remain independent of element IDs. */
+    idPrefix: string
     /** Effective values for display; layers below already merged in. */
     config: GenerationConfig
-    /** Emits only the fields the user changed. */
+
     onChange: (updates: GenerationConfigPatch) => void
     /** Field provenance by dot path; absent for the global base editor. */
     sources?: Record<string, ConfigSource>
-    /** Removes one overridden field so it inherits again. */
+
     onResetField?: (path: string) => void
 }

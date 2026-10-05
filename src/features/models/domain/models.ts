@@ -26,7 +26,10 @@ export function buildProviderModels(
             name: entry.name,
             enabled: true,
             mode: entry.mode,
-            pricing: entry.pricing
+            decisionProtocol: entry.decisionProtocol,
+            pricing: entry.pricing,
+            config: entry.config,
+            capabilities: entry.capabilities
         }
         const identity = modelIdentity(model)
         if (identities.has(identity)) continue

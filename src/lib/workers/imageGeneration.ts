@@ -5,7 +5,8 @@ import type { Message } from '../types'
 
 export async function generateImage(
     model: LLMModel,
-    prompt: string
+    prompt: string,
+    signal?: AbortSignal
 ): Promise<{ text: string; imageUrls: string[] }> {
     const baseURL = getBaseURL(model)
     const url = `${baseURL}/chat/completions`
@@ -31,7 +32,8 @@ export async function generateImage(
     const resp = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal
     })
 
     if (!resp.ok) {

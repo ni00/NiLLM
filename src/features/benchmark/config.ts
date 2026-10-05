@@ -2,11 +2,14 @@ import type {
     ConfigSource,
     GenerationConfig,
     GenerationConfigPatch,
+    ModelCapabilities,
+    LLMModel,
     ResolvedGenerationConfig,
     TelemetryConfig,
     TelemetryConfigPatch,
     TimeoutConfig
 } from '@/lib/types'
+import { resolveDecisionProtocol } from '@/features/decisions/protocol'
 
 const SCALAR_KEYS = [
     'temperature',
@@ -41,19 +44,26 @@ function mergeTelemetryConfig(
 ): TelemetryConfig {
     const merged: TelemetryConfig = {
         ...base,
-        ...patch,
         isEnabled: patch.isEnabled ?? base?.isEnabled ?? false
     }
-    // `metadata` replaces the whole map when the patch provides one.
-    if (!('metadata' in patch)) delete merged.metadata
+    for (const field of TELEMETRY_KEYS)
+        if (patch[field] !== undefined)
+            Object.assign(merged, { [field]: patch[field] })
     return merged
 }
 
-/**
- * Layered merge with patch semantics: absent or `undefined` fields inherit the
- * base; `0`, `false`, `''` and `[]` are explicit values. `timeout`/`telemetry`
- * merge per field; `telemetry.metadata` replaces the whole map.
- */
+function mergeTimeoutConfig(
+    base: TimeoutConfig | undefined,
+    patch: TimeoutConfig
+): TimeoutConfig {
+    const merged = { ...base }
+    for (const field of TIMEOUT_KEYS)
+        if (patch[field] !== undefined) merged[field] = patch[field]
+    return merged
+}
+
+/** Absent fields inherit; zero/false/empty values override. Nested fields
+ * merge individually, except metadata which replaces the whole map. */
 export function mergeGenerationConfig(
     base: GenerationConfig,
     patch: GenerationConfigPatch
@@ -63,17 +73,14 @@ export function mergeGenerationConfig(
         if (patch[key] !== undefined)
             Object.assign(merged, { [key]: patch[key] })
     }
-    if (patch.timeout) merged.timeout = { ...base.timeout, ...patch.timeout }
+    if (patch.timeout)
+        merged.timeout = mergeTimeoutConfig(base.timeout, patch.timeout)
     if (patch.telemetry)
         merged.telemetry = mergeTelemetryConfig(base.telemetry, patch.telemetry)
     return merged
 }
 
-/**
- * Folds an editor patch into an existing override layer. `undefined` values
- * mean "cleared", so the field goes back to inheriting; emptied nested
- * objects are removed so `Object.keys(patch)` reflects real overrides.
- */
+/** Apply an editor patch; undefined clears overrides, removing empty nested layers. */
 export function mergeConfigPatch(
     current: GenerationConfigPatch,
     incoming: GenerationConfigPatch
@@ -99,7 +106,6 @@ export function mergeConfigPatch(
             ...result.telemetry,
             ...incoming.telemetry
         }
-        if (!('metadata' in incoming.telemetry)) delete telemetry.metadata
         for (const key of TELEMETRY_KEYS)
             if (telemetry[key] === undefined) delete telemetry[key]
         if (Object.keys(telemetry).length > 0) result.telemetry = telemetry
@@ -108,10 +114,7 @@ export function mergeConfigPatch(
     return result
 }
 
-/**
- * Removes one overridden field (dot path such as `timeout.totalMs`) so it
- * inherits again; emptied nested objects and an emptied patch vanish.
- */
+/** Clear a dot-path override so it inherits again; remove empty parent layers. */
 export function resetConfigField(
     patch: GenerationConfigPatch,
     path: string
@@ -136,11 +139,8 @@ export function resetConfigField(
     return Object.keys(result).length > 0 ? result : {}
 }
 
-/**
- * Resolves the fixed precedence global → model → experiment → variant and
- * records where every field came from. `requested` is the full merge;
- * `effective` is what execution may send (scheduling fields excluded).
- */
+/** Resolve global → model → experiment → variant with field provenance;
+ * scheduling settings stay out of the effective request. */
 export function resolveGenerationConfig(
     global: GenerationConfig,
     model?: GenerationConfigPatch,
@@ -179,7 +179,7 @@ export function resolveGenerationConfig(
             sources[key] = source
         }
         if (patch.timeout) {
-            timeout = { ...timeout, ...patch.timeout }
+            timeout = mergeTimeoutConfig(timeout, patch.timeout)
             for (const field of TIMEOUT_KEYS)
                 if (patch.timeout[field] !== undefined)
                     sources[`timeout.${field}`] = source
@@ -203,5 +203,75 @@ export function resolveGenerationConfig(
         effective,
         sources,
         excludedParameters: []
+    }
+}
+
+/** Exclude declared unsupported parameters while retaining the requested values. */
+export function applyModelCapabilities(
+    resolved: ResolvedGenerationConfig,
+    capabilities?: ModelCapabilities,
+    model?: Pick<LLMModel, 'provider' | 'mode'> &
+        Partial<Pick<LLMModel, 'id' | 'providerId' | 'decisionProtocol'>>
+): ResolvedGenerationConfig {
+    const excluded = new Set<string>([
+        ...resolved.excludedParameters,
+        ...(capabilities?.unsupportedParameters ?? [])
+    ])
+    if (model?.mode === 'decision' || model?.provider === 'typesafe') {
+        if (resolved.requested.systemPrompt !== undefined)
+            excluded.add('systemPrompt')
+        if (resolved.requested.stopSequences !== undefined)
+            excluded.add('stopSequences')
+        const protocol = resolveDecisionProtocol(model)
+        if (protocol === 'system-one') {
+            for (const key of SCALAR_KEYS)
+                if (
+                    key !== 'connectTimeout' &&
+                    key !== 'readTimeout' &&
+                    resolved.requested[key] !== undefined
+                )
+                    excluded.add(key)
+            if (resolved.requested.telemetry !== undefined)
+                excluded.add('telemetry')
+        } else if (protocol === 'openai-responses') {
+            for (const key of [
+                'topK',
+                'frequencyPenalty',
+                'presencePenalty',
+                'repetitionPenalty',
+                'seed',
+                'minP',
+                'telemetry'
+            ] as const)
+                if (resolved.requested[key] !== undefined) excluded.add(key)
+        }
+    }
+    if (
+        excluded.size === 0 &&
+        model?.mode !== 'decision' &&
+        model?.provider !== 'typesafe'
+    )
+        return resolved
+    const effective = { ...resolved.effective }
+    for (const parameter of excluded)
+        delete effective[parameter as keyof GenerationConfig]
+    if (model?.mode === 'decision' || model?.provider === 'typesafe') {
+        for (const key of ['stepMs', 'chunkMs'] as const) {
+            if (effective.timeout?.[key] !== undefined)
+                excluded.add(`timeout.${key}`)
+        }
+        effective.timeout =
+            effective.timeout?.totalMs !== undefined
+                ? { totalMs: effective.timeout.totalMs }
+                : undefined
+        for (const key of ['connectTimeout', 'readTimeout'] as const) {
+            if (effective[key] !== undefined) excluded.add(key)
+            delete effective[key]
+        }
+    }
+    return {
+        ...resolved,
+        effective,
+        excludedParameters: [...excluded]
     }
 }

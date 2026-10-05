@@ -10,7 +10,7 @@ interface ConfigSliderProps {
     step: number
     onChange: (val: number) => void
     labels?: [string, string]
-    /** Optional control rendered beside the label (e.g. inherit-reset). */
+
     override?: React.ReactNode
 }
 
@@ -53,7 +53,7 @@ export const ConfigSlider = React.memo(
                 max={max}
                 value={value ?? 0}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary transition-all hover:bg-muted/80"
+                className="w-full h-11 rounded-lg cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             {labels && (
                 <div className="flex justify-between text-xs text-muted-foreground font-medium px-0.5">

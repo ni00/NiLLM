@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button'
 import { GenerationConfig, GenerationConfigPatch, LLMModel } from '@/lib/types'
 import {
     mergeConfigPatch,
+    applyModelCapabilities,
     resetConfigField,
     resolveGenerationConfig
 } from '@/features/benchmark/config'
 import { ConfigEditor } from './ConfigEditor'
+import { ParameterPresetControls } from './ParameterPresetControls'
 export interface ModelConfigPanelProps {
     model: LLMModel
     globalConfig: GenerationConfig
@@ -24,7 +26,11 @@ export const ModelConfigPanel = React.memo(
         onStartEditingDetails
     }: ModelConfigPanelProps) => {
         const t = useI18n()
-        const resolved = resolveGenerationConfig(globalConfig, model.config)
+        const resolved = applyModelCapabilities(
+            resolveGenerationConfig(globalConfig, model.config),
+            model.capabilities,
+            model
+        )
         const patch = model.config ?? {}
 
         const applyPatch = (incoming: GenerationConfigPatch) => {
@@ -50,7 +56,7 @@ export const ModelConfigPanel = React.memo(
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 text-xs font-medium"
+                                className="min-h-11 text-xs font-medium"
                                 onClick={() =>
                                     onUpdateModel(model.id, {
                                         config: undefined
@@ -59,6 +65,23 @@ export const ModelConfigPanel = React.memo(
                             >
                                 {t('Reset')}
                             </Button>
+                        </div>
+                        <div className="mb-4 space-y-3">
+                            <ParameterPresetControls
+                                config={patch}
+                                onApply={applyPatch}
+                            />
+                            {resolved.excludedParameters.length > 0 && (
+                                <p className="text-sm" role="status">
+                                    {t('Parameters not sent')}:{' '}
+                                    {resolved.excludedParameters.join(', ')}
+                                </p>
+                            )}
+                            <p className="text-sm text-muted-foreground">
+                                {t(
+                                    'Undeclared capabilities are unknown; providers may ignore requested parameters.'
+                                )}
+                            </p>
                         </div>
                         <div className="bg-muted/5 rounded-xl border p-4">
                             <ConfigEditor
@@ -82,7 +105,7 @@ export const ModelConfigPanel = React.memo(
                     <Button
                         variant="outline"
                         size="sm"
-                        className="w-full h-9 text-xs font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                        className="w-full min-h-11 text-xs font-semibold"
                         onClick={() => onStartEditingDetails(model)}
                     >
                         <Pencil className="w-3.5 h-3.5 mr-2" />

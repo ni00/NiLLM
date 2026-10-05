@@ -1,9 +1,5 @@
 import { useI18n } from '@/lib/i18n'
-import {
-    createBrowserRouter,
-    RouterProvider,
-    type DataRouter
-} from 'react-router'
+import { createBrowserRouter, RouterProvider } from 'react-router'
 import { useState, useEffect } from 'react'
 import { storeHydration } from '@/lib/store'
 
@@ -29,6 +25,11 @@ const createAppRouter = () =>
         }
     ])
 
+// Resolve the initial route chunk while IndexedDB hydration is in flight.
+// Mounting still waits below, so defaults cannot overwrite saved sessions.
+const router = createAppRouter()
+if (import.meta.hot) import.meta.hot.dispose(() => router.dispose())
+
 function LoadingView() {
     const t = useI18n()
     return (
@@ -42,16 +43,16 @@ function LoadingView() {
 }
 
 export default function AppRouter() {
-    const [router, setRouter] = useState<DataRouter | null>(null)
+    const [hydrated, setHydrated] = useState(false)
     useEffect(() => {
         let active = true
         void storeHydration.then(() => {
-            if (active) setRouter(createAppRouter())
+            if (active) setHydrated(true)
         })
         return () => {
             active = false
         }
     }, [])
-    if (!router) return <LoadingView />
+    if (!hydrated) return <LoadingView />
     return <RouterProvider router={router} />
 }

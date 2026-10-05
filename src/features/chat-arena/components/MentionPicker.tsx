@@ -20,11 +20,10 @@ export function MentionPicker({
 
     return (
         <div
-            className="absolute z-50 w-64 p-1 overflow-hidden bg-popover text-popover-foreground rounded-md border shadow-md animate-in fade-in zoom-in-95 duration-100"
+            className="absolute z-50 w-64 max-w-[calc(100%-1rem)] p-1 overflow-hidden bg-popover text-popover-foreground rounded-xl border border-border shadow-lg animate-in fade-in zoom-in-95 duration-100"
             style={{
                 bottom: position.top + 28,
-                left: position.left + 16,
-                minWidth: '200px'
+                left: `clamp(8px, ${position.left + 16}px, calc(100% - 16rem - 8px))`
             }}
         >
             <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
@@ -32,7 +31,7 @@ export function MentionPicker({
                     <button
                         key={model.id}
                         className={cn(
-                            'w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm select-none outline-none cursor-pointer text-left transition-colors',
+                            'w-full min-h-11 flex items-center gap-2 px-2 py-2 text-sm rounded-md select-none outline-none cursor-pointer text-left transition-colors',
                             idx === selectedIndex
                                 ? 'bg-accent text-accent-foreground'
                                 : 'hover:bg-muted'

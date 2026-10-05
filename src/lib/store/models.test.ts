@@ -3,6 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { createAppState } from './index'
 
 describe('model state', () => {
+    it('removes disabled models from arena selection', () => {
+        const store = createStore(createAppState)
+        store.getState().updateModel('gpt-4o', { enabled: false })
+        expect(store.getState().activeModelIds).not.toContain('gpt-4o')
+        store.getState().toggleModelActivation('gpt-4o')
+        expect(store.getState().activeModelIds).not.toContain('gpt-4o')
+    })
     it('removes deleted models from arena selection', () => {
         const store = createStore(createAppState)
         store.getState().deleteModel('gpt-4o')

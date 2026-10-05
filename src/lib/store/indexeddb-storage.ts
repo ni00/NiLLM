@@ -4,11 +4,7 @@ const DB_NAME = 'nillm-db'
 const STORE_NAME = 'store'
 let database: Promise<IDBDatabase> | undefined
 
-/**
- * Durable key-value storage with transactional batch operations. `commit`
- * applies every put/delete in one IndexedDB transaction (all-or-nothing);
- * `dump` reads a consistent snapshot of every record for diagnostics.
- */
+/** Commit puts/deletes atomically; dump reads a consistent record snapshot. */
 export interface AppStorage extends StateStorage {
     readMany(keys: string[]): Promise<Record<string, string | null>>
     commit(puts: Record<string, string>, deletes: string[]): Promise<void>

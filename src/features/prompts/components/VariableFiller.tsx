@@ -2,9 +2,19 @@ import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { X, Play, Loader2 } from 'lucide-react'
+import { Play, Loader2 } from 'lucide-react'
 import { SelectDropdown } from '@/components/ui/select-dropdown'
 import { LLMModel, PromptTemplate } from '@/lib/types'
+import { useId } from 'react'
+import {
+    Dialog,
+    DialogContent,
+    DialogBody,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog'
 
 interface VariableFillerProps {
     isOpen: boolean
@@ -12,6 +22,7 @@ interface VariableFillerProps {
     variableValues: Record<string, string>
     selectedModelId: string
     isGenerating: boolean
+    feedback?: { error: boolean; message: string }
     models: LLMModel[]
     onClose: () => void
     onUse: () => void
@@ -26,6 +37,7 @@ export function VariableFiller({
     variableValues,
     selectedModelId,
     isGenerating,
+    feedback,
     models,
     onClose,
     onUse,
@@ -34,26 +46,26 @@ export function VariableFiller({
     onSelectModel
 }: VariableFillerProps) {
     const t = useI18n()
+    const idPrefix = useId()
     if (!isOpen || !template) return null
 
-    const enabledModels = models.filter((m) => m.enabled)
+    const enabledModels = models.filter(
+        (m) => m.enabled && (m.mode ?? 'chat') === 'chat'
+    )
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="w-full max-w-xl bg-card border shadow-2xl rounded-xl flex flex-col max-h-[90vh] animate-in zoom-in-95">
-                <div className="p-4 border-b flex justify-between items-center bg-muted/20">
-                    <h3 className="font-semibold">
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>
                         {t('Fill Variables:')} {template.title}
-                    </h3>
-                    <Button variant="ghost" size="icon" onClick={onClose}>
-                        <X className="h-5 w-5" />
-                    </Button>
-                </div>
-                <div className="p-6 overflow-y-auto space-y-4">
-                    <div className="flex justify-between gap-2 items-center">
-                        <span className="text-xs text-muted-foreground italic">
-                            {t('Manually enter values or use AI to auto-fill.')}
-                        </span>
+                    </DialogTitle>
+                    <DialogDescription>
+                        {t('Manually enter values or use AI to auto-fill.')}
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogBody className="space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between gap-2 sm:items-center">
                         {models.length === 0 ? (
                             <span className="text-xs text-destructive">
                                 {t(
@@ -78,11 +90,22 @@ export function VariableFiller({
                             />
                         )}
                     </div>
+                    {feedback && (
+                        <p
+                            role={feedback.error ? 'alert' : 'status'}
+                            className="text-sm text-destructive"
+                        >
+                            {feedback.message}
+                        </p>
+                    )}
 
                     {template.variables.map((v) => (
                         <div key={v.name} className="space-y-1">
                             <div className="flex justify-between">
-                                <Label className="font-mono text-xs">
+                                <Label
+                                    htmlFor={`${idPrefix}-${v.name}`}
+                                    className="font-mono text-xs"
+                                >
                                     {v.name}
                                 </Label>
                                 <span className="text-xs text-muted-foreground">
@@ -90,6 +113,7 @@ export function VariableFiller({
                                 </span>
                             </div>
                             <Textarea
+                                id={`${idPrefix}-${v.name}`}
                                 value={variableValues[v.name] || ''}
                                 onChange={(e) =>
                                     onChangeVariable(v.name, e.target.value)
@@ -101,8 +125,8 @@ export function VariableFiller({
                             />
                         </div>
                     ))}
-                </div>
-                <div className="p-4 border-t bg-muted/20 flex justify-end gap-2">
+                </DialogBody>
+                <DialogFooter>
                     <Button variant="ghost" onClick={onClose}>
                         {t('Cancel')}
                     </Button>
@@ -114,8 +138,8 @@ export function VariableFiller({
                         )}
                         {t('Fill & Use')}
                     </Button>
-                </div>
-            </div>
-        </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }

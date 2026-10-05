@@ -1,7 +1,7 @@
 import { useI18n } from '@/lib/i18n'
 import { z } from 'zod'
 import type { DragEndEvent } from '@dnd-kit/core'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
 import { useNavigate } from 'react-router'
@@ -39,6 +39,7 @@ export function usePrompts() {
     const navigate = useNavigate()
 
     const [isEditing, setIsEditing] = useState(false)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editForm, setEditForm] = useState<PromptForm>({
         title: '',
@@ -55,6 +56,12 @@ export function usePrompts() {
     >({})
     const [isGenerating, setIsGenerating] = useState(false)
     const [selectedModelId, setSelectedModelId] = useState<string>('')
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [feedback, setFeedback] = useState<{
+        error: boolean
+        message: string
+    }>()
+    const handleImportClick = () => fileInputRef.current?.click()
 
     const extractVariables = (content: string) => {
         const regex = /\{\{([^}]+)\}\}/g
@@ -83,9 +90,11 @@ export function usePrompts() {
     }
 
     const handleDelete = (id: string) => {
-        if (confirm(t('Are you sure you want to delete this template?'))) {
-            deletePromptTemplate(id)
-        }
+        setDeletingId(id)
+    }
+    const confirmDelete = () => {
+        if (deletingId !== null) deletePromptTemplate(deletingId)
+        setDeletingId(null)
     }
 
     const handleSave = () => {
@@ -127,6 +136,7 @@ export function usePrompts() {
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+        setFeedback(undefined)
         try {
             const data = z
                 .object({
@@ -142,19 +152,23 @@ export function usePrompts() {
                         .default([])
                 })
                 .parse(await readJsonFile(file))
-            if (data.title && data.content) {
-                addPromptTemplate({
-                    ...data,
-                    id: crypto.randomUUID(),
-                    createdAt: Date.now(),
-                    updatedAt: Date.now()
-                })
-            } else {
-                alert(t('Invalid template format'))
-            }
-        } catch (err) {
-            console.error(err)
-            alert(t('Failed to read file'))
+            addPromptTemplate({
+                ...data,
+                id: crypto.randomUUID(),
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            })
+            setFeedback({
+                error: false,
+                message: t('Template imported successfully.')
+            })
+        } catch {
+            setFeedback({
+                error: true,
+                message: t('Failed to read a valid template file.')
+            })
+        } finally {
+            e.target.value = ''
         }
     }
 
@@ -166,7 +180,9 @@ export function usePrompts() {
         } else {
             setUsingTemplate(tmpl)
             setVariableValues(Object.fromEntries(vars.map((v) => [v, ''])))
-            const defaultModel = models.find((m) => m.enabled)
+            const defaultModel = models.find(
+                (m) => m.enabled && (m.mode ?? 'chat') === 'chat'
+            )
             if (defaultModel) setSelectedModelId(defaultModel.id)
             setIsUsing(true)
         }
@@ -187,12 +203,16 @@ export function usePrompts() {
         if (!usingTemplate) return
 
         const model = models.find((m) => m.id === modelId)
-        if (!model) {
-            alert(t('Selected model not found.'))
+        if (!model || (model.mode ?? 'chat') !== 'chat') {
+            setFeedback({
+                error: true,
+                message: t('Selected model not found.')
+            })
             return
         }
 
         setIsGenerating(true)
+        setFeedback(undefined)
         try {
             const [{ getProvider }, { generateText }] = await Promise.all([
                 import('@/lib/ai-provider'),
@@ -226,12 +246,12 @@ export function usePrompts() {
                 .parse(JSON.parse(jsonStr))
             setVariableValues((prev) => ({ ...prev, ...values }))
         } catch {
-            console.error('Could not generate template variables.')
-            alert(
-                t(
+            setFeedback({
+                error: true,
+                message: t(
                     'Could not fill variables. Check provider settings and network access.'
                 )
-            )
+            })
         } finally {
             setIsGenerating(false)
         }
@@ -249,6 +269,12 @@ export function usePrompts() {
     }
 
     return {
+        deletingId,
+        setDeletingId,
+        confirmDelete,
+        fileInputRef,
+        handleImportClick,
+        feedback,
         promptTemplates,
         isEditing,
         editingId,

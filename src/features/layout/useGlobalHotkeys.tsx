@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
-/** True when the event should trigger "send" (Ctrl/Cmd+Enter without Shift). */
 export function isSendShortcut(event: KeyboardEvent): boolean {
     return (
         (event.ctrlKey || event.metaKey) &&
@@ -36,6 +35,8 @@ export function useGlobalHotkeys(): React.ReactElement | null {
     const [activeIndex, setActiveIndex] = useState(0)
     const [showShortcuts, setShowShortcuts] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
+    const returnFocusRef = useRef<HTMLElement | null>(null)
+    const activeCommandRef = useRef<HTMLButtonElement>(null)
 
     const close = useCallback(() => {
         setOpen(false)
@@ -82,7 +83,6 @@ export function useGlobalHotkeys(): React.ReactElement | null {
         setActiveIndex(0)
     }, [query, showShortcuts])
 
-    // Global Ctrl/Cmd+K to open the command dialog.
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.defaultPrevented) return
@@ -95,17 +95,28 @@ export function useGlobalHotkeys(): React.ReactElement | null {
                 event.key.toLowerCase() === 'k'
             ) {
                 event.preventDefault()
+                if (!open) {
+                    returnFocusRef.current =
+                        document.activeElement instanceof HTMLElement
+                            ? document.activeElement
+                            : null
+                }
                 setOpen((v) => !v)
             }
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [])
+    }, [open])
 
-    // Reset list state when the dialog opens.
     useEffect(() => {
         if (open) inputRef.current?.focus()
     }, [open])
+
+    useEffect(() => {
+        if (open) {
+            activeCommandRef.current?.scrollIntoView({ block: 'nearest' })
+        }
+    }, [open, activeIndex, filtered])
 
     const activate = useCallback(
         (entry: CommandEntry) => {
@@ -140,7 +151,13 @@ export function useGlobalHotkeys(): React.ReactElement | null {
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && close()}>
-            <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+            <DialogContent
+                className="max-w-lg [&>button]:hidden"
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault()
+                    returnFocusRef.current?.focus()
+                }}
+            >
                 <DialogTitle className="sr-only">{t('Commands')}</DialogTitle>
                 <DialogDescription className="sr-only">
                     {t('Search commands...')}
@@ -151,10 +168,13 @@ export function useGlobalHotkeys(): React.ReactElement | null {
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={onInputKeyDown}
                     placeholder={t('Search commands...')}
-                    className="w-full bg-transparent px-4 py-3 text-sm outline-none border-b"
+                    className="w-full bg-transparent px-4 sm:px-6 py-4 text-sm outline-none border-b shrink-0"
                     aria-label={t('Search commands...')}
                 />
-                <ul className="max-h-72 overflow-y-auto py-1" role="listbox">
+                <ul
+                    className="min-h-0 max-h-72 overflow-y-auto p-2"
+                    role="listbox"
+                >
                     {filtered.length === 0 ? (
                         <li className="px-4 py-6 text-sm text-muted-foreground text-center">
                             {t('No matching commands')}
@@ -166,12 +186,17 @@ export function useGlobalHotkeys(): React.ReactElement | null {
                                 <li key={entry.id}>
                                     <button
                                         type="button"
+                                        ref={
+                                            i === activeIndex
+                                                ? activeCommandRef
+                                                : undefined
+                                        }
                                         role="option"
                                         aria-selected={i === activeIndex}
                                         onMouseEnter={() => setActiveIndex(i)}
                                         onClick={() => activate(entry)}
                                         className={cn(
-                                            'flex w-full items-center gap-3 px-4 py-2.5 text-sm text-left',
+                                            'flex min-h-11 w-full items-center gap-3 px-2 sm:px-4 py-2.5 rounded-lg text-sm text-left',
                                             i === activeIndex &&
                                                 'bg-accent text-accent-foreground'
                                         )}
@@ -187,7 +212,7 @@ export function useGlobalHotkeys(): React.ReactElement | null {
                     )}
                 </ul>
                 {showShortcuts && (
-                    <div className="border-t px-4 py-3 text-sm space-y-2">
+                    <div className="border-t p-4 sm:px-6 text-sm space-y-2 shrink-0">
                         <p className="font-medium">{t('Keyboard Shortcuts')}</p>
                         <ul className="space-y-1.5 text-muted-foreground">
                             <li className="flex justify-between gap-4">

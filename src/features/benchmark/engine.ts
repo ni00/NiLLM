@@ -1,14 +1,15 @@
 import { runConcurrent } from './concurrency'
-import { resolveGenerationConfig } from './config'
+import { resolveGenerationConfig, applyModelCapabilities } from './config'
 import { captureModelSnapshot } from './snapshots'
 import { runWorkerStream, type StreamOutcome } from './worker-stream'
-import { scheduleStreamingUpdate, abortStreamingUI } from './streaming-ui'
+import { scheduleStreamingUpdate } from './streaming-ui'
+import { hasImageInput } from '@/lib/streaming/messages'
+import { parseDecisionPrompt } from '@/features/decisions/domain'
+import { useAppStore } from '@/lib/store'
 import {
-    cancelAllStreams,
     registerStreamCancellation,
     streamGeneration
 } from '@/lib/streaming/cancellation'
-import { useAppStore } from '@/lib/store'
 import {
     BenchmarkResult,
     LLMModel,
@@ -16,7 +17,6 @@ import {
     RequestSnapshot
 } from '@/lib/types'
 
-/** Runs one streamed request; the caller owns the initial result record. */
 async function executeStream(
     sessionId: string,
     modelId: string,
@@ -67,13 +67,25 @@ export async function broadcastMessage(
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     }
 
-    const mentionedModels = activeModels.filter((m) => {
-        const pattern = new RegExp(
-            `@${escapeRegExp(m.name)}($|\\s|\\.|,|\\?|!)`,
-            'i'
-        )
-        return pattern.test(prompt)
-    })
+    const isDecision = activeModels.some(
+        (model) => model.mode === 'decision' || model.provider === 'typesafe'
+    )
+    if (isDecision) {
+        if (activeModels.some((model) => model.mode !== 'decision'))
+            throw new Error(
+                'Set every selected model to Decision mode for a comparable task.'
+            )
+        parseDecisionPrompt(prompt)
+    }
+    const mentionedModels = isDecision
+        ? []
+        : activeModels.filter((m) => {
+              const pattern = new RegExp(
+                  `@${escapeRegExp(m.name)}($|\\s|\\.|,|\\?|!)`,
+                  'i'
+              )
+              return pattern.test(prompt)
+          })
 
     const targetModels =
         mentionedModels.length > 0 ? mentionedModels : activeModels
@@ -108,9 +120,13 @@ export async function broadcastMessage(
         if (generation !== streamGeneration()) return
         const resultId = crypto.randomUUID()
 
-        const resolved = resolveGenerationConfig(
-            useAppStore.getState().globalConfig,
-            model.config
+        const resolved = applyModelCapabilities(
+            resolveGenerationConfig(
+                useAppStore.getState().globalConfig,
+                model.config
+            ),
+            model.capabilities,
+            model
         )
 
         // Snapshots are captured before dispatch so digest time never lands
@@ -122,7 +138,8 @@ export async function broadcastMessage(
                 schemaVersion: 1,
                 model: modelSnapshot,
                 parameters: resolved,
-                context: 'conversation',
+                context:
+                    model.mode === 'decision' ? 'independent' : 'conversation',
                 capturedAt: Date.now()
             }
         } catch {
@@ -138,9 +155,10 @@ export async function broadcastMessage(
             })
             return
         }
+        if (generation !== streamGeneration()) return
 
         const history: Message[] = []
-        if (session && session.results[model.id]) {
+        if (model.mode !== 'decision' && session && session.results[model.id]) {
             session.results[model.id].forEach((res) => {
                 history.push({ role: 'user', content: res.prompt })
                 if (res.response) {
@@ -159,6 +177,23 @@ export async function broadcastMessage(
 
         messages.push(...history, { role: 'user', content: processedPrompt })
 
+        // Declared vision=false fails before any network call; unknown
+        // capabilities still send (the provider may ignore the image).
+        if (model.capabilities?.vision === false && hasImageInput(messages)) {
+            useAppStore.getState().addResult(sessionId, model.id, {
+                id: resultId,
+                modelId: model.id,
+                prompt: processedPrompt,
+                response: '',
+                metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
+                timestamp: Date.now(),
+                status: 'error',
+                error: 'This model does not support image input.',
+                requestSnapshot: snapshot
+            })
+            return
+        }
+
         const initialResult: BenchmarkResult = {
             id: resultId,
             modelId: model.id,
@@ -174,7 +209,11 @@ export async function broadcastMessage(
         await executeStream(
             sessionId,
             model.id,
-            { ...model, config: resolved.effective },
+            {
+                ...model,
+                pricing: snapshot.model.pricing,
+                config: resolved.effective
+            },
             messages,
             resultId
         )
@@ -183,17 +222,13 @@ export async function broadcastMessage(
     return sessionId
 }
 
-export function abortAllTasks() {
-    cancelAllStreams()
-    abortStreamingUI()
-}
-
 export async function retryResult(
     sessionId: string,
     modelId: string,
     resultId: string
 ) {
     const store = useAppStore.getState()
+    const generation = streamGeneration()
     const session = store.sessions.find((s) => s.id === sessionId)
     if (!session) return
 
@@ -206,9 +241,13 @@ export async function retryResult(
 
     const resultToRetry = modelResults[resultIndex]
 
-    const resolved = resolveGenerationConfig(
-        useAppStore.getState().globalConfig,
-        model.config
+    const resolved = applyModelCapabilities(
+        resolveGenerationConfig(
+            useAppStore.getState().globalConfig,
+            model.config
+        ),
+        model.capabilities,
+        model
     )
 
     let snapshot: RequestSnapshot | undefined
@@ -217,7 +256,7 @@ export async function retryResult(
             schemaVersion: 1,
             model: await captureModelSnapshot(model),
             parameters: resolved,
-            context: 'conversation',
+            context: model.mode === 'decision' ? 'independent' : 'conversation',
             capturedAt: Date.now()
         }
     } catch {
@@ -228,17 +267,8 @@ export async function retryResult(
         return
     }
 
-    useAppStore.getState().updateResult(sessionId, modelId, resultId, {
-        error: undefined,
-        response: '',
-        reasoning: undefined,
-        status: 'pending',
-        metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
-        timestamp: Date.now(),
-        requestSnapshot: snapshot
-    })
-
-    const historyResults = modelResults.slice(0, resultIndex)
+    const historyResults =
+        model.mode === 'decision' ? [] : modelResults.slice(0, resultIndex)
     const history: Message[] = []
     historyResults.forEach((res) => {
         history.push({ role: 'user', content: res.prompt })
@@ -256,10 +286,34 @@ export async function retryResult(
     }
     messages.push(...history, { role: 'user', content: resultToRetry.prompt })
 
+    if (generation !== streamGeneration()) return
+    if (model.capabilities?.vision === false && hasImageInput(messages)) {
+        store.updateResult(sessionId, modelId, resultId, {
+            status: 'error',
+            error: 'This model does not support image input.',
+            requestSnapshot: snapshot
+        })
+        return
+    }
+
+    useAppStore.getState().updateResult(sessionId, modelId, resultId, {
+        error: undefined,
+        response: '',
+        reasoning: undefined,
+        status: 'pending',
+        metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
+        timestamp: Date.now(),
+        requestSnapshot: snapshot
+    })
+
     await executeStream(
         sessionId,
         model.id,
-        { ...model, config: resolved.effective },
+        {
+            ...model,
+            pricing: snapshot.model.pricing,
+            config: resolved.effective
+        },
         messages,
         resultId
     )

@@ -1,7 +1,21 @@
 import type { AppState } from './index'
 import { StateCreator } from 'zustand'
 import { mergeGenerationConfig } from '@/features/benchmark/config'
-import { GenerationConfig, GlobalConfigUpdate } from '@/lib/types'
+import { parameterPresetSchema } from '@/lib/validation'
+import {
+    GenerationConfig,
+    GenerationConfigPatch,
+    GlobalConfigUpdate
+} from '@/lib/types'
+
+/** A saved parameter patch users can re-apply to any layer. */
+export interface ParameterPreset {
+    id: string
+    name: string
+    config: GenerationConfigPatch
+    createdAt: number
+    updatedAt: number
+}
 
 const DEFAULT_CONFIG: GenerationConfig = {
     maxConcurrent: 4,
@@ -45,6 +59,9 @@ export interface ConfigSlice {
     setTheme: (theme: AppTheme) => void
     density: AppDensity
     setDensity: (density: AppDensity) => void
+    parameterPresets: ParameterPreset[]
+    saveParameterPreset: (preset: ParameterPreset) => void
+    deleteParameterPreset: (id: string) => void
 }
 
 export const createConfigSlice: StateCreator<AppState, [], [], ConfigSlice> = (
@@ -55,22 +72,73 @@ export const createConfigSlice: StateCreator<AppState, [], [], ConfigSlice> = (
     benchmarkLanguage: null,
     theme: 'system',
     density: 'comfortable',
-    // Scalars assign directly (clearing an optional field unsets it); nested
-    // timeout/telemetry fold through mergeGenerationConfig so sibling fields
-    // never get frozen by a partial nested update.
+    parameterPresets: [],
+    // Partial nested patches must not freeze inherited sibling fields.
+
     updateGlobalConfig: (updates) =>
         set((state) => {
             const { timeout, telemetry, ...scalars } = updates
+            const base = { ...state.globalConfig, ...scalars }
+            if (timeout) {
+                const next = { ...base.timeout }
+                for (const key of Object.keys(
+                    timeout
+                ) as (keyof typeof timeout)[]) {
+                    if (timeout[key] === undefined) delete next[key]
+                }
+                base.timeout = Object.keys(next).length ? next : undefined
+            }
+            if (telemetry) {
+                const next = { ...base.telemetry }
+                for (const key of Object.keys(
+                    telemetry
+                ) as (keyof typeof telemetry)[]) {
+                    if (telemetry[key] === undefined) delete next[key]
+                }
+                base.telemetry = Object.keys(next).length
+                    ? { ...next, isEnabled: next.isEnabled ?? false }
+                    : undefined
+            }
             return {
-                globalConfig: mergeGenerationConfig(
-                    { ...state.globalConfig, ...scalars },
-                    { timeout, telemetry }
-                )
+                globalConfig: mergeGenerationConfig(base, {
+                    timeout,
+                    telemetry
+                })
             }
         }),
 
     setLanguage: (language) => set({ language }),
     setBenchmarkLanguage: (benchmarkLanguage) => set({ benchmarkLanguage }),
     setTheme: (theme) => set({ theme }),
-    setDensity: (density) => set({ density })
+    setDensity: (density) => set({ density }),
+
+    saveParameterPreset: (preset) => {
+        const parsed = parameterPresetSchema.parse(preset)
+        const config = structuredClone(parsed.config)
+        set((state) => {
+            const existing = state.parameterPresets.find(
+                (candidate) => candidate.id === parsed.id
+            )
+            const saved: ParameterPreset = {
+                ...parsed,
+                config,
+                createdAt: existing?.createdAt ?? parsed.createdAt,
+                updatedAt: Date.now()
+            }
+            return {
+                parameterPresets: existing
+                    ? state.parameterPresets.map((candidate) =>
+                          candidate.id === saved.id ? saved : candidate
+                      )
+                    : [...state.parameterPresets, saved]
+            }
+        })
+    },
+
+    deleteParameterPreset: (id) =>
+        set((state) => ({
+            parameterPresets: state.parameterPresets.filter(
+                (preset) => preset.id !== id
+            )
+        }))
 })

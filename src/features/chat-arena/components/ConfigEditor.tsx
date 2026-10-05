@@ -5,6 +5,7 @@ import { ConstraintsConfig } from './config/ConstraintsConfig'
 import { TimeoutsConfig } from './config/TimeoutsConfig'
 import { TelemetryConfig } from './config/TelemetryConfig'
 import type { ConfigSource } from '@/lib/types'
+import { useId } from 'react'
 
 interface ConfigEditorProps {
     /** Effective values for display (base merged with the edited layer). */
@@ -21,7 +22,8 @@ export const ConfigEditor = ({
     sources,
     onResetField
 }: ConfigEditorProps) => {
-    const sectionProps = { config, onChange, sources, onResetField }
+    const idPrefix = useId()
+    const sectionProps = { config, onChange, sources, onResetField, idPrefix }
     return (
         <div className="grid gap-10 py-2">
             <SamplingConfig {...sectionProps} />

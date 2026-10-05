@@ -23,10 +23,6 @@ function formatDateTime(timestamp: number) {
     return new Date(timestamp).toLocaleString()
 }
 
-function statusLabel(status: ExperimentRun['status']) {
-    return status
-}
-
 function runProgress(run: ExperimentRun) {
     const executed = run.tasks.filter((t) => t.attempts.length > 0).length
     return { executed, planned: run.tasks.length }
@@ -115,7 +111,7 @@ export function ExperimentsPage() {
                                                 {t('executed')}
                                             </span>
                                             <span className="uppercase tracking-wide font-medium">
-                                                {statusLabel(run.status)}
+                                                {t(run.status)}
                                             </span>
                                         </div>
                                     </div>

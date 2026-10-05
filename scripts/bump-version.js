@@ -17,14 +17,12 @@ if (version.startsWith('v')) {
     version = version.slice(1)
 }
 
-// 1. Update package.json
 const pkgPath = path.join(rootDir, 'package.json')
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
 pkg.version = version
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 4) + '\n')
 console.log(`Updated package.json to ${version}`)
 
-// 2. Update src-tauri/tauri.conf.json
 const tauriConfPath = path.join(rootDir, 'src-tauri', 'tauri.conf.json')
 if (fs.existsSync(tauriConfPath)) {
     const tauriConf = JSON.parse(fs.readFileSync(tauriConfPath, 'utf-8'))
@@ -33,7 +31,6 @@ if (fs.existsSync(tauriConfPath)) {
     console.log(`Updated tauri.conf.json to ${version}`)
 }
 
-// 3. Update src-tauri/Cargo.toml
 const cargoPath = path.join(rootDir, 'src-tauri', 'Cargo.toml')
 if (fs.existsSync(cargoPath)) {
     let cargo = fs.readFileSync(cargoPath, 'utf-8')

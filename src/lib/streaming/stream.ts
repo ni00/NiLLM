@@ -1,9 +1,11 @@
-import { streamText } from 'ai'
+import { streamText, type LanguageModelUsage } from 'ai'
+import { normalizeUsage } from '@/lib/usage'
+import { resolveModelPricing } from '@/lib/providers/presets'
 import { getProvider } from '@/lib/ai-provider'
 import type { LLMModel, Message } from '@/lib/types'
 import type { StreamEvent } from './protocol'
 import { toModelMessages } from './messages'
-import { estimateTokens, streamMetrics } from './metrics'
+import { createTokenCounter, streamMetrics } from './metrics'
 
 export async function streamModel(
     model: LLMModel,
@@ -14,13 +16,14 @@ export async function streamModel(
 ) {
     const start = performance.now()
     let firstToken: number | undefined
-    let text = '',
-        reasoning = '',
-        pendingText = '',
+    const tokens = createTokenCounter()
+    let pendingText = '',
         pendingReasoning = ''
     let lastUpdate = start
     let finished = false
+    let stepUsage: LanguageModelUsage | undefined
     const config = model.config
+    const pricing = resolveModelPricing(model)
     const result = streamText({
         model: (await getProvider(model))(model.providerId || model.id),
         messages: toModelMessages(messages),
@@ -59,19 +62,19 @@ export async function streamModel(
             if (done) break
             const now = performance.now()
             if (value.type === 'error') throw value.error
+            if (value.type === 'finish-step') stepUsage = value.usage
             if (
                 value.type === 'text-delta' ||
                 value.type === 'reasoning-delta'
             ) {
+                tokens.add(value.text)
                 if (value.text && firstToken === undefined) {
                     firstToken = now
                     emit({ type: 'start', resultId })
                 }
                 if (value.type === 'text-delta') {
-                    text += value.text
                     pendingText += value.text
                 } else {
-                    reasoning += value.text
                     pendingReasoning += value.text
                 }
             }
@@ -80,7 +83,9 @@ export async function streamModel(
                     throw new Error(
                         'The provider failed to complete the response.'
                     )
-                const usage = value.totalUsage
+                // The SDK's aggregate drops raw billing/cache fields. This
+                // executor sends one model call without tools or extra steps.
+                const usage = stepUsage ?? value.totalUsage
                 emit({
                     type: 'update',
                     resultId,
@@ -90,14 +95,9 @@ export async function streamModel(
                         start,
                         now,
                         firstToken,
-                        estimateTokens(text + reasoning),
-                        {
-                            inputTokens: usage.inputTokens,
-                            outputTokens: usage.outputTokens,
-                            reasoningTokens:
-                                usage.outputTokenDetails?.reasoningTokens
-                        },
-                        model.pricing
+                        tokens.count(),
+                        normalizeUsage(usage),
+                        pricing
                     ),
                     isFinal: true
                 })
@@ -117,7 +117,7 @@ export async function streamModel(
                         start,
                         now,
                         firstToken,
-                        estimateTokens(text + reasoning)
+                        tokens.count()
                     ),
                     isFinal: false
                 })

@@ -1,16 +1,21 @@
 import { useI18n } from '@/lib/i18n'
 import type { Dispatch, SetStateAction } from 'react'
-import { providerOptions } from '@/lib/providers/catalog'
+import { providerOptions, PROVIDERS } from '@/lib/providers/catalog'
+import { changeModelProvider } from '@/lib/providers/presets'
 import { Button } from '@/components/ui/button'
-import { CardContent } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { LLMModel } from '@/lib/types'
 import { SelectDropdown } from '@/components/ui/select-dropdown'
+import { ModelCapabilitiesEditor } from '@/features/models/components/ModelCapabilitiesEditor'
+import { DecisionProtocolEditor } from '@/features/models/components/DecisionProtocolEditor'
+import { ModelPresetPicker } from '@/features/models/components/ModelPresetPicker'
+import { ModelPricingEditor } from '@/features/models/components/ModelPricingEditor'
+import { getReferenceModelPreset } from '@/lib/providers/presets'
 import {
     Dialog,
     DialogContent,
+    DialogBody,
     DialogHeader,
     DialogTitle,
     DialogFooter
@@ -32,12 +37,12 @@ export const ModelEditDialog = ({
     const t = useI18n()
     return (
         <Dialog open={!!editForm} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-md border-primary/20">
+            <DialogContent className="max-w-2xl" aria-describedby={undefined}>
                 <DialogHeader>
                     <DialogTitle>{t('Edit Model Details')}</DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="max-h-[70vh]">
-                    <CardContent className="space-y-4 p-6 pb-8">
+                <DialogBody>
+                    <div className="space-y-4">
                         <div className="space-y-2">
                             <Label>{t('Display Name')}</Label>
                             <Input
@@ -53,12 +58,16 @@ export const ModelEditDialog = ({
                         <div className="space-y-2">
                             <Label>{t('Provider Type')}</Label>
                             <SelectDropdown
+                                ariaLabel={t('Provider')}
                                 value={editForm.provider || ''}
+                                searchable
                                 onChange={(val) =>
-                                    setEditForm((prev) => ({
-                                        ...prev,
-                                        provider: val as LLMModel['provider']
-                                    }))
+                                    setEditForm((prev) =>
+                                        changeModelProvider(
+                                            prev,
+                                            val as LLMModel['provider']
+                                        )
+                                    )
                                 }
                                 options={providerOptions.map((option) => ({
                                     ...option,
@@ -66,9 +75,14 @@ export const ModelEditDialog = ({
                                 }))}
                             />
                         </div>
+                        <ModelPresetPicker
+                            value={editForm}
+                            onChange={setEditForm}
+                        />
                         <div className="space-y-2">
                             <Label>{t('Model Mode')}</Label>
                             <SelectDropdown
+                                ariaLabel={t('Model mode')}
                                 value={editForm.mode || 'chat'}
                                 onChange={(val) =>
                                     setEditForm((prev) => ({
@@ -77,17 +91,26 @@ export const ModelEditDialog = ({
                                     }))
                                 }
                                 options={[
-                                    {
-                                        label: t('Chat Completion'),
-                                        value: 'chat'
-                                    },
-                                    {
-                                        label: t('Image Generation'),
-                                        value: 'image'
-                                    }
+                                    { label: t('Decision'), value: 'decision' },
+                                    ...(editForm.provider === 'typesafe'
+                                        ? []
+                                        : [
+                                              {
+                                                  label: t('Chat Completion'),
+                                                  value: 'chat'
+                                              },
+                                              {
+                                                  label: t('Image Generation'),
+                                                  value: 'image'
+                                              }
+                                          ])
                                 ]}
                             />
                         </div>
+                        <DecisionProtocolEditor
+                            value={editForm}
+                            onChange={setEditForm}
+                        />
                         <div className="space-y-2">
                             <Label>{t('Provider Tag (Optional)')}</Label>
                             <Input
@@ -138,11 +161,34 @@ export const ModelEditDialog = ({
                                         baseURL: e.target.value
                                     }))
                                 }
-                                placeholder="https://api.example.com/v1"
+                                placeholder={
+                                    PROVIDERS[editForm.provider ?? 'openrouter']
+                                        .baseURL || 'https://api.example.com/v1'
+                                }
                             />
                         </div>
-                    </CardContent>
-                </ScrollArea>
+                        <ModelCapabilitiesEditor
+                            value={editForm.capabilities}
+                            onChange={(capabilities) =>
+                                setEditForm((prev) => ({
+                                    ...prev,
+                                    capabilities
+                                }))
+                            }
+                        />
+                        <ModelPricingEditor
+                            key={`${editForm.provider}:${editForm.providerId ?? ''}`}
+                            value={editForm.pricing}
+                            reference={getReferenceModelPreset(editForm)}
+                            onChange={(pricing) =>
+                                setEditForm((previous) => ({
+                                    ...previous,
+                                    pricing
+                                }))
+                            }
+                        />
+                    </div>
+                </DialogBody>
                 <DialogFooter>
                     <Button variant="ghost" onClick={onClose}>
                         {t('Cancel')}

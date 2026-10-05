@@ -7,20 +7,20 @@ import type {
     ModelSnapshot
 } from '@/lib/types'
 import { getBaseURL } from '@/lib/providers/catalog'
+import { applyModelCapabilities } from '@/features/benchmark/config'
+import { hasImageInput } from '@/lib/streaming/messages'
 import { endpointFingerprint } from '@/features/benchmark/snapshots'
 import { runWorkerStream } from '@/features/benchmark/worker-stream'
 import { runConcurrent } from '@/features/benchmark/concurrency'
 import { scheduleStreamingUpdate } from '@/features/benchmark/streaming-ui'
 import { registerExperimentExecution } from './runtime'
+import { evaluateExpected } from './domain/scoring'
 
 const MODEL_UNAVAILABLE =
     'Experiment model configuration is no longer available.'
 
-/**
- * Builds the execution model from the frozen snapshot; only the API key and
- * the identity-checked base URL come from the live model, so current pricing
- * or provider changes never rewrite history.
- */
+/** Execute the frozen snapshot; only credentials and an identity-checked
+ * endpoint come from the live model. */
 async function buildExecutionModel(
     snapshot: ModelSnapshot,
     live: LLMModel
@@ -35,6 +35,7 @@ async function buildExecutionModel(
         live.provider === snapshot.provider &&
         (live.providerId ?? live.id) === (snapshot.providerId ?? snapshot.id) &&
         (live.mode ?? 'chat') === snapshot.mode &&
+        live.decisionProtocol === snapshot.decisionProtocol &&
         fingerprint === snapshot.endpointFingerprint
     if (!identityMatches) return undefined
     return {
@@ -51,6 +52,7 @@ async function buildExecutionModel(
         baseURL: live.baseURL,
         enabled: true,
         mode: snapshot.mode,
+        decisionProtocol: snapshot.decisionProtocol,
         ...(snapshot.pricing !== undefined && {
             pricing: { ...snapshot.pricing }
         }),
@@ -68,6 +70,10 @@ async function runExperimentTask(
     const store = useAppStore.getState()
     const freshRun = store.experimentRuns.find((r) => r.id === run.id)
     const freshTask = freshRun?.tasks.find((t) => t.id === task.id)
+    const snapshot = freshRun?.models.find((m) => m.id === task.modelId)
+    const resolvedBase =
+        freshRun?.configByModelVariant[task.modelId]?.[task.variantId]
+    const testCase = freshRun?.testSet.cases.find((c) => c.id === task.caseId)
     if (
         !freshRun ||
         freshRun.status !== 'running' ||
@@ -76,12 +82,7 @@ async function runExperimentTask(
         signal.aborted
     )
         return
-
-    const snapshot = freshRun.models.find((m) => m.id === task.modelId)
-    const resolved =
-        freshRun.configByModelVariant[task.modelId]?.[task.variantId]
-    const testCase = freshRun.testSet.cases.find((c) => c.id === task.caseId)
-    if (!snapshot || !resolved || !testCase) {
+    if (!snapshot || !resolvedBase || !testCase) {
         useAppStore.getState().appendExperimentAttempt(run.id, task.id, {
             id: crypto.randomUUID(),
             modelId: task.modelId,
@@ -94,7 +95,7 @@ async function runExperimentTask(
             experiment: {
                 runId: run.id,
                 taskId: task.id,
-                attempt: freshTask.attempts.length + 1
+                attempt: (freshTask?.attempts.length ?? 0) + 1
             }
         })
         return
@@ -104,6 +105,10 @@ async function runExperimentTask(
         .getState()
         .models.find((m) => m.id === task.modelId)
     const executionModel = live && (await buildExecutionModel(snapshot, live))
+    const current = useAppStore
+        .getState()
+        .experimentRuns.find((r) => r.id === run.id)
+    if (signal.aborted || current?.status !== 'running') return
     if (!executionModel) {
         useAppStore.getState().appendExperimentAttempt(run.id, task.id, {
             id: crypto.randomUUID(),
@@ -122,7 +127,36 @@ async function runExperimentTask(
         })
         return
     }
+    const resolved = applyModelCapabilities(
+        resolvedBase,
+        snapshot.capabilities,
+        snapshot
+    )
     executionModel.config = resolved.effective
+
+    // Declared vision=false fails before any network call; unknown
+    // capabilities still send.
+    if (
+        snapshot.capabilities?.vision === false &&
+        hasImageInput([{ role: 'user', content: testCase.prompt }])
+    ) {
+        useAppStore.getState().appendExperimentAttempt(run.id, task.id, {
+            id: crypto.randomUUID(),
+            modelId: task.modelId,
+            prompt: testCase.prompt,
+            response: '',
+            metrics: { ttft: 0, tps: 0, totalDuration: 0, tokenCount: 0 },
+            timestamp: Date.now(),
+            status: 'error',
+            error: 'This model does not support image input.',
+            experiment: {
+                runId: run.id,
+                taskId: task.id,
+                attempt: freshTask.attempts.length + 1
+            }
+        })
+        return
+    }
 
     // Independent-case context: only this case's system/user message, never
     // conversation history or @-mention routing.
@@ -162,21 +196,22 @@ async function runExperimentTask(
         signal
     })
     scheduleStreamingUpdate(resultId, null)
+    const rule =
+        outcome.status === 'completed' && snapshot.mode !== 'image'
+            ? evaluateExpected(testCase, outcome.response)
+            : undefined
     useAppStore.getState().updateExperimentResult(run.id, task.id, resultId, {
         response: outcome.response,
         reasoning: outcome.reasoning,
         metrics: outcome.metrics,
         status: outcome.status,
-        error: outcome.error
+        error: outcome.error,
+        ruleEvaluation: rule ? { ...rule, evaluatedAt: Date.now() } : undefined
     })
 }
 
-/**
- * Drains a queued experiment: tasks dispatch in canonical order up to the
- * frozen concurrency limit, re-checking run state and the abort signal before
- * every dispatch. Pause/cancel stop new dispatches and let in-flight tasks
- * settle; unexpected throws mark the run interrupted and recover attempts.
- */
+/** Dispatch in plan order at the frozen concurrency limit. Pause/cancel stops
+ * new work; in-flight tasks settle before interruption recovery. */
 export async function runExperiment(runId: string): Promise<void> {
     const store = useAppStore.getState()
     const run = store.experimentRuns.find((r) => r.id === runId)
@@ -190,9 +225,8 @@ export async function runExperiment(runId: string): Promise<void> {
     const unregister = registerExperimentExecution(runId, controller, settled)
     useAppStore.getState().beginExperiment(runId, Date.now())
     try {
-        const planned = run.tasks.filter((task) =>
-            run.pendingTaskIds.includes(task.id)
-        )
+        const pending = new Set(run.pendingTaskIds)
+        const planned = run.tasks.filter((task) => pending.has(task.id))
         await runConcurrent(planned, run.maxConcurrent, async (task) =>
             runExperimentTask(run, task, controller.signal)
         )

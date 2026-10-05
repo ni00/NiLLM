@@ -1,12 +1,15 @@
-// Execution registry decoupling the store from the runner: the slice cancels
-// or deletes runs through this module without importing runner code, so no
-// store ↔ runner import cycle exists. This module never imports the store.
+// Keep cancellation registries independent of the store and runner.
+
 export interface ExperimentExecution {
     controller: AbortController
     settled: Promise<void>
 }
 
 const executions = new Map<string, ExperimentExecution>()
+
+// Track judging separately so deletion can await both batches.
+
+const judgings = new Map<string, ExperimentExecution>()
 
 export function registerExperimentExecution(
     runId: string,
@@ -19,13 +22,30 @@ export function registerExperimentExecution(
     }
 }
 
-/**
- * Aborts the run's in-flight requests and resolves once its runner settled.
- * A run without an active execution completes immediately.
- */
+/** Register one judging batch and return its unregister callback. */
+export function registerExperimentJudging(
+    runId: string,
+    controller: AbortController,
+    settled: Promise<void>
+): () => void {
+    judgings.set(runId, { controller, settled })
+    return () => {
+        if (judgings.get(runId)?.settled === settled) judgings.delete(runId)
+    }
+}
+
+/** Abort requests and wait for the runner; resolve immediately when inactive. */
 export async function cancelExperimentExecution(runId: string): Promise<void> {
     const execution = executions.get(runId)
     if (!execution) return
     execution.controller.abort()
     await execution.settled
+}
+
+/** Abort judging and wait for the batch; resolve immediately when inactive. */
+export async function cancelExperimentJudging(runId: string): Promise<void> {
+    const judging = judgings.get(runId)
+    if (!judging) return
+    judging.controller.abort()
+    await judging.settled
 }

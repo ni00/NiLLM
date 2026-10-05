@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { estimateTokens, streamMetrics } from './metrics'
+import { createTokenCounter, estimateTokens, streamMetrics } from './metrics'
 import { toModelMessages } from './messages'
 describe('stream measurements', () => {
+    it('counts mixed text incrementally, including split surrogate pairs', () => {
+        const text = 'abc你好、かな한글😀\n'.repeat(100)
+        for (const chunkSize of [1, 3, 50, text.length]) {
+            const counter = createTokenCounter()
+            expect(counter.count()).toBe(0)
+            for (let offset = 0; offset < text.length; offset += chunkSize) {
+                counter.add(text.slice(offset, offset + chunkSize))
+                expect(counter.count()).toBe(
+                    estimateTokens(text.slice(0, offset + chunkSize))
+                )
+            }
+        }
+    })
     it('prefers exact API usage even when the heuristic overestimates', () => {
         const metrics = streamMetrics(
             0,

@@ -19,6 +19,7 @@ function PopoverContent({
     className,
     align = 'center',
     sideOffset = 4,
+    collisionPadding = 16,
     ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
     return (
@@ -27,8 +28,9 @@ function PopoverContent({
                 data-slot="popover-content"
                 align={align}
                 sideOffset={sideOffset}
+                collisionPadding={collisionPadding}
                 className={cn(
-                    'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border p-4 shadow-md outline-hidden',
+                    'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-72 max-w-[calc(100vw-2rem)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto origin-(--radix-popover-content-transform-origin) rounded-xl border p-4 shadow-lg outline-hidden',
                     className
                 )}
                 {...props}

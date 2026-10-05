@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { indexedDBStorage } from './indexeddb-storage'
+
+afterEach(() => vi.restoreAllMocks())
 
 describe('IndexedDB storage', () => {
     it('commits writes before resolving, reuses the connection, and removes data', async () => {
@@ -34,8 +36,47 @@ describe('IndexedDB storage', () => {
         expect(await indexedDBStorage.getItem('commit-gone')).toBeNull()
     })
 
+    it('rolls back every queued put and delete when its transaction aborts', async () => {
+        await indexedDBStorage.commit(
+            {
+                'rollback-old': 'original',
+                'rollback-delete': 'retained'
+            },
+            []
+        )
+        const put = IDBObjectStore.prototype.put
+        vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementationOnce(
+            function (this: IDBObjectStore, value, key) {
+                const request = put.call(this, value, key)
+                const transaction = this.transaction
+                queueMicrotask(() => transaction.abort())
+                return request
+            }
+        )
+        await expect(
+            indexedDBStorage.commit(
+                {
+                    'rollback-old': 'replacement',
+                    'rollback-new': 'new'
+                },
+                ['rollback-delete']
+            )
+        ).rejects.toBeInstanceOf(Error)
+        expect(
+            await indexedDBStorage.readMany([
+                'rollback-old',
+                'rollback-new',
+                'rollback-delete'
+            ])
+        ).toEqual({
+            'rollback-old': 'original',
+            'rollback-new': null,
+            'rollback-delete': 'retained'
+        })
+    })
+
     it('dumps every stored record as raw strings', async () => {
-        const stamp = `dump-${Math.random()}`
+        const stamp = 'dump-key'
         await indexedDBStorage.setItem(stamp, 'value')
         const records = await indexedDBStorage.dump()
         expect(records[stamp]).toBe('value')

@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { useI18n } from '@/lib/i18n'
 import {
     Card,
@@ -6,195 +7,127 @@ import {
     CardTitle,
     CardDescription
 } from '@/components/ui/card'
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Cell
-} from 'recharts'
 import { Activity, Clock } from 'lucide-react'
 import type { ChartDataPoint } from '../hooks/useStats'
+import { formatStatNumber } from '../display'
 
-interface PerformanceChartsProps {
+export const PerformanceCharts = memo(function PerformanceCharts({
+    chartData
+}: {
     chartData: ChartDataPoint[]
-    mounted: boolean
-}
-
-export function PerformanceCharts({
-    chartData,
-    mounted
-}: PerformanceChartsProps) {
+}) {
     const t = useI18n()
-    if (!mounted) return null
-
+    const comparisons = useMemo(
+        () => [
+            {
+                key: 'speed' as const,
+                title: 'Generation Speed (t/s)',
+                description: 'Throughput comparison per model.',
+                unit: 't/s',
+                icon: Activity,
+                rows: [...chartData]
+                    .sort((a, b) => (b.speed ?? -1) - (a.speed ?? -1))
+                    .slice(0, 12)
+            },
+            {
+                key: 'latency' as const,
+                title: 'Avg. Latency (ms)',
+                description: 'Time to first token (Lower is better).',
+                unit: 'ms',
+                icon: Clock,
+                rows: [...chartData]
+                    .sort(
+                        (a, b) =>
+                            (a.latency ?? Infinity) - (b.latency ?? Infinity)
+                    )
+                    .slice(0, 12)
+            }
+        ],
+        [chartData]
+    )
     return (
-        <div className="grid gap-6 md:grid-cols-2 w-full max-w-full min-w-0">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-primary" />{' '}
-                        {t('Generation Speed (t/s)')}
-                    </CardTitle>
-                    <CardDescription>
-                        {t('Throughput comparison per model.')}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="h-[280px] w-full">
-                    <div className="h-full w-full">
-                        <ResponsiveContainer
-                            width="100%"
-                            height="100%"
-                            minWidth={0}
-                            minHeight={0}
+        <div
+            className="grid gap-6 xl:grid-cols-2 min-w-0"
+            data-stats-performance
+        >
+            {comparisons.map(
+                ({ key, title, description, unit, icon: Icon, rows }) => {
+                    const maximum = Math.max(
+                        1,
+                        ...rows.map((row) => row[key] ?? 0)
+                    )
+                    return (
+                        <Card
+                            key={key}
+                            className="min-w-0"
+                            aria-label={t(title)}
                         >
-                            <BarChart
-                                data={chartData}
-                                margin={{
-                                    top: 10,
-                                    right: 10,
-                                    left: -20,
-                                    bottom: 0
-                                }}
-                            >
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    vertical={false}
-                                    stroke="var(--muted)"
-                                />
-                                <XAxis
-                                    dataKey="name"
-                                    fontSize={11}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    stroke="var(--muted-foreground)"
-                                />
-                                <YAxis
-                                    fontSize={11}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    stroke="var(--muted-foreground)"
-                                />
-                                <Tooltip
-                                    cursor={{
-                                        fill: 'var(--muted)',
-                                        fillOpacity: 0.15
-                                    }}
-                                    contentStyle={{
-                                        backgroundColor: 'var(--background)',
-                                        borderColor: 'var(--border)',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                                    }}
-                                />
-                                <Bar
-                                    isAnimationActive={false}
-                                    name={t('Speed')}
-                                    dataKey="speed"
-                                    radius={[4, 4, 0, 0]}
-                                    barSize={32}
-                                >
-                                    {chartData.map((_, index) => (
-                                        <Cell
-                                            key={`cell-${index}`}
-                                            fill="var(--primary)"
-                                            fillOpacity={
-                                                index === 0
-                                                    ? 1
-                                                    : Math.max(
-                                                          0.2,
-                                                          0.8 - index * 0.15
-                                                      )
-                                            }
-                                        />
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Icon className="h-4 w-4" />
+                                    {t(title)}
+                                </CardTitle>
+                                <CardDescription>
+                                    {t(description)}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ol className="space-y-4">
+                                    {rows.map((row) => (
+                                        <li
+                                            key={row.id}
+                                            className="min-w-0"
+                                            data-stats-bar={key}
+                                        >
+                                            <div className="flex items-start gap-4 mb-2">
+                                                <div className="min-w-0 flex-1">
+                                                    <p
+                                                        className="truncate text-sm font-medium leading-5"
+                                                        title={row.name}
+                                                    >
+                                                        {row.name}
+                                                    </p>
+                                                    <p
+                                                        className="truncate text-xs text-muted-foreground leading-5"
+                                                        title={row.provider}
+                                                    >
+                                                        {row.provider}
+                                                    </p>
+                                                </div>
+                                                <p
+                                                    className="shrink-0 text-sm font-semibold tabular-nums text-right"
+                                                    data-stats-value
+                                                >
+                                                    {formatStatNumber(row[key])}
+                                                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                                        {unit}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <div
+                                                className="h-2 rounded-full bg-muted overflow-hidden"
+                                                aria-hidden
+                                            >
+                                                <div
+                                                    className="h-full rounded-full bg-primary/75"
+                                                    style={{
+                                                        width: `${((row[key] ?? 0) / maximum) * 100}%`
+                                                    }}
+                                                />
+                                            </div>
+                                        </li>
                                     ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-blue-500" />{' '}
-                        {t('Avg. Latency (ms)')}
-                    </CardTitle>
-                    <CardDescription>
-                        {t('Time to first token (Lower is better).')}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="h-[280px] w-full">
-                    <div className="h-full w-full">
-                        <ResponsiveContainer
-                            width="100%"
-                            height="100%"
-                            minWidth={0}
-                            minHeight={0}
-                        >
-                            <BarChart
-                                layout="vertical"
-                                data={chartData}
-                                margin={{
-                                    top: 10,
-                                    right: 30,
-                                    left: 20,
-                                    bottom: 0
-                                }}
-                            >
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    horizontal={false}
-                                    stroke="var(--muted)"
-                                />
-                                <XAxis
-                                    type="number"
-                                    fontSize={11}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    stroke="var(--muted-foreground)"
-                                />
-                                <YAxis
-                                    dataKey="name"
-                                    type="category"
-                                    fontSize={11}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    width={100}
-                                    stroke="var(--muted-foreground)"
-                                />
-                                <Tooltip
-                                    cursor={{
-                                        fill: 'var(--muted)',
-                                        fillOpacity: 0.15
-                                    }}
-                                    contentStyle={{
-                                        backgroundColor: 'var(--background)',
-                                        borderColor: 'var(--border)',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                                    }}
-                                />
-                                <Bar
-                                    isAnimationActive={false}
-                                    name={t('Latency')}
-                                    dataKey="latency"
-                                    fill="var(--muted-foreground)"
-                                    fillOpacity={0.2}
-                                    radius={[0, 4, 4, 0]}
-                                    barSize={20}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </CardContent>
-            </Card>
+                                </ol>
+                                {!rows.length && (
+                                    <p className="text-sm text-muted-foreground py-8 text-center">
+                                        {t('Insufficient Data')}
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )
+                }
+            )}
         </div>
     )
-}
+})

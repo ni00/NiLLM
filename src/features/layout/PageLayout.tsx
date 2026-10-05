@@ -8,20 +8,13 @@ interface PageLayoutProps {
     title: string
     icon?: LucideIcon
     actions?: React.ReactNode
-    /** Optional footer kept below the scrolling content. */
+
     footer?: React.ReactNode
     children?: React.ReactNode
     className?: string
-    /**
-     * If true, wraps children in a ScrollArea.
-     * If false, children take up available space (flex-1) and must handle their own scrolling.
-     * @default true
-     */
+    /** Children manage their own scrolling when false; defaults to true. */
     isScrollable?: boolean
-    /**
-     * Padding for the content area. Defaults to "p-6" if scrollable.
-     * Can be customized.
-     */
+    /** Defaults to p-6 when scrollable. */
     contentClassName?: string
 }
 
@@ -55,7 +48,7 @@ export function PageLayout({
             </PageHeader>
 
             {isScrollable ? (
-                <ScrollArea className="flex-1 w-full min-h-0">
+                <ScrollArea className="flex-1 w-full min-h-0 [&>[data-slot=scroll-area-viewport]>div]:!block">
                     <div
                         className={cn(
                             'flex flex-col gap-6 overflow-x-hidden',

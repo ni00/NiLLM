@@ -1,12 +1,13 @@
 import { useI18n } from '@/lib/i18n'
-import { providerOptions } from '@/lib/providers/catalog'
+import { providerOptions, PROVIDERS } from '@/lib/providers/catalog'
+import { changeModelProvider } from '@/lib/providers/presets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
     Dialog,
     DialogContent,
+    DialogBody,
     DialogDescription,
     DialogFooter,
     DialogHeader,
@@ -14,6 +15,11 @@ import {
 } from '@/components/ui/dialog'
 import { SelectDropdown } from '@/components/ui/select-dropdown'
 import type { LLMModel } from '@/lib/types'
+import { ModelCapabilitiesEditor } from './ModelCapabilitiesEditor'
+import { DecisionProtocolEditor } from './DecisionProtocolEditor'
+import { ModelPresetPicker } from './ModelPresetPicker'
+import { ModelPricingEditor } from './ModelPricingEditor'
+import { getReferenceModelPreset } from '@/lib/providers/presets'
 
 interface ModelEditorProps {
     isOpen: boolean
@@ -36,7 +42,7 @@ export function ModelEditor({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+            <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>
                         {editingId ? t('Edit Model') : t('Add New Model')}
@@ -47,8 +53,8 @@ export function ModelEditor({
                     </DialogDescription>
                 </DialogHeader>
 
-                <ScrollArea className="flex-1 min-h-0">
-                    <div className="p-1 grid gap-6">
+                <DialogBody>
+                    <div className="grid gap-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label
@@ -75,13 +81,16 @@ export function ModelEditor({
                                     {t('Provider')}
                                 </Label>
                                 <SelectDropdown
+                                    ariaLabel={t('Provider')}
                                     value={modelData.provider || ''}
+                                    searchable
                                     onChange={(val) =>
-                                        onChange({
-                                            ...modelData,
-                                            provider:
+                                        onChange(
+                                            changeModelProvider(
+                                                modelData,
                                                 val as LLMModel['provider']
-                                        })
+                                            )
+                                        )
                                     }
                                     className="h-10 border-border/50 bg-muted/20 transition-all justify-between"
                                     options={providerOptions.map((option) => ({
@@ -95,6 +104,7 @@ export function ModelEditor({
                                     {t('Mode')}
                                 </Label>
                                 <SelectDropdown
+                                    ariaLabel={t('Model mode')}
                                     value={modelData.mode || 'chat'}
                                     onChange={(val) =>
                                         onChange({
@@ -105,17 +115,39 @@ export function ModelEditor({
                                     className="h-10 border-border/50 bg-muted/20 transition-all justify-between"
                                     options={[
                                         {
-                                            label: t('Chat Completion'),
-                                            value: 'chat'
+                                            label: t('Decision'),
+                                            value: 'decision'
                                         },
-                                        {
-                                            label: t('Image Generation'),
-                                            value: 'image'
-                                        }
+                                        ...(modelData.provider === 'typesafe'
+                                            ? []
+                                            : [
+                                                  {
+                                                      label: t(
+                                                          'Chat Completion'
+                                                      ),
+                                                      value: 'chat'
+                                                  },
+                                                  {
+                                                      label: t(
+                                                          'Image Generation'
+                                                      ),
+                                                      value: 'image'
+                                                  }
+                                              ])
                                     ]}
                                 />
                             </div>
                         </div>
+
+                        <ModelPresetPicker
+                            value={modelData}
+                            onChange={onChange}
+                        />
+
+                        <DecisionProtocolEditor
+                            value={modelData}
+                            onChange={onChange}
+                        />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -166,7 +198,11 @@ export function ModelEditor({
                             <Input
                                 id="model-base-url"
                                 className="h-10 border-border/50 bg-muted/20 focus:bg-background transition-all font-mono text-xs"
-                                placeholder="https://api.example.com/v1"
+                                placeholder={
+                                    PROVIDERS[
+                                        modelData.provider ?? 'openrouter'
+                                    ].baseURL || 'https://api.example.com/v1'
+                                }
                                 value={modelData.baseURL || ''}
                                 onChange={(e) =>
                                     onChange({
@@ -198,8 +234,22 @@ export function ModelEditor({
                                 }
                             />
                         </div>
+                        <ModelCapabilitiesEditor
+                            value={modelData.capabilities}
+                            onChange={(capabilities) =>
+                                onChange({ ...modelData, capabilities })
+                            }
+                        />
+                        <ModelPricingEditor
+                            key={`${modelData.provider}:${modelData.providerId ?? ''}`}
+                            value={modelData.pricing}
+                            reference={getReferenceModelPreset(modelData)}
+                            onChange={(pricing) =>
+                                onChange({ ...modelData, pricing })
+                            }
+                        />
                     </div>
-                </ScrollArea>
+                </DialogBody>
 
                 <DialogFooter>
                     <Button

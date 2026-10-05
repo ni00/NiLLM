@@ -21,7 +21,6 @@ import type {
 const META_KEY = 'nillm-meta'
 const LEGACY_KEY = 'nillm-storage'
 
-/** Every persisted top-level field except the split-record domains. */
 export const metaStateKeys = [
     'models',
     'activeModelIds',
@@ -31,6 +30,7 @@ export const metaStateKeys = [
     'promptTemplates',
     'globalConfig',
     'language',
+    'parameterPresets',
     'benchmarkLanguage',
     'theme',
     'density',
@@ -82,14 +82,14 @@ interface Baseline {
     sessions: Map<string, ChatSession>
     runs: Map<string, RunBaseline>
 }
-/** Controllers bound to the store instance they persist. */
-const persistenceRegistry = new WeakMap<object, PersistenceController>()
+/** The bound hook and vanilla API share getState, but not object identity. */
+const persistenceRegistry = new WeakMap<
+    StoreApi<AppState>['getState'],
+    PersistenceController
+>()
 
-/**
- * Domain-preserving import: fields present in the backup replace their
- * domain, absent ones keep the current values; interrupted work is recovered
- * and dangling active ids are repaired.
- */
+/** Imported domains replace supplied values and retain omitted ones;
+ * recover interrupted work and repair dangling active IDs. */
 export function applyImportedData(
     setState: (partial: Partial<AppState>) => void,
     current: Pick<
@@ -116,11 +116,14 @@ export function applyImportedData(
             .filter((key) => data[key as keyof BackupData] !== undefined)
             .map((key) => [key, data[key as keyof BackupData]])
     )
+    const selectedSessionId =
+        data.activeSessionId !== undefined
+            ? data.activeSessionId
+            : current.activeSessionId
     const activeSessionId = sessions.some(
-        (session) =>
-            session.id === (data.activeSessionId ?? current.activeSessionId)
+        (session) => session.id === selectedSessionId
     )
-        ? (data.activeSessionId ?? current.activeSessionId)
+        ? selectedSessionId
         : null
     const activeModelIds = (
         data.activeModelIds ?? current.activeModelIds
@@ -230,13 +233,8 @@ function readError(error: unknown) {
     return error instanceof Error ? error.message : 'Local storage failed.'
 }
 
-/**
- * Split-record persistence: one record per session and per experiment
- * task/run so dispatching or settling one task never rewrites the rest of
- * the workspace. Writes coalesce (200ms), serialize through one queue and
- * commit atomically; reads validate every record before anything is
- * restored, and failures surface as visible state instead of console logs.
- */
+/** Persist sessions and experiment tasks separately. Coalesce writes (200ms),
+ * commit atomically, and validate all records before restoring state. */
 export function attachPersistence(
     store: StoreApi<AppState>,
     storage: AppStorage
@@ -256,8 +254,6 @@ export function attachPersistence(
             persistenceError: { operation, message: readError(error) }
         })
     }
-
-    // ---- Diffing -----------------------------------------------------------
 
     function diff(): {
         puts: Record<string, string>
@@ -295,6 +291,7 @@ export function attachPersistence(
             if (runStateChanged(run, prev))
                 puts[runStateKeyOf(run.id)] = JSON.stringify(runStateOf(run))
             const pending = new Set(run.pendingTaskIds)
+            const taskIds = new Set(run.tasks.map((task) => task.id))
             for (const task of run.tasks) {
                 const prevTask = prev?.tasks.get(task.id)
                 const isPending = pending.has(task.id)
@@ -310,7 +307,7 @@ export function attachPersistence(
             }
             if (prev)
                 for (const taskId of prev.tasks.keys())
-                    if (!run.tasks.some((t) => t.id === taskId))
+                    if (!taskIds.has(taskId))
                         deletes.push(taskKeyOf(run.id, taskId))
         }
         for (const id of baseline!.runs.keys()) {
@@ -330,8 +327,6 @@ export function attachPersistence(
 
         return { puts, deletes, snapshot }
     }
-
-    // ---- Writing -----------------------------------------------------------
 
     const flush = () => {
         if (timer !== undefined) {
@@ -360,7 +355,6 @@ export function attachPersistence(
         return writeQueue
     }
 
-    // Cheap guards for the subscribe fast-path: whole-domain references.
     let lastSessionsRef = store.getState().sessions
     let lastRunsRef = store.getState().experimentRuns
     const unsubscribe = store.subscribe((state) => {
@@ -376,34 +370,38 @@ export function attachPersistence(
         if (timer === undefined) timer = setTimeout(() => void flush(), 200)
     })
 
-    // ---- Hydration ---------------------------------------------------------
-
     function applyRestored(input: {
         meta?: Partial<MetaState>
         sessions?: ChatSession[]
         runs?: ExperimentRun[]
     }) {
-        store.setState((state) => ({
-            ...input.meta,
-            ...(input.sessions !== undefined && { sessions: input.sessions }),
-            ...(input.runs !== undefined && {
-                experimentRuns: input.runs
-            }),
-            activeSessionId: (input.sessions ?? state.sessions).some(
-                (session) =>
-                    session.id ===
-                    (input.meta?.activeSessionId ?? state.activeSessionId)
-            )
-                ? (input.meta?.activeSessionId ?? state.activeSessionId)
-                : null,
-            activeModelIds: (
-                input.meta?.activeModelIds ?? state.activeModelIds
-            ).filter((id) =>
-                (input.meta?.models ?? state.models).some(
-                    (model) => model.id === id && model.enabled
+        store.setState((state) => {
+            const selectedSessionId =
+                input.meta?.activeSessionId !== undefined
+                    ? input.meta.activeSessionId
+                    : state.activeSessionId
+            return {
+                ...input.meta,
+                ...(input.sessions !== undefined && {
+                    sessions: input.sessions
+                }),
+                ...(input.runs !== undefined && {
+                    experimentRuns: input.runs
+                }),
+                activeSessionId: (input.sessions ?? state.sessions).some(
+                    (session) => session.id === selectedSessionId
                 )
-            )
-        }))
+                    ? selectedSessionId
+                    : null,
+                activeModelIds: (
+                    input.meta?.activeModelIds ?? state.activeModelIds
+                ).filter((id) =>
+                    (input.meta?.models ?? state.models).some(
+                        (model) => model.id === id && model.enabled
+                    )
+                )
+            }
+        })
     }
 
     async function restoreFromMeta(rawMeta: string) {
@@ -574,7 +572,7 @@ export function attachPersistence(
         hydrated,
         flush,
         retry: async () => {
-            if (store.getState().persistenceState !== 'error') {
+            if (store.getState().persistenceError?.operation !== 'read') {
                 await flush()
                 return
             }
@@ -592,13 +590,14 @@ export function attachPersistence(
             )
         },
         importValidated: async (data) => {
-            if (importing) return
-            // Settle pending writes so the baseline equals the live store.
-            await flush()
-            if (!baseline || writeBlocked)
-                throw new Error('Local storage is not available.')
+            if (importing)
+                throw new Error('A workspace restore is already in progress.')
             importing = true
             try {
+                // Existing writes settle before the replacement transaction.
+                await flush()
+                if (!baseline || writeBlocked)
+                    throw new Error('Local storage is not available.')
                 const state = store.getState()
                 const sessions =
                     data.sessions !== undefined
@@ -619,6 +618,16 @@ export function attachPersistence(
                             .map((key) => [key, data[key as keyof BackupData]])
                     )
                 } as MetaState
+                meta.activeSessionId = sessions.some(
+                    (session) => session.id === meta.activeSessionId
+                )
+                    ? meta.activeSessionId
+                    : null
+                meta.activeModelIds = meta.activeModelIds.filter((id) =>
+                    meta.models.some(
+                        (model) => model.id === id && model.enabled
+                    )
+                )
 
                 const puts: Record<string, string> = {
                     [META_KEY]: JSON.stringify({
@@ -677,11 +686,12 @@ export function attachPersistence(
             void flush()
         }
     }
-    persistenceRegistry.set(store, controller)
+    persistenceRegistry.set(store.getState, controller)
     return controller
 }
 
-/** The persistence controller attached to a specific store, if any. */
-export function persistenceFor(store: object): PersistenceController | null {
-    return persistenceRegistry.get(store) ?? null
+export function persistenceFor(
+    store: Pick<StoreApi<AppState>, 'getState'>
+): PersistenceController | null {
+    return persistenceRegistry.get(store.getState) ?? null
 }

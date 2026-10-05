@@ -1,172 +1,181 @@
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { ConfigSlider } from '../ConfigSlider'
 import { SectionHeader, ConfigSectionProps } from './SectionHeader'
 import { FieldOverride } from './FieldOverride'
-import type { TimeoutConfig } from '@/lib/types'
+
+const sdkTimeouts = [
+    {
+        key: 'totalMs',
+        label: 'Total',
+        initial: 120000,
+        min: 10000,
+        max: 300000,
+        step: 10000
+    },
+    {
+        key: 'stepMs',
+        label: 'Step',
+        initial: 60000,
+        min: 5000,
+        max: 180000,
+        step: 5000
+    },
+    {
+        key: 'chunkMs',
+        label: 'Chunk',
+        initial: 10000,
+        min: 1000,
+        max: 60000,
+        step: 1000
+    }
+] as const
+
+const workerTimeouts = [
+    {
+        key: 'connectTimeout',
+        label: 'First-event wait',
+        initial: 15000,
+        min: 1000,
+        max: 60000,
+        step: 1000
+    },
+    {
+        key: 'readTimeout',
+        label: 'No-chunk wait',
+        initial: 30000,
+        min: 5000,
+        max: 120000,
+        step: 5000
+    }
+] as const
 
 export function TimeoutsConfig({
     config,
     onChange,
     sources,
-    onResetField
+    onResetField,
+    idPrefix
 }: ConfigSectionProps) {
     const t = useI18n()
-    const timeout = config.timeout || {}
-
-    // Only the changed sub-fields are emitted so a nested update never
-    // freezes inherited siblings into the edited layer.
-    const updateTimeout = (updates: Partial<TimeoutConfig>) => {
-        onChange({ timeout: updates })
-    }
-
     return (
         <div className="space-y-6 pt-4 border-t border-border/40">
             <SectionHeader title={t('Timeouts (ms)')} />
-
-            {/* AI SDK Native Timeouts */}
             <div className="space-y-4">
-                <div className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                    {t('AI SDK Timeouts')}
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-1.5">
-                                <Label className="text-xs opacity-70">
-                                    {t('Total')}
-                                </Label>
-                                <FieldOverride
-                                    path="timeout.totalMs"
-                                    sources={sources}
-                                    onResetField={onResetField}
-                                />
-                            </div>
-                            <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
-                                {timeout.totalMs ?? 120000}
-                            </span>
-                        </div>
-                        <ConfigSlider
-                            id="timeout.totalMs"
-                            value={timeout.totalMs ?? 120000}
-                            min={10000}
-                            max={300000}
-                            step={10000}
-                            onChange={(v) => updateTimeout({ totalMs: v })}
-                        />
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-1.5">
-                                <Label className="text-xs opacity-70">
-                                    {t('Step')}
-                                </Label>
-                                <FieldOverride
-                                    path="timeout.stepMs"
-                                    sources={sources}
-                                    onResetField={onResetField}
-                                />
-                            </div>
-                            <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
-                                {timeout.stepMs ?? 60000}
-                            </span>
-                        </div>
-                        <ConfigSlider
-                            id="timeout.stepMs"
-                            value={timeout.stepMs ?? 60000}
-                            min={5000}
-                            max={180000}
-                            step={5000}
-                            onChange={(v) => updateTimeout({ stepMs: v })}
-                        />
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-1.5">
-                                <Label className="text-xs opacity-70">
-                                    {t('Chunk')}
-                                </Label>
-                                <FieldOverride
-                                    path="timeout.chunkMs"
-                                    sources={sources}
-                                    onResetField={onResetField}
-                                />
-                            </div>
-                            <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
-                                {timeout.chunkMs ?? 10000}
-                            </span>
-                        </div>
-                        <ConfigSlider
-                            id="timeout.chunkMs"
-                            value={timeout.chunkMs ?? 10000}
-                            min={1000}
-                            max={60000}
-                            step={1000}
-                            onChange={(v) => updateTimeout({ chunkMs: v })}
-                        />
-                    </div>
+                <h3 className="text-sm font-medium">{t('AI SDK Timeouts')}</h3>
+                <p className="text-sm text-muted-foreground">
+                    {t(
+                        'SDK total, step and chunk limits are separate from worker waiting guards.'
+                    )}
+                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    {sdkTimeouts.map(
+                        ({ key, label, initial, min, max, step }) => {
+                            const value = config.timeout?.[key]
+                            const path = `timeout.${key}`
+                            return (
+                                <div key={key} className="min-w-0 space-y-3">
+                                    <div className="flex flex-wrap justify-between items-center gap-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <Label
+                                                htmlFor={`${idPrefix}-${path}`}
+                                            >
+                                                {t(label)}
+                                            </Label>
+                                            <FieldOverride
+                                                path={path}
+                                                sources={sources}
+                                                onResetField={onResetField}
+                                            />
+                                        </div>
+                                        <span className="text-sm tabular-nums">
+                                            {value === undefined
+                                                ? t('Not configured')
+                                                : value}
+                                        </span>
+                                    </div>
+                                    {value === undefined ? (
+                                        <Button
+                                            variant="outline"
+                                            className="min-h-11"
+                                            onClick={() =>
+                                                onChange({
+                                                    timeout: { [key]: initial }
+                                                })
+                                            }
+                                        >
+                                            {t('Configure')}
+                                        </Button>
+                                    ) : (
+                                        <>
+                                            <ConfigSlider
+                                                id={`${idPrefix}-${path}`}
+                                                value={value}
+                                                min={min}
+                                                max={max}
+                                                step={step}
+                                                onChange={(next) =>
+                                                    onChange({
+                                                        timeout: { [key]: next }
+                                                    })
+                                                }
+                                            />
+                                            {onResetField && (
+                                                <Button
+                                                    variant="ghost"
+                                                    className="min-h-11"
+                                                    onClick={() =>
+                                                        onResetField(path)
+                                                    }
+                                                >
+                                                    {t('Clear override')}
+                                                </Button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )
+                        }
+                    )}
                 </div>
             </div>
-
-            {/* Worker-level fallback timeouts (connect / no-data read guard) */}
-            <div className="space-y-4 opacity-60">
-                <div className="text-xs font-bold opacity-60 uppercase tracking-tight">
-                    {t('Legacy (Fallback)')}
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-1.5">
-                                <Label className="text-xs opacity-70">
-                                    {t('Connect')}
-                                </Label>
-                                <FieldOverride
-                                    path="connectTimeout"
-                                    sources={sources}
-                                    onResetField={onResetField}
+            <div className="space-y-4">
+                <h3 className="text-sm font-medium">
+                    {t('Worker waiting guards')}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {workerTimeouts.map(
+                        ({ key, label, initial, min, max, step }) => (
+                            <div key={key} className="min-w-0 space-y-3">
+                                <div className="flex flex-wrap justify-between items-center gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <Label htmlFor={`${idPrefix}-${key}`}>
+                                            {t(label)}
+                                        </Label>
+                                        <FieldOverride
+                                            path={key}
+                                            sources={sources}
+                                            onResetField={onResetField}
+                                        />
+                                    </div>
+                                    <span className="text-sm tabular-nums">
+                                        {config[key] ?? initial}
+                                    </span>
+                                </div>
+                                <ConfigSlider
+                                    id={`${idPrefix}-${key}`}
+                                    value={config[key] ?? initial}
+                                    min={min}
+                                    max={max}
+                                    step={step}
+                                    onChange={(next) =>
+                                        onChange({ [key]: next })
+                                    }
                                 />
                             </div>
-                            <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
-                                {config.connectTimeout ?? 15000}
-                            </span>
-                        </div>
-                        <ConfigSlider
-                            id="connectTimeout"
-                            value={config.connectTimeout ?? 15000}
-                            min={1000}
-                            max={60000}
-                            step={1000}
-                            onChange={(v) => onChange({ connectTimeout: v })}
-                        />
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-1.5">
-                                <Label className="text-xs opacity-70">
-                                    {t('Read')}
-                                </Label>
-                                <FieldOverride
-                                    path="readTimeout"
-                                    sources={sources}
-                                    onResetField={onResetField}
-                                />
-                            </div>
-                            <span className="text-xs font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded opacity-70">
-                                {config.readTimeout ?? 30000}
-                            </span>
-                        </div>
-                        <ConfigSlider
-                            id="readTimeout"
-                            value={config.readTimeout ?? 30000}
-                            min={5000}
-                            max={120000}
-                            step={5000}
-                            onChange={(v) => onChange({ readTimeout: v })}
-                        />
-                    </div>
+                        )
+                    )}
                 </div>
             </div>
         </div>

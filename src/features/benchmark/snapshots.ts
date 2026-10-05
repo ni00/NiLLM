@@ -1,5 +1,6 @@
 import type { LLMModel, ModelSnapshot } from '@/lib/types'
 import { getBaseURL } from '@/lib/providers/catalog'
+import { resolveModelPricing } from '@/lib/providers/presets'
 
 const fingerprintCache = new Map<string, Promise<string>>()
 const MAX_FINGERPRINTS = 32
@@ -12,11 +13,7 @@ export function publicEndpoint(normalizedURL: string): string {
     return url.href.replace(/\/$/, '')
 }
 
-/**
- * SHA-256 of the fully normalized base URL, hex-encoded (64 lowercase chars).
- * Same-URL promises are cached (bounded, LRU-touched like the provider cache)
- * so capturing many requests does not re-hash or drift.
- */
+/** Cache SHA-256 fingerprints of normalized endpoints (bounded LRU). */
 export function endpointFingerprint(normalizedURL: string): Promise<string> {
     const cached = fingerprintCache.get(normalizedURL)
     if (cached) {
@@ -41,14 +38,13 @@ export function endpointFingerprint(normalizedURL: string): Promise<string> {
     return promise
 }
 
-/**
- * Freezes a model's execution identity. Throws when `getBaseURL` rejects the
- * endpoint, so callers decide whether one bad model may affect others.
- * Never contains `apiKey`; the endpoint is the sanitized public form.
- */
+/** Freeze execution identity without credentials; reject invalid endpoints. */
 export async function captureModelSnapshot(
     model: LLMModel
 ): Promise<ModelSnapshot> {
+    // Capture mutable configuration before fingerprinting yields control.
+    model = structuredClone(model)
+    model.pricing = resolveModelPricing(model)
     const normalized = getBaseURL(model)
     const fingerprint = await endpointFingerprint(normalized)
     return {
@@ -62,13 +58,16 @@ export async function captureModelSnapshot(
             providerId: model.providerId
         }),
         mode: model.mode ?? 'chat',
+        ...(model.decisionProtocol !== undefined && {
+            decisionProtocol: model.decisionProtocol
+        }),
         ...(model.pricing !== undefined && {
             pricing: { ...model.pricing }
         }),
         endpoint: publicEndpoint(normalized),
         endpointFingerprint: fingerprint,
         ...(model.capabilities !== undefined && {
-            capabilities: { ...model.capabilities }
+            capabilities: structuredClone(model.capabilities)
         })
     }
 }

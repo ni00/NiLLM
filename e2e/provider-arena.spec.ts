@@ -71,8 +71,6 @@ test('provider to arena works through the UI with a bundled worker', async ({
         page.getByText('Bundled worker completed.', { exact: true })
     ).toBeVisible({ timeout: 15000 })
     await page.getByRole('link', { name: 'Stats' }).click()
-    await expect(
-        page.getByText('100.0%', { exact: true }).first()
-    ).toBeVisible()
+    await expect(page.getByText('100%', { exact: true }).first()).toBeVisible()
     await expect(page.getByText('In 3 / Out 6')).toBeVisible()
 })

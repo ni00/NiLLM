@@ -1,6 +1,5 @@
 import { useAppStore } from '@/lib/store'
 
-// State selectors
 export const useModels = () => useAppStore((state) => state.models)
 export const useActiveModelIds = () =>
     useAppStore((state) => state.activeModelIds)
@@ -22,7 +21,6 @@ export const useLanguage = () => useAppStore((state) => state.language)
 export const useArenaColumns = () => useAppStore((state) => state.arenaColumns)
 export const useArenaSortBy = () => useAppStore((state) => state.arenaSortBy)
 
-// Action selectors
 export const useSetPendingPrompt = () =>
     useAppStore((state) => state.setPendingPrompt)
 export const useAddToQueue = () => useAppStore((state) => state.addToQueue)

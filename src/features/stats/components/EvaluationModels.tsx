@@ -1,5 +1,5 @@
 import { useI18n } from '@/lib/i18n'
-import { useState, useMemo } from 'react'
+import { memo, useState, useMemo } from 'react'
 import {
     BarChart3,
     Clock,
@@ -15,8 +15,9 @@ import {
     Tag
 } from 'lucide-react'
 import type { ModelStat } from '../hooks/useStats'
+import { formatStatCost, formatStatNumber } from '../display'
+import { Button } from '@/components/ui/button'
 
-// Fallback table components if not available in project
 const SimpleTable = ({ children }: { children: React.ReactNode }) => (
     <div
         style={{
@@ -67,7 +68,7 @@ const SimpleTableHead = ({
     onClick?: () => void
 }) => (
     <th
-        className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${className}`}
+        className={`h-12 px-4 text-left align-middle whitespace-nowrap font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${className}`}
         onClick={onClick}
     >
         {children}
@@ -81,7 +82,7 @@ const SimpleTableCell = ({
     className?: string
 }) => (
     <td
-        className={`p-4 align-middle [&:has([role=checkbox])]:pr-0 ${className}`}
+        className={`p-4 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 ${className}`}
     >
         {children}
     </td>
@@ -93,12 +94,13 @@ interface EvaluationModelsProps {
     onClearModel: (modelId: string) => void
 }
 
-export function EvaluationModels({
+export const EvaluationModels = memo(function EvaluationModels({
     modelStats,
     maxTPS,
     onClearModel
 }: EvaluationModelsProps) {
     const t = useI18n()
+    const [page, setPage] = useState(0)
     const [sortConfig, setSortConfig] = useState<{
         key: keyof ModelStat
         direction: 'asc' | 'desc'
@@ -121,6 +123,7 @@ export function EvaluationModels({
     }, [modelStats, sortConfig])
 
     const handleSort = (key: keyof ModelStat) => {
+        setPage(0)
         setSortConfig((current) => ({
             key,
             direction:
@@ -129,6 +132,13 @@ export function EvaluationModels({
                     : 'desc'
         }))
     }
+
+    const pageCount = Math.max(1, Math.ceil(sortedStats.length / 25))
+    const currentPage = Math.min(page, pageCount - 1)
+    const visibleStats = sortedStats.slice(
+        currentPage * 25,
+        (currentPage + 1) * 25
+    )
 
     const SortHeader = ({
         column,
@@ -251,8 +261,8 @@ export function EvaluationModels({
                         </SimpleTableRow>
                     </SimpleTableHeader>
                     <SimpleTableBody>
-                        {sortedStats.map((stat) => (
-                            <SimpleTableRow key={stat.id}>
+                        {visibleStats.map((stat) => (
+                            <SimpleTableRow key={stat.groupKey ?? stat.id}>
                                 <SimpleTableCell className="font-medium">
                                     <div className="flex flex-col">
                                         <span
@@ -276,14 +286,21 @@ export function EvaluationModels({
                                             <>
                                                 <MessageSquare className="h-3 w-3 text-blue-500" />
                                                 <span className="text-[10px] font-bold uppercase tracking-wider">
-                                                    {t('Chat')}
+                                                    {t(
+                                                        stat.mode === 'decision'
+                                                            ? 'Decision'
+                                                            : 'Chat'
+                                                    )}
                                                 </span>
                                             </>
                                         )}
                                     </div>
                                 </SimpleTableCell>
                                 <SimpleTableCell>
-                                    <span className="text-xs font-mono uppercase text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-muted">
+                                    <span
+                                        className="block max-w-[180px] truncate text-xs font-mono uppercase text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-muted"
+                                        title={stat.provider}
+                                    >
                                         {stat.provider}
                                     </span>
                                 </SimpleTableCell>
@@ -292,7 +309,9 @@ export function EvaluationModels({
                                         <div className="flex items-baseline justify-between">
                                             <span className="font-mono font-medium">
                                                 {stat.speedSampleCount
-                                                    ? stat.avgTPS.toFixed(1)
+                                                    ? formatStatNumber(
+                                                          stat.avgTPS
+                                                      )
                                                     : '—'}
                                             </span>
                                             <span className="text-xs text-muted-foreground">
@@ -312,7 +331,7 @@ export function EvaluationModels({
                                 <SimpleTableCell>
                                     <div className="font-mono">
                                         {stat.latencySampleCount
-                                            ? stat.avgTTFT.toFixed(0)
+                                            ? formatStatNumber(stat.avgTTFT)
                                             : '—'}{' '}
                                         <span className="text-xs text-muted-foreground">
                                             {'ms'}
@@ -322,14 +341,14 @@ export function EvaluationModels({
                                 <SimpleTableCell>
                                     <span className="font-mono">
                                         {stat.latencySampleCount
-                                            ? `${stat.p95TTFT.toFixed(0)} ms`
+                                            ? `${formatStatNumber(stat.p95TTFT)} ms`
                                             : '—'}
                                     </span>
                                 </SimpleTableCell>
                                 <SimpleTableCell>
                                     <span className="font-mono">
                                         {stat.avgDuration
-                                            ? `${(stat.avgDuration / 1000).toFixed(2)} s`
+                                            ? `${formatStatNumber(stat.avgDuration / 1000)} s`
                                             : '—'}
                                     </span>
                                 </SimpleTableCell>
@@ -338,7 +357,7 @@ export function EvaluationModels({
                                         {stat.completedCount +
                                         stat.errorCount +
                                         stat.cancelledCount
-                                            ? `${stat.successRate.toFixed(1)}%`
+                                            ? `${formatStatNumber(stat.successRate)}%`
                                             : '—'}
                                     </span>
                                     <p className="text-xs text-muted-foreground">
@@ -364,13 +383,13 @@ export function EvaluationModels({
                                 </SimpleTableCell>
                                 <SimpleTableCell>
                                     {stat.costSampleCount
-                                        ? `$${stat.totalCost.toFixed(4)}`
+                                        ? formatStatCost(stat.totalCost)
                                         : '—'}
                                 </SimpleTableCell>
                                 <SimpleTableCell>
                                     <div className="font-medium">
                                         {stat.avgRating > 0
-                                            ? stat.avgRating.toFixed(1)
+                                            ? formatStatNumber(stat.avgRating)
                                             : '—'}
                                     </div>
                                 </SimpleTableCell>
@@ -397,6 +416,32 @@ export function EvaluationModels({
                     </SimpleTableBody>
                 </SimpleTable>
             </div>
+            {pageCount > 1 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                    <p className="text-muted-foreground">
+                        {t('Page {page} of {pages}', {
+                            page: currentPage + 1,
+                            pages: pageCount
+                        })}
+                    </p>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            disabled={currentPage === 0}
+                            onClick={() => setPage(currentPage - 1)}
+                        >
+                            {t('Previous page')}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            disabled={currentPage === pageCount - 1}
+                            onClick={() => setPage(currentPage + 1)}
+                        >
+                            {t('Next page')}
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     )
-}
+})

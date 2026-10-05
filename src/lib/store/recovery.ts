@@ -1,10 +1,7 @@
 import type { ChatSession, ExperimentRun } from '@/lib/types'
 import { CLOSED_ERROR } from './experiments'
 
-/**
- * Marks one unfinished attempt as cancelled by the shutdown and returns the
- * owning task ID, or undefined when the attempt list is already terminal.
- */
+/** Cancel an unfinished attempt and return its task ID; ignore terminal attempts. */
 function closePendingAttempt(task: ExperimentRun['tasks'][number]): {
     task: ExperimentRun['tasks'][number]
     recovered: boolean
@@ -28,12 +25,8 @@ function closePendingAttempt(task: ExperimentRun['tasks'][number]): {
     }
 }
 
-/**
- * Hydration-time recovery: queued/running runs become interrupted; paused
- * runs stay paused. In-flight attempts are cancelled with partial output
- * kept, their tasks rejoin the persisted pending set (in task order) so a
- * later "continue" or saved retry intent is neither lost nor duplicated.
- */
+/** Interrupt queued/running runs, preserving paused status and partial output.
+ * Restore unfinished tasks to the pending set in plan order, without duplicates. */
 export function recoverInterruptedExperiment(
     run: ExperimentRun
 ): ExperimentRun {
@@ -57,10 +50,7 @@ export function recoverInterruptedExperiment(
     }
 }
 
-/**
- * Ordinary arena results stuck in `pending` across a shutdown become
- * cancelled with their partial output preserved; nothing is auto-resent.
- */
+/** Cancel pending arena results after shutdown; keep partial output without resending. */
 export function recoverInterruptedSession(session: ChatSession): ChatSession {
     let changed = false
     const results: ChatSession['results'] = {}

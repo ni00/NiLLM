@@ -1,5 +1,256 @@
 // Application copy only. User content and provider model identifiers remain unchanged.
 export const messages = {
+    'Previous page': { zh: '上一页', ja: '前のページ' },
+    'Next page': { zh: '下一页', ja: '次のページ' },
+    'Page {page} of {pages}': {
+        zh: '第 {page} / {pages} 页',
+        ja: '{page} / {pages} ページ'
+    },
+    'Delete Template': { zh: '删除提示词模板', ja: 'テンプレートを削除' },
+    'DeepSeek pricing varies between peak and off-peak hours; actual billing may differ.':
+        {
+            zh: 'DeepSeek 区分高峰和非高峰价格，实际账单可能不同。',
+            ja: 'DeepSeekの料金はピークとオフピークで異なり、実際の請求額は異なる場合があります。'
+        },
+    'Blank prices use the built-in reference prices for this model. Enter prices to override them.':
+        {
+            zh: '价格留空时自动使用此模型的内置参考价，填写价格可覆盖参考价。',
+            ja: '価格が空欄の場合はモデルの内蔵参考価格を使います。入力すると上書きできます。'
+        },
+    'Auto: {price}': {
+        zh: '自动：{price}',
+        ja: '自動：{price}'
+    },
+    'DeepSeek reference prices use off-peak rates. Peak rates are twice as high; actual billing may differ.':
+        {
+            zh: 'DeepSeek 参考价采用非高峰价格，高峰价格为其两倍；实际账单可能不同。',
+            ja: 'DeepSeekの参考価格はオフピーク料金です。ピーク料金はその2倍で、実際の請求額は異なる場合があります。'
+        },
+    'Estimated from model token prices (USD), using reference prices when none are configured. Historical prices, peak/off-peak rates and other charges may differ.':
+        {
+            zh: '按模型 Token 价格估算（美元），未配置价格时使用参考价。历史价格、高峰／非高峰价格及其他费用可能不同。',
+            ja: 'モデルのトークン価格（米ドル）で推定し、未設定の場合は参考価格を使います。過去の価格、ピーク／オフピーク料金やその他の費用は異なる場合があります。'
+        },
+    Cost: { zh: '费用', ja: '費用' },
+    Cache: { zh: '缓存', ja: 'キャッシュ' },
+    Unknown: { zh: '未知', ja: '不明' },
+    'Input price': { zh: '输入价格', ja: '入力料金' },
+    'Output price': { zh: '输出价格', ja: '出力料金' },
+    'Cache read price': { zh: '缓存读取价格', ja: 'キャッシュ読み取り料金' },
+    'Cache write price': { zh: '缓存写入价格', ja: 'キャッシュ書き込み料金' },
+    'Clear prices': { zh: '清除价格', ja: '料金をクリア' },
+    'Token prices (USD / 1M tokens)': {
+        zh: 'Token 价格（美元 / 百万 Token）',
+        ja: 'トークン料金（USD / 100万トークン）'
+    },
+    'Used when the provider does not report cost. Leave optional cache prices blank to use the input price.':
+        {
+            zh: '供应商未返回费用时用于估算。缓存价格留空时使用普通输入价格。',
+            ja: 'プロバイダーが費用を返さない場合の推計に使います。キャッシュ料金が空欄の場合は入力料金を使います。'
+        },
+    'Fill both input and output prices with nonnegative numbers to estimate cost.':
+        {
+            zh: '请填写有效的输入和输出价格（大于等于 0），才能估算费用。',
+            ja: '費用の推計には、有効な入力料金と出力料金（0以上）が必要です。'
+        },
+    'Cost unavailable. Set token prices in model settings to estimate it.': {
+        zh: '暂无费用数据。可在模型设置中填写 Token 价格以估算费用。',
+        ja: '費用データがありません。モデル設定でトークン料金を入力すると推計できます。'
+    },
+    'Cost reported by the provider (USD).': {
+        zh: '供应商返回的费用（美元）。',
+        ja: 'プロバイダーが返した費用（USD）。'
+    },
+    'Estimated from configured token prices (USD); other charges may be excluded.':
+        {
+            zh: '按配置的 Token 价格估算（美元），可能不包含其他收费。',
+            ja: '設定されたトークン料金による推計（USD）。その他の料金は含まれない場合があります。'
+        },
+    'Recorded cost (USD); source unavailable for this historical result.': {
+        zh: '已记录费用（美元），这条历史记录未保存费用来源。',
+        ja: '記録済みの費用（USD）。この履歴では費用の出典が不明です。'
+    },
+    'Data available for {known}/{total} requests.': {
+        zh: '共 {total} 次请求，其中 {known} 次有数据。',
+        ja: '{total} 件中 {known} 件にデータがあります。'
+    },
+    'The provider did not report usable cache data.': {
+        zh: '供应商未返回可用的缓存数据。',
+        ja: 'プロバイダーから有効なキャッシュデータが返されていません。'
+    },
+    'Cache read {read} / input {input} tokens. Cache hit rate is weighted by input tokens.':
+        {
+            zh: '缓存读取 {read} / 输入 {input} Token。缓存命中率按输入 Token 加权计算。',
+            ja: 'キャッシュ読み取り {read} / 入力 {input} トークン。ヒット率は入力トークン数で加重計算します。'
+        },
+    'Cache write: {tokens} tokens.': {
+        zh: '缓存写入：{tokens} Token。',
+        ja: 'キャッシュ書き込み：{tokens} トークン。'
+    },
+    'Search options': { zh: '搜索选项', ja: '選択肢を検索' },
+    'Model preset': { zh: '模型预设', ja: 'モデルプリセット' },
+    'Initial output budget: {tokens} tokens': {
+        zh: '初始输出预算：{tokens} Token',
+        ja: '初期出力予算：{tokens} トークン'
+    },
+    'Choose a model preset (optional)': {
+        zh: '选择模型预设（可选）',
+        ja: 'モデルプリセットを選択（任意）'
+    },
+    'Presets fill the model ID, pricing and supported parameters. You can edit every field.':
+        {
+            zh: '预设会填入模型 ID、费用和参数能力，所有字段都可自行修改。',
+            ja: 'プリセットからモデル ID、料金、対応パラメーターを入力します。各項目は変更できます。'
+        },
+    'Context: {context} · Output limit: {output} tokens': {
+        zh: '上下文：{context} · 最大输出：{output} Token',
+        ja: 'コンテキスト：{context} · 最大出力：{output} トークン'
+    },
+    'Preset data: {date}. Availability and pricing may change.': {
+        zh: '预设资料日期：{date}。模型可用性和费用可能变化。',
+        ja: 'プリセット更新日：{date}。提供状況と料金は変更される場合があります。'
+    },
+    'Choose built-in presets or fetch the provider’s latest models. Existing models are skipped.':
+        {
+            zh: '选择内置预设，或在线获取供应商的最新模型。已有模型会自动跳过。',
+            ja: '内蔵プリセットを選ぶか、最新のモデルを取得します。登録済みのモデルはスキップします。'
+        },
+    'Use presets ({count})': {
+        zh: '使用预设（{count}）',
+        ja: 'プリセットを使用（{count}）'
+    },
+    'Local model presets require the model to be installed first.': {
+        zh: '本地模型预设需要先在本地服务中安装对应模型。',
+        ja: 'ローカルモデルは、対応するモデルをサービス側にインストールする必要があります。'
+    },
+    'Moonshot AI (International)': {
+        zh: 'Moonshot AI（国际）',
+        ja: 'Moonshot AI（国際）'
+    },
+    'Moonshot AI (China)': {
+        zh: 'Moonshot AI（中国）',
+        ja: 'Moonshot AI（中国）'
+    },
+    'Alibaba DashScope (China)': {
+        zh: '阿里云百炼（中国）',
+        ja: 'Alibaba DashScope（中国）'
+    },
+    'Alibaba DashScope (International)': {
+        zh: '阿里云百炼（国际）',
+        ja: 'Alibaba DashScope（国際）'
+    },
+    'SiliconFlow (China)': {
+        zh: '硅基流动（中国）',
+        ja: 'SiliconFlow（中国）'
+    },
+    'SiliconFlow (International)': {
+        zh: '硅基流动（国际）',
+        ja: 'SiliconFlow（国際）'
+    },
+    'Zhipu AI': { zh: '智谱 AI', ja: 'Zhipu AI' },
+    'Zhipu AI Coding Plan': {
+        zh: '智谱 AI Coding Plan',
+        ja: 'Zhipu AI Coding Plan'
+    },
+    'MiniMax (International)': { zh: 'MiniMax（国际）', ja: 'MiniMax（国際）' },
+    'MiniMax (China)': { zh: 'MiniMax（中国）', ja: 'MiniMax（中国）' },
+    'Ollama (Local)': { zh: 'Ollama（本地）', ja: 'Ollama（ローカル）' },
+    'LM Studio (Local)': {
+        zh: 'LM Studio（本地）',
+        ja: 'LM Studio（ローカル）'
+    },
+    'Decision API': { zh: '决策接口', ja: '意思決定 API' },
+    Automatic: { zh: '自动', ja: '自動' },
+    'Chat Completions (JSON)': {
+        zh: 'Chat Completions（JSON）',
+        ja: 'Chat Completions（JSON）'
+    },
+    'Automatic uses System One for Jev and structured output for language models. Responses uses the OpenAI Responses API.':
+        {
+            zh: '自动模式为 Jev 使用 System One，为语言模型使用结构化输出。Responses 使用 OpenAI Responses 接口。',
+            ja: '自動モードは Jev に System One、言語モデルに構造化出力を使用します。Responses は OpenAI Responses API を使用します。'
+        },
+    Decision: { zh: '决策', ja: '意思決定' },
+    'Decision values': { zh: '决策值', ja: '意思決定の値' },
+    'Decision input': { zh: '决策输入', ja: '意思決定の入力' },
+    'Edit decision input': { zh: '编辑决策输入', ja: '意思決定の入力を編集' },
+    'Apply decision input': { zh: '应用决策输入', ja: '意思決定の入力を適用' },
+    'Define the state and questions once. Every selected decision model receives the same independent task.':
+        {
+            zh: '统一定义状态和问题，所有选中的决策模型接收同一项独立任务。',
+            ja: '状態と質問を定義すると、選択したすべての意思決定モデルに同じ独立したタスクが渡されます。'
+        },
+    State: { zh: '状态', ja: '状態' },
+    'State format': { zh: '状态格式', ja: '状態の形式' },
+    Text: { zh: '文本', ja: 'テキスト' },
+    Questions: { zh: '问题', ja: '質問' },
+    'Choice selects an option; Score rates ordered levels from zero; Noul returns the probability of yes. Questions use type, instructions and criteria.':
+        {
+            zh: 'Choice 选择选项；Score 按从 0 开始的有序等级评分；Noul 返回“是”的概率。问题由 type、instructions 和 criteria 定义。',
+            ja: 'Choice は選択肢を選び、Score は 0 始まりの順序付き段階で評価し、Noul は「はい」の確率を返します。質問は type、instructions、criteria で定義します。'
+        },
+    'Check the state and question definitions. Choice needs options; Score needs 2–10 levels.':
+        {
+            zh: '请检查状态和问题定义。Choice 需要选项，Score 需要 2–10 个等级。',
+            ja: '状態と質問の定義を確認してください。Choice には選択肢、Score には 2〜10 段階が必要です。'
+        },
+    'Decision requests are independent; conversation history is excluded.': {
+        zh: '决策请求独立运行，不包含对话历史。',
+        ja: '意思決定リクエストは独立して実行され、会話履歴は含まれません。'
+    },
+    'Set every selected model to Decision mode for a comparable task.': {
+        zh: '请将所有选中的模型设为决策模式，以比较同一任务。',
+        ja: '同じタスクを比較するには、選択したすべてのモデルを意思決定モードに設定してください。'
+    },
+    'Decision input must be valid JSON with state and typed questions.': {
+        zh: '决策输入须为包含 state 和类型化 questions 的有效 JSON。',
+        ja: '意思決定の入力は state と型付き questions を含む有効な JSON にしてください。'
+    },
+    'Decision input uses text or JSON state. Remove file attachments before sending.':
+        {
+            zh: '决策输入使用文本或 JSON 状态，请先移除文件附件。',
+            ja: '意思決定の入力にはテキストまたは JSON の状態を使います。送信前に添付ファイルを削除してください。'
+        },
+    'Enter a decision task with state and questions, or use the decision editor.':
+        {
+            zh: '输入包含状态和问题的决策任务，或使用决策编辑器。',
+            ja: '状態と質問を含む意思決定タスクを入力するか、エディターを使用してください。'
+        },
+    'Decision mode evaluates typed questions against a state. OpenAI and compatible models use structured output; Jev uses its native API.':
+        {
+            zh: '决策模式根据状态回答类型化问题。OpenAI 等兼容模型生成结构化输出，Jev 使用原生决策接口。',
+            ja: '意思決定モードは状態に対して型付き質問を評価します。OpenAI 等の互換モデルは構造化出力、Jev は専用 API を使用します。'
+        },
+    'Expected values by question ID: Choice label, zero-based Score, or Noul boolean/probability.':
+        {
+            zh: '按问题 ID 填写预期值：Choice 选项名、从 0 开始的 Score 分数，或 Noul 布尔值／概率。',
+            ja: '質問 ID ごとに期待値を指定します：Choice の選択肢名、0 始まりの Score、Noul の真偽値または確率。'
+        },
+    'Numeric tolerance': { zh: '数值容差', ja: '数値の許容誤差' },
+    'Resolved model': { zh: '实际模型版本', ja: '実際のモデル' },
+    'Probability distribution': { zh: '概率分布', ja: '確率分布' },
+    Option: { zh: '选项', ja: '選択肢' },
+    Probability: { zh: '概率', ja: '確率' },
+    'Self-reported confidence': {
+        zh: '模型自报置信度',
+        ja: 'モデルの自己申告の確信度'
+    },
+    'Provider confidence': { zh: '供应商置信度', ja: 'プロバイダーの確信度' },
+    'Raw decision JSON': { zh: '原始决策 JSON', ja: '意思決定の元 JSON' },
+    'Decision scoring needs a valid decision prompt and expected values by question ID.':
+        {
+            zh: '决策评分需要有效的决策输入和按问题 ID 填写的预期值。',
+            ja: '意思決定の採点には有効な入力と質問 ID ごとの期待値が必要です。'
+        },
+    'Response is not a valid decision answer.': {
+        zh: '响应不是有效的决策答案。',
+        ja: '応答は有効な意思決定の回答ではありません。'
+    },
+    'Decision test sets require models in Decision mode.': {
+        zh: '决策测试集需要使用决策模式的模型。',
+        ja: '意思決定のテストセットには意思決定モードのモデルが必要です。'
+    },
+
     Settings: {
         zh: '设置',
         ja: '設定'
@@ -1583,6 +1834,8 @@ export const messages = {
     },
     'Frozen parameters': { zh: '冻结参数', ja: '固定パラメータ' },
     'Case × Model': { zh: '用例 × 模型', ja: 'ケース × モデル' },
+    Case: { zh: '用例', ja: 'ケース' },
+    groups: { zh: '参数组', ja: 'グループ' },
     'All groups': { zh: '全部参数组', ja: 'すべてのグループ' },
     'Parameter group': { zh: '参数组', ja: 'パラメータグループ' },
     Repetition: { zh: '重复', ja: '繰り返し' },
@@ -1690,5 +1943,620 @@ export const messages = {
     'Expected answer (optional)': {
         zh: '预期答案（可选）',
         ja: '期待する回答（任意）'
+    },
+    'Parameter presets': { zh: '参数预设', ja: 'パラメータープリセット' },
+    'Select a parameter preset': {
+        zh: '选择参数预设',
+        ja: 'パラメータープリセットを選択'
+    },
+    'Preset name': { zh: '预设名称', ja: 'プリセット名' },
+    'Preset name is required.': {
+        zh: '请输入预设名称。',
+        ja: 'プリセット名を入力してください。'
+    },
+    'Enter a non-empty preset name and valid parameter values.': {
+        zh: '请输入非空预设名称和有效参数值。',
+        ja: '空でないプリセット名と有効なパラメーター値を入力してください。'
+    },
+    'Save current patch': {
+        zh: '保存当前覆盖参数',
+        ja: '現在の上書き設定を保存'
+    },
+    'Rename preset': { zh: '重命名预设', ja: 'プリセット名を変更' },
+    'Update from current patch': {
+        zh: '用当前覆盖参数更新',
+        ja: '現在の上書き設定で更新'
+    },
+    'Preview preset': { zh: '预览预设', ja: 'プリセットをプレビュー' },
+    'Delete preset': { zh: '删除预设', ja: 'プリセットを削除' },
+    'Presets copy parameter overrides; omitted fields remain unchanged.': {
+        zh: '预设复制参数覆盖值；未包含的字段保持不变。',
+        ja: 'プリセットはパラメーターの上書き値をコピーします。含まれない項目は変更されません。'
+    },
+    'Review changed fields before applying a copied patch.': {
+        zh: '应用复制的覆盖参数前，请检查变更字段。',
+        ja: 'コピーした上書き設定を適用する前に、変更項目を確認してください。'
+    },
+    Inherited: { zh: '继承', ja: '継承' },
+    'No parameter values will change.': {
+        zh: '不会更改任何参数值。',
+        ja: '変更されるパラメーター値はありません。'
+    },
+    'Unable to apply parameter preset.': {
+        zh: '无法应用参数预设。',
+        ja: 'パラメータープリセットを適用できません。'
+    },
+    'Apply preset': { zh: '应用预设', ja: 'プリセットを適用' },
+    'Parameters not sent': { zh: '不发送的参数', ja: '送信しないパラメーター' },
+    'Undeclared capabilities are unknown; providers may ignore requested parameters.':
+        {
+            zh: '未声明的能力为未知；供应商可能忽略请求的参数。',
+            ja: '未指定の機能は不明です。プロバイダーは要求されたパラメーターを無視する場合があります。'
+        },
+    Selection: { zh: '选择', ja: '選択' },
+    'Confirm requests': { zh: '确认请求', ja: 'リクエストの確認' },
+    'No enabled models.': {
+        zh: '没有已启用的模型。',
+        ja: '有効なモデルがありません。'
+    },
+    'Select at least one enabled model.': {
+        zh: '请至少选择一个已启用的模型。',
+        ja: '有効なモデルを少なくとも1つ選択してください。'
+    },
+    'A name is required.': {
+        zh: '请输入名称。',
+        ja: '名前を入力してください。'
+    },
+    'The test set needs at least one non-empty prompt.': {
+        zh: '测试集至少需要一个非空提示词。',
+        ja: 'テストセットには空でないプロンプトが少なくとも1つ必要です。'
+    },
+    'Repetitions must be an integer between 1 and 20.': {
+        zh: '重复次数必须为 1–20 的整数。',
+        ja: '繰り返し回数は1〜20の整数にしてください。'
+    },
+    'Parameter groups must be between 1 and 8.': {
+        zh: '参数组数量必须为 1–8。',
+        ja: 'パラメーターグループ数は1〜8にしてください。'
+    },
+    'Parameter group names must be unique.': {
+        zh: '参数组名称必须唯一。',
+        ja: 'パラメーターグループ名は重複できません。'
+    },
+    'Limit 50,000 calls. Reduce cases, models, groups or repetitions.': {
+        zh: '最多 50,000 次调用。请减少用例、模型、参数组或重复次数。',
+        ja: '上限は50,000回です。ケース、モデル、グループ、または繰り返し回数を減らしてください。'
+    },
+    'Common experiment parameters': {
+        zh: '实验公共参数',
+        ja: '実験の共通パラメーター'
+    },
+    'Parameter group name': { zh: '参数组名称', ja: 'パラメーターグループ名' },
+    'Copy group': { zh: '复制参数组', ja: 'グループを複製' },
+    'Delete group': { zh: '删除参数组', ja: 'グループを削除' },
+    'Add group': { zh: '添加参数组', ja: 'グループを追加' },
+    'Image generation remains available; text scoring and text TPS are not applicable.':
+        {
+            zh: '仍支持图像生成；文本评分和文本 TPS 不适用。',
+            ja: '画像生成は引き続き利用できます。テキスト評価とテキストTPSは対象外です。'
+        },
+    'Confirming starts API requests. Review every model and parameter group below.':
+        {
+            zh: '确认后将开始 API 请求。请检查下方每个模型和参数组。',
+            ja: '確認するとAPIリクエストが開始します。以下の各モデルとパラメーターグループを確認してください。'
+        },
+    'Unknown capabilities are not verified; providers may ignore requested parameters.':
+        {
+            zh: '未知能力尚未验证；供应商可能忽略请求参数。',
+            ja: '不明な機能は検証されていません。プロバイダーがリクエストのパラメーターを無視する場合があります。'
+        },
+    'Not sent': { zh: '不发送', ja: '送信しない項目' },
+    'NiLLM request configuration': {
+        zh: 'NiLLM 请求配置',
+        ja: 'NiLLMリクエスト設定'
+    },
+    Back: { zh: '上一步', ja: '戻る' },
+    Next: { zh: '下一步', ja: '次へ' },
+    'Model capabilities': { zh: '模型能力', ja: 'モデルの機能' },
+    'Image input support': { zh: '图片输入支持', ja: '画像入力の対応' },
+    'Unknown (unverified)': { zh: '未知（未经验证）', ja: '不明（未検証）' },
+    Supported: { zh: '支持', ja: '対応' },
+    'Not supported': { zh: '不支持', ja: '非対応' },
+    'Unknown capabilities are unverified; parameters are sent and the provider may ignore them.':
+        {
+            zh: '未知能力未经验证；参数仍会发送，供应商可能忽略它们。',
+            ja: '不明な機能は未検証です。パラメーターは送信されますが、プロバイダーが無視する場合があります。'
+        },
+    'Unsupported sampling parameters': {
+        zh: '不支持的采样参数',
+        ja: '非対応のサンプリングパラメーター'
+    },
+    'Declared unsupported parameters are omitted from requests; requested values remain recorded.':
+        {
+            zh: '已声明不支持的参数将从请求中省略；请求设置值仍会保留记录。',
+            ja: '非対応と指定したパラメーターはリクエストから除外されます。要求した値は記録に残ります。'
+        },
+    'First-event wait': { zh: '首事件等待', ja: '最初のイベント待機' },
+    'No-chunk wait': { zh: '无数据块等待', ja: 'チャンク未受信の待機' },
+    'Worker waiting guards': {
+        zh: 'Worker 等待保护',
+        ja: 'Worker の待機ガード'
+    },
+    'SDK total, step and chunk limits are separate from worker waiting guards.':
+        {
+            zh: 'SDK 总时长、步骤和数据块限制与 Worker 等待保护相互独立。',
+            ja: 'SDK の全体・ステップ・チャンクの制限は、Worker の待機ガードとは別です。'
+        },
+    'Not configured': { zh: '未配置', ja: '未設定' },
+    'Clear override': { zh: '清除覆盖', ja: '上書きを解除' },
+    'Telemetry uses the configured OpenTelemetry SDK; enabling it does not change input or output recording settings.':
+        {
+            zh: '遥测使用已配置的 OpenTelemetry SDK；启用遥测不会更改输入或输出记录设置。',
+            ja: 'テレメトリーは設定済みの OpenTelemetry SDK を使用します。有効にしても入力・出力の記録設定は変わりません。'
+        },
+    'Telemetry is disabled; no inputs or outputs are recorded.': {
+        zh: '遥测已禁用；不记录输入或输出。',
+        ja: 'テレメトリーは無効です。入力・出力は記録されません。'
+    },
+    'SDK records inputs and outputs.': {
+        zh: 'SDK 会记录输入和输出。',
+        ja: 'SDK は入力と出力を記録します。'
+    },
+    'SDK records inputs only.': {
+        zh: 'SDK 仅记录输入。',
+        ja: 'SDK は入力のみ記録します。'
+    },
+    'SDK records outputs only.': {
+        zh: 'SDK 仅记录输出。',
+        ja: 'SDK は出力のみ記録します。'
+    },
+    'SDK records neither inputs nor outputs.': {
+        zh: 'SDK 不记录输入或输出。',
+        ja: 'SDK は入力も出力も記録しません。'
+    },
+    'No prompt templates yet': {
+        zh: '还没有提示词模板',
+        ja: 'プロンプトテンプレートはまだありません'
+    },
+    'Create a reusable prompt template or import a JSON template.': {
+        zh: '创建可复用的提示词模板，或导入 JSON 模板。',
+        ja: '再利用できるプロンプトテンプレートを作成するか、JSON テンプレートをインポートしてください。'
+    },
+    'Create your own test set': {
+        zh: '创建自定义测试集',
+        ja: '独自のテストセットを作成'
+    },
+    'Built-in test sets are available above. Create or import a custom set for your evaluations.':
+        {
+            zh: '上方可使用内置测试集。为你的评测创建或导入自定义测试集。',
+            ja: '上に組み込みのテストセットがあります。評価用の独自セットを作成またはインポートしてください。'
+        },
+    'Template imported successfully.': {
+        zh: '模板导入成功。',
+        ja: 'テンプレートをインポートしました。'
+    },
+    'Failed to read a valid template file.': {
+        zh: '无法读取有效的模板文件。',
+        ja: '有効なテンプレートファイルを読み込めませんでした。'
+    },
+    Scoring: { zh: '评分', ja: '採点' },
+    'No scoring': { zh: '不评分', ja: '採点なし' },
+    'Exact match': { zh: '精确匹配', ja: '完全一致' },
+    Contains: { zh: '包含', ja: '部分一致' },
+    JSON: { zh: 'JSON', ja: 'JSON' },
+    'Expected answer': { zh: '预期答案', ja: '期待する回答' },
+    'Expected JSON value': { zh: '预期 JSON 值', ja: '期待する JSON 値' },
+    Prompt: { zh: '提示词', ja: 'プロンプト' },
+    'Move case up': { zh: '上移用例', ja: 'ケースを上へ移動' },
+    'Move case down': { zh: '下移用例', ja: 'ケースを下へ移動' },
+    'Remove case': { zh: '删除用例', ja: 'ケースを削除' },
+    'An expected answer is required for the scoring rule.': {
+        zh: '选择评分规则时必须提供预期答案。',
+        ja: '採点ルールには期待する回答が必要です。'
+    },
+    'Contains scoring requires a non-empty expected answer.': {
+        zh: '“包含”评分要求预期答案不能为空白。',
+        ja: '「部分一致」の採点には空でない期待する回答が必要です。'
+    },
+    'The expected answer must be valid JSON.': {
+        zh: '预期答案必须是合法的 JSON。',
+        ja: '期待する回答は有効な JSON ではありません。'
+    },
+    'Please fix the highlighted cases before saving.': {
+        zh: '保存前请先修正标出的问题用例。',
+        ja: '保存する前に問題のあるケースを修正してください。'
+    },
+    'The file is not a valid test set.': {
+        zh: '该文件不是有效的测试集。',
+        ja: 'そのファイルは有効なテストセットではありません。'
+    },
+    Dismiss: { zh: '关闭', ja: '閉じる' },
+    'Select responses to the same prompt before judging.': {
+        zh: '请先选择同一提示词的回答再进行评审。',
+        ja: '同じプロンプトへの回答を選択してから評価してください。'
+    },
+    'Judge returned invalid ratings.': {
+        zh: '评审返回的评分无效。',
+        ja: '評価モデルが無効な採点を返しました。'
+    },
+    'Judge request failed. Check provider settings and network access.': {
+        zh: '评审请求失败，请检查供应商设置和网络连接。',
+        ja: '評価リクエストに失敗しました。プロバイダー設定とネットワークを確認してください。'
+    },
+    'Judge request was cancelled': {
+        zh: '评审请求已取消。',
+        ja: '評価リクエストをキャンセルしました。'
+    },
+    Rule: { zh: '规则', ja: 'ルール' },
+    Passed: { zh: '通过', ja: '合格' },
+    'Rule evaluation: not evaluated': {
+        zh: '规则评分：未评分',
+        ja: 'ルール評価：未評価'
+    },
+    'AI judging': { zh: 'AI 评审', ja: 'AI 評価' },
+    Accuracy: { zh: '准确性', ja: '正確性' },
+    'Instruction following': { zh: '指令遵循', ja: '指示への適合' },
+    Completeness: { zh: '完整性', ja: '完全性' },
+    'Judging cost': { zh: '评审费用', ja: '評価費用' },
+    'AI judging: not evaluated': {
+        zh: 'AI 评审：未评分',
+        ja: 'AI 評価：未評価'
+    },
+    'Time unknown': { zh: '时间未知', ja: '時刻不明' },
+    'Scoring not applicable to this attempt': {
+        zh: '本次尝试不适用评分',
+        ja: 'この試行は採点対象外です'
+    },
+    'Rule scoring': { zh: '规则评分', ja: 'ルール採点' },
+    'Known judging cost': { zh: '已知评审费用', ja: '既知の評価費用' },
+    'priced calls': { zh: '费用已知的调用', ja: '費用が分かる呼び出し' },
+    Scope: { zh: '范围', ja: '範囲' },
+    'Estimated judge calls': { zh: '预计评审调用数', ja: '予定評価呼び出し数' },
+    'Each group anonymously compares the latest completed answers of all chat models for one case, parameter group and repeat. Failed, cancelled and unfinished attempts are not scored; image models are excluded.':
+        {
+            zh: '每组匿名比较同一用例、参数组和重复轮次下所有文本模型的最新已完成回答。失败、取消和未完成的尝试不评分；图像模型不参与。',
+            ja: '各グループでは、同じケース・パラメーターグループ・反復回の全チャットモデルの最新の完了回答を匿名で比較します。失敗・キャンセル・未完了の試行と画像モデルは対象外です。'
+        },
+    'Judge model': { zh: '评审模型', ja: '評価モデル' },
+    'Select a chat model…': {
+        zh: '选择文本模型…',
+        ja: 'チャットモデルを選択…'
+    },
+    'Judge prompt': { zh: '评审提示词', ja: '評価プロンプト' },
+    'Start scoring': { zh: '开始评分', ja: '採点を開始' },
+    'Stop scoring': { zh: '停止评分', ja: '採点を停止' },
+    'Another judging batch is running.': {
+        zh: '另一个评审批次正在运行。',
+        ja: '別の評価バッチが実行中です。'
+    },
+    'No completed answers in this scope yet.': {
+        zh: '当前范围还没有已完成的回答。',
+        ja: 'この範囲には完了した回答がまだありません。'
+    },
+    'Judging…': { zh: '评审中…', ja: '評価中…' },
+    'Select an enabled chat model as the judge first.': {
+        zh: '请先选择一个已启用的文本模型作为裁判。',
+        ja: '有効なチャットモデルを評価モデルとして選択してください。'
+    },
+    'Judging stopped before group {index} of {total}: {reason}': {
+        zh: '评审在第 {index}/{total} 组前停止：{reason}',
+        ja: '全 {total} グループ中 {index} 番目の評価前に停止しました：{reason}'
+    },
+    'This experiment was deleted; judging stopped. Scores recorded so far were kept.':
+        {
+            zh: '此实验已删除，评审已停止。此前记录的评分已保留。',
+            ja: '実験が削除されたため評価を停止しました。それまでの採点は保持されています。'
+        },
+    'Judging stopped. Scores recorded so far were kept.': {
+        zh: '评审已停止，此前记录的评分已保留。',
+        ja: '評価を停止しました。それまでの採点は保持されています。'
+    },
+    'Judging finished: {total} scored.': {
+        zh: '评审完成：已评分 {total} 组。',
+        ja: '評価完了：{total} グループを採点しました。'
+    },
+    'Text judging uses only completed chat responses.': {
+        zh: '文本评审仅处理已完成的文本回答。',
+        ja: 'テキスト評価は完了したチャット回答のみを対象にします。'
+    },
+    'Rule scoring is not applicable to image responses.': {
+        zh: '图像回答不适用文本规则评分。',
+        ja: '画像回答はテキストルール採点の対象外です。'
+    },
+    'AI judging is not applicable to image responses.': {
+        zh: '图像回答不适用文本 AI 评审。',
+        ja: '画像回答はテキスト AI 評価の対象外です。'
+    },
+    'Unknown rating source': { zh: '评分来源未知', ja: '採点元不明' },
+    'Response is not valid JSON.': {
+        zh: '回答不是合法的 JSON。',
+        ja: '回答は有効な JSON ではありません。'
+    },
+    completed: { zh: '已完成', ja: '完了' },
+    error: { zh: '失败', ja: '失敗' },
+    'Rate {score} out of 5': {
+        zh: '评为 {score}/5 分',
+        ja: '5 点中 {score} 点を付ける'
+    },
+    'Stop All': { zh: '全部停止', ja: 'すべて停止' },
+    'Running requests…': { zh: '请求运行中…', ja: 'リクエスト実行中…' },
+    'Pending work': { zh: '待处理任务', ja: '保留中の処理' },
+    'Summary JSON': { zh: '汇总 JSON', ja: '集計 JSON' },
+    'Summary CSV': { zh: '汇总 CSV', ja: '集計 CSV' },
+    'Raw requests JSON': { zh: '原始请求 JSON', ja: '生リクエスト JSON' },
+    'Raw requests CSV': { zh: '原始请求 CSV', ja: '生リクエスト CSV' },
+    'Markdown report': { zh: 'Markdown 报告', ja: 'Markdown レポート' },
+    'Offline HTML report': {
+        zh: '离线 HTML 报告',
+        ja: 'オフライン HTML レポート'
+    },
+    'Shared reports omit prompts and responses by default.': {
+        zh: '分享报告默认不包含提示词和回答正文。',
+        ja: '共有レポートには、既定でプロンプトと回答本文を含めません。'
+    },
+    'Export raw requests': {
+        zh: '导出原始请求',
+        ja: '生リクエストをエクスポート'
+    },
+    'Raw requests contain user prompts and responses. API keys, private endpoint parts and telemetry metadata are never exported.':
+        {
+            zh: '原始请求包含用户提示词和回答。API 密钥、端点私密部分及遥测元数据始终不会导出。',
+            ja: '生リクエストにはユーザーのプロンプトと回答が含まれます。API キー、非公開のエンドポイント部分、テレメトリのメタデータは常に除外されます。'
+        },
+    'The selection is captured when this confirmation opens.': {
+        zh: '导出范围在打开此确认框时固定。',
+        ja: 'この確認画面を開いた時点の選択範囲を使用します。'
+    },
+    'Include reasoning text': {
+        zh: '包含思考文本',
+        ja: '推論テキストを含める'
+    },
+    'Reasoning may contain additional sensitive content.': {
+        zh: '思考文本可能包含额外敏感内容。',
+        ja: '推論テキストには追加の機密情報が含まれる可能性があります。'
+    },
+    'Download raw requests': {
+        zh: '下载原始请求',
+        ja: '生リクエストをダウンロード'
+    },
+    'Statistics source': { zh: '统计来源', ja: '統計の対象' },
+    'Arena statistics': { zh: '竞技场统计', ja: 'アリーナ統計' },
+    'Experiment reports': { zh: '实验报告', ja: '実験レポート' },
+    'Select experiment': { zh: '选择实验', ja: '実験を選択' },
+    'Target parameter group': {
+        zh: '目标参数组',
+        ja: '対象パラメーターグループ'
+    },
+    'All parameter groups': {
+        zh: '全部参数组',
+        ja: 'すべてのパラメーターグループ'
+    },
+    'Baseline experiment': { zh: '基线实验', ja: 'ベースライン実験' },
+    'No baseline': { zh: '不使用基线', ja: 'ベースラインなし' },
+    'Baseline parameter group': {
+        zh: '基线参数组',
+        ja: 'ベースラインのパラメーターグループ'
+    },
+    'Choose baseline parameter group': {
+        zh: '选择基线参数组',
+        ja: 'ベースラインのグループを選択'
+    },
+    'This experiment is no longer available. Select another experiment.': {
+        zh: '此实验已失效，请选择其他实验。',
+        ja: 'この実験は利用できません。別の実験を選択してください。'
+    },
+    'Select an experiment to inspect frozen metrics, quality signals and request evidence.':
+        {
+            zh: '选择实验以查看冻结配置的指标、独立质量信号和请求证据。',
+            ja: '実験を選択して、固定された設定の指標、品質評価、リクエストの根拠を確認してください。'
+        },
+    'This parameter group is no longer available. Select another group.': {
+        zh: '此参数组已失效，请选择其他参数组。',
+        ja: 'このパラメーターグループは利用できません。別のグループを選択してください。'
+    },
+    'The selected baseline is no longer available.': {
+        zh: '所选基线实验已失效。',
+        ja: '選択したベースライン実験は利用できません。'
+    },
+    'View experiment': { zh: '查看实验', ja: '実験を表示' },
+    'View report': { zh: '查看报告', ja: 'レポートを表示' },
+    'Frozen configuration': { zh: '冻结配置', ja: '固定された設定' },
+    Concurrency: { zh: '并发数', ja: '同時実行数' },
+    Cases: { zh: '用例数', ja: 'ケース数' },
+    'TTFT distribution (ms)': {
+        zh: '首字延迟分布（毫秒）',
+        ja: '最初のトークンまでの時間分布（ms）'
+    },
+    'Duration distribution (ms)': {
+        zh: '总时长分布（毫秒）',
+        ja: '総所要時間の分布（ms）'
+    },
+    'View chart data': { zh: '查看图表数据', ja: 'グラフのデータを表示' },
+    'Range (ms)': { zh: '区间（毫秒）', ja: '範囲（ms）' },
+    'Quality versus known cost': {
+        zh: '质量与已知费用',
+        ja: '品質と既知の費用'
+    },
+    'Quality dimension': { zh: '质量维度', ja: '品質の評価軸' },
+    'AI accuracy': { zh: 'AI 准确性', ja: 'AI の正確性' },
+    'Human stars': { zh: '人工星级', ja: '人による星評価' },
+    'Rule pass rate': { zh: '规则通过率', ja: 'ルール合格率' },
+    'Only groups with the selected quality signal and known generation cost are plotted. Missing signals do not fall back to another score.':
+        {
+            zh: '仅绘制具有所选质量信号且生成费用已知的参数组。缺失信号不会自动改用其他评分。',
+            ja: '選択した品質評価と既知の生成費用があるグループのみを表示します。評価がない場合、別のスコアで補いません。'
+        },
+    'Mean known generation cost (USD)': {
+        zh: '已知生成费用均值（USD）',
+        ja: '既知の生成費用の平均（USD）'
+    },
+    'Estimated TPS samples': { zh: '估算 TPS 样本', ja: '推定 TPS サンプル' },
+    'Model / parameter group': {
+        zh: '模型 / 参数组',
+        ja: 'モデル / パラメーターグループ'
+    },
+    'Priced samples': { zh: '费用已知样本', ja: '費用が分かるサンプル' },
+    'AI dimensions and human stars': {
+        zh: 'AI 各维度与人工星级',
+        ja: 'AI の評価軸と人による星評価'
+    },
+    'AI samples': { zh: 'AI 评分样本', ja: 'AI 評価サンプル' },
+    'Human samples': { zh: '人工评分样本', ja: '人による評価サンプル' },
+    'The metric table below contains the same quality values and sample counts. Signals are not combined into a capability score.':
+        {
+            zh: '下方指标表列出相同的质量数值和样本数。各信号不合并为综合能力分。',
+            ja: '下の指標表に同じ品質値とサンプル数を示します。各評価を総合能力スコアにはまとめません。'
+        },
+    'Only evaluated completed text answers enter the rule denominator.': {
+        zh: '规则通过率的分母仅包含已进行规则评分的已完成文本回答。',
+        ja: 'ルール合格率の分母には、ルール評価済みの完了したテキスト回答のみを含めます。'
+    },
+    'Planned tasks (entire run)': {
+        zh: '计划任务（全实验）',
+        ja: '予定タスク（実験全体）'
+    },
+    'Selected tasks': { zh: '所选任务', ja: '選択したタスク' },
+    'Executed tasks': { zh: '已执行任务', ja: '実行済みタスク' },
+    'Recorded attempts': { zh: '已记录尝试', ja: '記録された試行' },
+    'Historical failed attempts': { zh: '历史失败尝试', ja: '過去の失敗試行' },
+    'Retried tasks': { zh: '已重试任务', ja: '再試行したタスク' },
+    'Known generation cost (latest attempts)': {
+        zh: '已知生成费用（最新尝试）',
+        ja: '既知の生成費用（最新の試行）'
+    },
+    'Known cost (all attempts)': {
+        zh: '已知费用（全部尝试）',
+        ja: '既知の費用（すべての試行）'
+    },
+    'Retained judging cost': {
+        zh: '保留评分的评审费用',
+        ja: '保持されている評価の費用'
+    },
+    '{count} distinct priced judge calls': {
+        zh: '{count} 次费用已知的独立评审调用',
+        ja: '費用が分かる重複のない評価呼び出し {count} 回'
+    },
+    'Primary metrics use only the latest attempt of each trial. Failed and cancelled attempts do not enter performance or quality averages. Unknown cost is not zero; retained judging cost is not a lifetime bill.':
+        {
+            zh: '主指标仅使用每个试验的最新尝试。失败和取消不计入性能或质量均值。未知费用不等于零；保留评分的评审费用不代表累计账单。',
+            ja: '主要指標には各評価単位の最新の試行のみを使用します。失敗・キャンセルは性能と品質の平均から除外します。不明な費用はゼロではなく、保持されている評価の費用は累計請求額ではありません。'
+        },
+    'Experiment metric comparison': {
+        zh: '实验指标对比',
+        ja: '実験指標の比較'
+    },
+    'Mixed TPS includes API, estimated and unknown-source samples. Quality signals retain separate denominators; missing samples are shown as unknown.':
+        {
+            zh: '混合 TPS 包含 API、估算和来源未知的样本。各质量信号保留独立分母；缺失样本显示为未知。',
+            ja: '混合 TPS には API・推定・出所不明のサンプルが含まれます。品質評価の分母はそれぞれ独立し、サンプルがない値は不明として表示します。'
+        },
+    'Completed / executed': { zh: '完成 / 已执行', ja: '完了 / 実行済み' },
+    'Mean TTFT (ms)': {
+        zh: '首字延迟均值（毫秒）',
+        ja: '最初のトークンまでの平均時間（ms）'
+    },
+    'Median / P95 TTFT (ms)': {
+        zh: '首字延迟中位数 / P95（毫秒）',
+        ja: '最初のトークンまでの時間の中央値 / P95（ms）'
+    },
+    'Mean duration (ms)': {
+        zh: '总时长均值（毫秒）',
+        ja: '平均総所要時間（ms）'
+    },
+    'Median / P95 duration (ms)': {
+        zh: '总时长中位数 / P95（毫秒）',
+        ja: '総所要時間の中央値 / P95（ms）'
+    },
+    'Mixed TPS': { zh: '混合 TPS', ja: '混合 TPS' },
+    'API TPS': { zh: 'API TPS', ja: 'API TPS' },
+    'Estimated TPS': { zh: '估算 TPS', ja: '推定 TPS' },
+    'Unknown-source TPS samples': {
+        zh: '来源未知的 TPS 样本',
+        ja: '出所不明の TPS サンプル'
+    },
+    'Input / output tokens': {
+        zh: '输入 / 输出 Token',
+        ja: '入力 / 出力トークン'
+    },
+    'Known generation cost (USD)': {
+        zh: '已知生成费用（USD）',
+        ja: '既知の生成費用（USD）'
+    },
+    'AI instruction following': { zh: 'AI 指令遵循', ja: 'AI の指示への適合' },
+    'AI completeness': { zh: 'AI 完整性', ja: 'AI の完全性' },
+    'Repeated-trial stability': {
+        zh: '重复试验稳定性',
+        ja: '反復評価の安定性'
+    },
+    'Each row is one case, model and parameter group across repetitions. Standard deviation uses n−1 and is unknown for n<2. TPS stability uses API measurements only, not estimates or cross-question variation.':
+        {
+            zh: '每行对应同一用例、模型和参数组的多次重复。标准差使用 n−1，n<2 时未知。TPS 稳定性仅使用 API 实测，不混入估算或跨题目差异。',
+            ja: '各行は同じケース・モデル・グループの反復評価です。標準偏差は n−1 を使用し、n<2 では不明です。TPS の安定性には API 実測のみを使用し、推定値や異なる問題のばらつきは含めません。'
+        },
+    'Case / model / parameter group': {
+        zh: '用例 / 模型 / 参数组',
+        ja: 'ケース / モデル / グループ'
+    },
+    Metric: { zh: '指标', ja: '指標' },
+    Mean: { zh: '均值', ja: '平均' },
+    'Sample standard deviation': { zh: '样本标准差', ja: '標本標準偏差' },
+    'Duration (ms)': { zh: '总时长（毫秒）', ja: '総所要時間（ms）' },
+    'Explicit baseline comparison': {
+        zh: '显式基线对比',
+        ja: '明示的なベースライン比較'
+    },
+    Baseline: { zh: '基线', ja: 'ベースライン' },
+    Target: { zh: '目标', ja: '対象' },
+    'Choose one parameter group on each side to compare.': {
+        zh: '请选择两侧各一个参数组进行对比。',
+        ja: '比較するには、両側でパラメーターグループを一つずつ選択してください。'
+    },
+    'Different test sets: results are shown side by side, without improvement claims.':
+        {
+            zh: '测试集不同：仅并列展示，不报告改善。',
+            ja: 'テストセットが異なります。結果は並列表示し、改善とは解釈しません。'
+        },
+    'Ambiguous model identity: duplicate model identities cannot be aligned.': {
+        zh: '模型身份有歧义：重复身份无法正确对齐。',
+        ja: 'モデルの識別が曖昧です。重複する識別情報は対応付けできません。'
+    },
+    'No matching model identities and endpoints. Results cannot be directly compared.':
+        {
+            zh: '没有匹配的模型身份和端点，不能直接比较结果。',
+            ja: '一致するモデル識別情報とエンドポイントがないため、結果を直接比較できません。'
+        },
+    'Differences are target minus baseline. Relative differences require a positive baseline. Repetition, concurrency and parameter changes are reported, not normalized or interpreted as causal effects.':
+        {
+            zh: '差值为目标减基线；相对差要求基线大于零。重复数、并发和参数变化逐项报告，不偷偷归一或宣称因果。',
+            ja: '差分は対象値からベースライン値を引いたものです。相対差分には正のベースラインが必要です。反復数・同時実行数・設定の差を報告し、正規化や因果効果の解釈は行いません。'
+        },
+    'Baseline metric differences': {
+        zh: '基线指标差异',
+        ja: 'ベースラインとの差分'
+    },
+    'P95 TTFT (ms)': {
+        zh: 'P95 首字延迟（毫秒）',
+        ja: 'P95 最初のトークンまでの時間（ms）'
+    },
+    'Absolute difference': { zh: '绝对差值', ja: '絶対差分' },
+    'Relative difference': { zh: '相对差值', ja: '相対差分' },
+    'Baseline side-by-side metrics': {
+        zh: '基线并列指标',
+        ja: 'ベースラインの並列指標'
+    },
+    'Frozen experiment manifest': {
+        zh: '冻结实验清单',
+        ja: '固定された実験マニフェスト'
+    },
+    'Endpoint unknown': { zh: '端点未知', ja: 'エンドポイント不明' },
+    'Clear arena history': { zh: '清空竞技场历史', ja: 'アリーナの履歴を消去' },
+    queued: { zh: '排队中', ja: '待機中' },
+    running: { zh: '运行中', ja: '実行中' },
+    paused: { zh: '已暂停', ja: '一時停止' },
+    interrupted: { zh: '已中断', ja: '中断' },
+    'Parameter groups': { zh: '参数组', ja: 'パラメーターグループ' },
+    'Estimated token measurements': {
+        zh: '估算 Token 测量',
+        ja: '推定トークン計測'
     }
 } as const

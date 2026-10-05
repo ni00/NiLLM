@@ -6,7 +6,11 @@ import type {
     ExperimentRun
 } from '@/lib/types'
 import { planExperiment } from '@/features/experiments/domain/plan'
-import { cancelExperimentExecution } from '@/features/experiments/runtime'
+import {
+    cancelExperimentExecution,
+    cancelExperimentJudging
+} from '@/features/experiments/runtime'
+import { resultStatus } from '@/features/stats/domain/statistics'
 
 export const INTERRUPTED_ERROR = 'Experiment execution was interrupted.'
 export const CLOSED_ERROR = 'Application closed before the request finished.'
@@ -19,6 +23,12 @@ export interface ExperimentsSlice {
     cancelExperiment: (id: string) => Promise<void>
     retryFailedExperiment: (id: string) => void
     deleteExperiment: (id: string) => Promise<void>
+    rateExperimentResult: (
+        runId: string,
+        taskId: string,
+        resultId: string,
+        rating: number
+    ) => void
     /** Marks the run running; keeps the first real dispatch time. */
     beginExperiment: (id: string, now: number) => void
     /** Appends the initial attempt and drops the pending ID in one mutation. */
@@ -122,6 +132,7 @@ export const createExperimentsSlice: StateCreator<
         })),
 
     deleteExperiment: async (id) => {
+        await cancelExperimentJudging(id)
         await cancelExperimentExecution(id)
         set((state) => ({
             experimentRuns: state.experimentRuns.filter((run) => run.id !== id)
@@ -143,7 +154,12 @@ export const createExperimentsSlice: StateCreator<
         set((state) => {
             const run = state.experimentRuns.find((r) => r.id === runId)
             const task = run?.tasks.find((t) => t.id === taskId)
-            if (!run || !task || !run.pendingTaskIds.includes(taskId))
+            if (
+                !run ||
+                run.status !== 'running' ||
+                !task ||
+                !run.pendingTaskIds.includes(taskId)
+            )
                 return state
             appended = true
             return {
@@ -190,6 +206,21 @@ export const createExperimentsSlice: StateCreator<
                 }))
             }
         }),
+
+    rateExperimentResult: (runId, taskId, resultId, rating) => {
+        if (!Number.isInteger(rating) || rating < 1 || rating > 5) return
+        const state = get()
+        const result = state.experimentRuns
+            .find((run) => run.id === runId)
+            ?.tasks.find((task) => task.id === taskId)
+            ?.attempts.find((attempt) => attempt.id === resultId)
+        if (!result || resultStatus(result) !== 'completed') return
+        state.updateExperimentResult(runId, taskId, resultId, {
+            rating,
+            ratingSource: 'human',
+            ratedAt: Date.now()
+        })
+    },
 
     settleExperiment: (runId, now) =>
         set((state) => ({

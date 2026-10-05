@@ -14,27 +14,23 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
     const t = useI18n()
     const [currentIndex, setCurrentIndex] = useState(0)
 
-    // Touch state
     const touchStartX = useRef<number | null>(null)
     const touchEndX = useRef<number | null>(null)
     const touchStartY = useRef<number | null>(null)
     const touchEndY = useRef<number | null>(null)
 
-    // Mouse state
     const isDragging = useRef(false)
     const mouseStartX = useRef<number | null>(null)
     const mouseEndX = useRef<number | null>(null)
 
     const minSwipeDistance = 50
 
-    // Reset or clamp index if models change
     useEffect(() => {
         if (currentIndex >= models.length) {
             setCurrentIndex(Math.max(0, models.length - 1))
         }
     }, [models.length, currentIndex])
 
-    // Touch Handlers
     const onTouchStart = (e: TouchEvent) => {
         touchEndX.current = null
         touchStartY.current = e.targetTouches[0].clientY
@@ -70,14 +66,12 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
 
         handleSwipe(xDistance)
 
-        // Reset
         touchStartX.current = null
         touchEndX.current = null
         touchStartY.current = null
         touchEndY.current = null
     }
 
-    // Mouse Handlers
     const onMouseDown = (e: MouseEvent) => {
         isDragging.current = true
         mouseStartX.current = e.clientX
@@ -158,7 +152,6 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
             onMouseUpCapture={onMouseUp}
             onMouseLeave={onMouseLeave}
         >
-            {/* Indicators */}
             <div className="flex items-center justify-center gap-2 py-2 shrink-0 z-10">
                 {models.map((model, index) => (
                     <button
@@ -181,7 +174,6 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
                 ))}
             </div>
 
-            {/* Content Area */}
             <div className="flex-1 min-h-0 relative px-2 md:px-12">
                 <Button
                     variant="ghost"
@@ -217,7 +209,6 @@ export function ArenaCarousel({ models, renderModel }: ArenaCarouselProps) {
                 </Button>
             </div>
 
-            {/* Mobile Navigation Areas (Invisible tap zones) */}
             <div
                 className="absolute left-0 top-1/4 bottom-1/4 w-8 z-20 md:hidden"
                 onClick={(e) => {

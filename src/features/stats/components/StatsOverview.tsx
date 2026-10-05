@@ -1,3 +1,5 @@
+import { memo } from 'react'
+import { formatStatNumber } from '../display'
 import { useI18n } from '@/lib/i18n'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MessageSquare, Hash, Zap, Trophy } from 'lucide-react'
@@ -9,7 +11,7 @@ interface StatsOverviewProps {
     topTPSModel?: { name: string }
 }
 
-export function StatsOverview({
+export const StatsOverview = memo(function StatsOverview({
     totalSessions,
     totalTokensAcrossModels,
     avgGlobalTPS,
@@ -65,7 +67,7 @@ export function StatsOverview({
                 </CardHeader>
                 <CardContent>
                     <div className="text-3xl font-bold">
-                        {avgGlobalTPS.toFixed(2)}{' '}
+                        {formatStatNumber(avgGlobalTPS)}{' '}
                         <span className="text-sm font-normal text-muted-foreground">
                             {'t/s'}
                         </span>
@@ -103,4 +105,4 @@ export function StatsOverview({
             </Card>
         </div>
     )
-}
+})

@@ -6,6 +6,7 @@ import { aggregateStatistics } from '@/features/stats/domain/statistics'
 import { parseModels, modelSchema } from '@/lib/validation'
 import { useAppStore } from '@/lib/store'
 import { LLMModel } from '@/lib/types'
+import { sanitizeModels } from '@/lib/providers/export'
 
 export interface ModelFormData {
     name: string
@@ -42,6 +43,7 @@ export function useModels() {
 
     const [editingModelId, setEditingModelId] = useState<string | null>(null)
     const [isAdding, setIsAdding] = useState(false)
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [newModel, setNewModel] = useState<Partial<LLMModel>>({
         provider: 'openrouter',
         enabled: true
@@ -51,12 +53,17 @@ export function useModels() {
         if (!newModel.name || !newModel.providerId) return
 
         if (editingModelId) {
-            updateModel(editingModelId, newModel)
+            try {
+                updateModel(
+                    editingModelId,
+                    modelSchema.parse({ ...newModel, id: editingModelId })
+                )
+            } catch {
+                setErrorMessage(t('Invalid model data. Check the JSON format.'))
+                return
+            }
             setEditingModelId(null)
         } else {
-            // New models keep every submitted field (mode/config/pricing/
-            // capabilities included) instead of a hand-picked subset that
-            // would silently drop them.
             const candidate: LLMModel = {
                 id: crypto.randomUUID(),
                 name: newModel.name,
@@ -76,6 +83,9 @@ export function useModels() {
                     baseURL: newModel.baseURL
                 }),
                 ...(newModel.mode !== undefined && { mode: newModel.mode }),
+                ...(newModel.decisionProtocol !== undefined && {
+                    decisionProtocol: newModel.decisionProtocol
+                }),
                 ...(newModel.config !== undefined && {
                     config: newModel.config
                 }),
@@ -89,7 +99,7 @@ export function useModels() {
             try {
                 addModel(modelSchema.parse(candidate))
             } catch {
-                alert(t('Invalid model data. Check the JSON format.'))
+                setErrorMessage(t('Invalid model data. Check the JSON format.'))
                 return
             }
         }
@@ -166,11 +176,11 @@ export function useModels() {
                 const store = useAppStore.getState()
                 store.importModels(parseModels(data))
             } else {
-                alert(t('Invalid model data format'))
+                setErrorMessage(t('Invalid model data format'))
             }
         } catch {
             console.error('Failed to import model data.')
-            alert(t('Invalid model data. Check the JSON format.'))
+            setErrorMessage(t('Invalid model data. Check the JSON format.'))
         }
         e.target.value = ''
     }
@@ -178,14 +188,14 @@ export function useModels() {
     const handleExport = async () => {
         const { downloadJson } = await import('@/lib/utils')
         await downloadJson(
-            useAppStore
-                .getState()
-                .models.map((model) => ({ ...model, apiKey: undefined })),
+            sanitizeModels(useAppStore.getState().models),
             'nillm-models.json'
         )
     }
 
     return {
+        errorMessage,
+        setErrorMessage,
         models,
         activeModelIds,
         isAdding,

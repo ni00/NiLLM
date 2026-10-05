@@ -11,10 +11,21 @@ import { Button } from '@/components/ui/button'
 import { PageLayout } from '@/features/layout/PageLayout'
 import { useModels } from '@/features/models/hooks/useModels'
 import { ModelEditor } from '@/features/models/components/ModelEditor'
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogAction
+} from '@/components/ui/alert-dialog'
 
 export function ModelsPage() {
     const t = useI18n()
     const {
+        errorMessage,
+        setErrorMessage,
         models,
         activeModelIds,
         isAdding,
@@ -89,6 +100,7 @@ export function ModelsPage() {
                     />
                     <Button
                         variant="outline"
+                        aria-label={t('Import')}
                         onClick={() =>
                             document.getElementById('import-models')?.click()
                         }
@@ -101,6 +113,7 @@ export function ModelsPage() {
                     </Button>
                     <Button
                         variant="outline"
+                        aria-label={t('Export')}
                         onClick={handleExport}
                         className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2 shadow-sm transition-all active:scale-95"
                     >
@@ -120,6 +133,7 @@ export function ModelsPage() {
                     {!isAdding && (
                         <Button
                             variant="outline"
+                            aria-label={t('Add')}
                             onClick={() => {
                                 setIsAdding(true)
                                 setEditingModelId(null)
@@ -190,6 +204,28 @@ export function ModelsPage() {
                 onSave={handleSaveModel}
                 onChange={setNewModel}
             />
+            <AlertDialog
+                open={errorMessage !== null}
+                onOpenChange={(open) => !open && setErrorMessage(null)}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {t('Invalid model data format')}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {errorMessage}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction
+                            onClick={() => setErrorMessage(null)}
+                        >
+                            {t('Close')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </PageLayout>
     )
 }

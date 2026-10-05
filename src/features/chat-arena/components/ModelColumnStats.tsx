@@ -2,8 +2,11 @@ import { useI18n } from '@/lib/i18n'
 import React from 'react'
 import { BenchmarkResult } from '@/lib/types'
 import { getMetricColor } from '../utils/metrics'
+import { summarizeUsage } from '@/lib/usage'
+import { UsageMetrics } from './result/UsageMetrics'
 
 export interface ModelColumnStatsProps {
+    isDecision?: boolean
     results: BenchmarkResult[]
     footerRanges: {
         ttft: { min: number; max: number }
@@ -14,7 +17,7 @@ export interface ModelColumnStatsProps {
 }
 
 export const ModelColumnStats = React.memo(
-    ({ results, footerRanges }: ModelColumnStatsProps) => {
+    ({ results, footerRanges, isDecision }: ModelColumnStatsProps) => {
         const t = useI18n()
         const {
             ttft: fTtftRange,
@@ -50,38 +53,46 @@ export const ModelColumnStats = React.memo(
             (acc, r) => acc + (r.metrics?.tokenCount || 0),
             0
         )
+        const usage = summarizeUsage(results.map((result) => result.metrics))
 
         return (
-            <div className="flex flex-wrap gap-1.5 text-xs font-mono text-muted-foreground tabular-nums overflow-hidden">
-                <div
-                    title={t('Average TTFT')}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
-                >
-                    <span className="opacity-50">{'TTFT'}</span>
-                    <span
-                        className={`font-bold ${getMetricColor(avgTtft, fTtftRange.min, fTtftRange.max, 'min-best')}`}
+            <div
+                data-testid="column-metrics"
+                className="flex flex-wrap gap-1.5 text-xs font-mono text-muted-foreground tabular-nums overflow-hidden"
+            >
+                {!isDecision && (
+                    <div
+                        title={t('Average TTFT')}
+                        className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-max justify-center"
                     >
-                        {Number(avgTtft.toFixed(2))}
-                    </span>
-                    <span className="opacity-40 text-[8px]">{'ms'}</span>
-                </div>
+                        <span className="opacity-50">{'TTFT'}</span>
+                        <span
+                            className={`font-bold ${getMetricColor(avgTtft, fTtftRange.min, fTtftRange.max, 'min-best')}`}
+                        >
+                            {Number(avgTtft.toFixed(2))}
+                        </span>
+                        <span className="opacity-40 text-[8px]">{'ms'}</span>
+                    </div>
+                )}
 
-                <div
-                    title={t('Average Tokens/sec')}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
-                >
-                    <span className="opacity-50">{'SPD'}</span>
-                    <span
-                        className={`font-bold ${getMetricColor(avgTps, fTpsRange.min, fTpsRange.max, 'max-best')}`}
+                {!isDecision && (
+                    <div
+                        title={t('Average Tokens/sec')}
+                        className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-max justify-center"
                     >
-                        {avgTps.toFixed(1)}
-                    </span>
-                    <span className="opacity-40 text-[8px]">{'t/s'}</span>
-                </div>
+                        <span className="opacity-50">{'SPD'}</span>
+                        <span
+                            className={`font-bold ${getMetricColor(avgTps, fTpsRange.min, fTpsRange.max, 'max-best')}`}
+                        >
+                            {avgTps.toFixed(1)}
+                        </span>
+                        <span className="opacity-40 text-[8px]">{'t/s'}</span>
+                    </div>
+                )}
 
                 <div
                     title={t('Total Duration')}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-max justify-center"
                 >
                     <span className="opacity-50">{'TIME'}</span>
                     <span
@@ -92,9 +103,15 @@ export const ModelColumnStats = React.memo(
                     <span className="opacity-40 text-[8px]">{'s'}</span>
                 </div>
 
+                <UsageMetrics
+                    metrics={usage}
+                    coverage={usage}
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-max justify-center"
+                />
+
                 <div
                     title={t('Total Tokens')}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-[70px] justify-center"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-muted/40 whitespace-nowrap flex-1 min-w-max justify-center"
                 >
                     <span className="opacity-50">{'TOKS'}</span>
                     <span

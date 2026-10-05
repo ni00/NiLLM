@@ -10,13 +10,8 @@ import {
     useFailQueueItem
 } from '@/lib/hooks/useStoreSelectors'
 
-/**
- * The single scheduler, mounted once from the Layout: leaving a page never
- * stops work. It serializes one unit at a time — a queued experiment run
- * (creation order) or one ordinary/retry broadcast — and releases
- * `isProcessing` only after the unit settles, so Stop All cannot strand a
- * lock while stale finally-blocks still run.
- */
+/** One scheduler survives route changes. Serialize each run/broadcast and
+ * release the processing lock only after it settles, including cancellation. */
 export const useQueueProcessor = () => {
     const messageQueue = useMessageQueue()
     const isProcessing = useIsProcessing()

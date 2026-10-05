@@ -142,15 +142,53 @@ test('drag source survives scrolling out of view and can be dropped far down the
     await page.mouse.move(source.x + 5, source.y + 5)
     await page.mouse.down()
     await page.mouse.move(source.x + 20, source.y + 20)
-    await page
-        .getByRole('region', { name: 'Model list' })
-        .evaluate((element) => {
-            element.scrollTop = 8000
-        })
+    const viewport = page.getByRole('region', { name: 'Model list' })
+    await viewport.evaluate((element) => {
+        element.scrollTop = 8000
+    })
     await expect
         .poll(() => page.locator('[data-model-id="scroll-144"]').count())
         .toBe(1)
     expect(await page.locator('[data-model-id]').count()).toBeLessThan(70)
+    // The jump mounts scroll-144 while the virtualizer is still applying
+    // keep-visual-stability corrections: estimated 224px rows measure to
+    // 240px, which keeps nudging scrollTop after the card mounts. Center the
+    // card and wait until the scroll position and the card's viewport box are
+    // stable across animation frames, otherwise the box read below no longer
+    // matches the geometry at drop time and the pointer lands a row below the
+    // intended target.
+    await viewport.evaluate((element) => {
+        const card = element.querySelector('[data-model-id="scroll-144"]')
+        if (!card) throw new Error('scroll-144 is not mounted')
+        element.scrollTop +=
+            card.getBoundingClientRect().top -
+            element.getBoundingClientRect().top -
+            element.clientHeight / 2 +
+            card.getBoundingClientRect().height / 2
+    })
+    await viewport.evaluate(async (element) => {
+        const cardSelector = '[data-model-id="scroll-144"]'
+        const nextFrame = () => {
+            const { promise, resolve } = Promise.withResolvers<void>()
+            requestAnimationFrame(resolve)
+            return promise
+        }
+        let lastScrollTop = element.scrollTop
+        let lastCardY = element
+            .querySelector(cardSelector)
+            ?.getBoundingClientRect().y
+        for (let frame = 0; frame < 120; frame++) {
+            await nextFrame()
+            const scrollTop = element.scrollTop
+            const cardY = element
+                .querySelector(cardSelector)
+                ?.getBoundingClientRect().y
+            if (scrollTop === lastScrollTop && cardY === lastCardY) return
+            lastScrollTop = scrollTop
+            lastCardY = cardY
+        }
+        throw new Error('model list scroll did not settle')
+    })
     const destination = (await page
         .locator('[data-model-id="scroll-144"]')
         .boundingBox())!

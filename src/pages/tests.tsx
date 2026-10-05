@@ -75,6 +75,8 @@ export function TestsPage() {
     const {
         fileInputRef,
         isImporting,
+        importError,
+        clearImportError,
         isEditing,
         editingSetId,
         editForm,
@@ -189,6 +191,21 @@ export function TestsPage() {
             }
         >
             <div className="flex flex-col gap-8 pb-8">
+                {importError && (
+                    <div
+                        role="alert"
+                        className="flex items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive"
+                    >
+                        <span>{importError}</span>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={clearImportError}
+                        >
+                            {t('Dismiss')}
+                        </Button>
+                    </div>
+                )}
                 <div>
                     <div className="flex items-center gap-2 mb-4">
                         <Sparkles className="h-4 w-4 text-primary" />
@@ -258,7 +275,10 @@ export function TestsPage() {
                     </DndContext>
                 </div>
                 {!storedSets.length && (
-                    <EmptyState onImport={handleImportClick} />
+                    <EmptyState
+                        onImport={handleImportClick}
+                        onCreate={openCreateModal}
+                    />
                 )}
             </div>
 

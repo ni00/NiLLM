@@ -3,12 +3,12 @@ import * as React from 'react'
 import { Check, ChevronDown, LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
     Popover,
     PopoverContent,
     PopoverTrigger
 } from '@/components/ui/popover'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 export interface SelectOption {
     label: string
@@ -37,17 +37,33 @@ export function SelectDropdown({
     placeholder,
     className,
     width = 'w-full',
-    searchable: _searchable = false,
+    searchable = false,
     disabled = false
 }: SelectDropdownProps) {
     const t = useI18n()
     const placeholderText = placeholder ?? t('Select...')
     const [open, setOpen] = React.useState(false)
+    const [query, setQuery] = React.useState('')
+    const filteredOptions = options.filter(
+        (option) =>
+            !searchable ||
+            `${option.label} ${option.value}`
+                .toLowerCase()
+                .includes(query.toLowerCase())
+    )
 
     const selectedOption = options.find((opt) => opt.value === value)
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover
+            // A portaled list needs its own scroll lock inside a modal dialog.
+            modal
+            open={open}
+            onOpenChange={(next) => {
+                setOpen(next)
+                if (!next) setQuery('')
+            }}
+        >
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
@@ -81,24 +97,40 @@ export function SelectDropdown({
                 </Button>
             </PopoverTrigger>
             <PopoverContent
-                className="p-1"
+                className="flex flex-col overflow-hidden p-1"
                 align="start"
+                collisionPadding={8}
                 style={{
+                    maxHeight:
+                        'min(360px, var(--radix-popover-content-available-height))',
                     width:
                         typeof width === 'number'
                             ? width
                             : 'var(--radix-popover-trigger-width)'
                 }}
             >
-                <ScrollArea className="max-h-[300px]">
+                {searchable && (
+                    <Input
+                        aria-label={t('Search options')}
+                        placeholder={t('Search options')}
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        className="mb-1 shrink-0"
+                    />
+                )}
+                <div
+                    data-slot="select-options"
+                    className="min-h-0 max-h-[300px] overflow-y-auto overscroll-contain touch-pan-y"
+                >
                     <div className="flex flex-col gap-0.5 p-1">
-                        {options.map((option) => (
+                        {filteredOptions.map((option) => (
                             <Button
                                 key={option.value}
                                 variant="ghost"
                                 onClick={() => {
                                     onChange(option.value)
                                     setOpen(false)
+                                    setQuery('')
                                 }}
                                 className={cn(
                                     'justify-between items-center h-9 px-2 font-normal',
@@ -126,13 +158,13 @@ export function SelectDropdown({
                                 )}
                             </Button>
                         ))}
-                        {options.length === 0 && (
+                        {filteredOptions.length === 0 && (
                             <div className="py-6 text-center text-sm text-muted-foreground">
                                 {t('No options found.')}
                             </div>
                         )}
                     </div>
-                </ScrollArea>
+                </div>
             </PopoverContent>
         </Popover>
     )

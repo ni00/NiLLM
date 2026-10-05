@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { LLMModel, BenchmarkResult, BenchmarkMetrics } from '@/lib/types'
+import { useStreamingMetrics } from './useStreamingMetrics'
+import { LLMModel, BenchmarkResult } from '@/lib/types'
 
 export interface MetricsRanges {
     ttft: { min: number; max: number }
@@ -26,16 +27,19 @@ export interface FooterRanges {
 export function useArenaMetrics(
     activeModels: LLMModel[],
     activeSession: { results: Record<string, BenchmarkResult[]> } | undefined,
-    streamingData: Record<string, { metrics?: Partial<BenchmarkMetrics> }>,
     arenaSortBy: string
 ) {
+    const streamingData = useStreamingMetrics()
     const metricsRanges: MetricsRanges = useMemo(() => {
         const allLastMetrics = activeModels
             .map((model) => {
                 const results = activeSession?.results[model.id] || []
                 const lastRes = results[results.length - 1]
                 if (!lastRes) return undefined
-                const streaming = streamingData[lastRes.id]
+                const streaming =
+                    lastRes.status === 'pending'
+                        ? streamingData[lastRes.id]
+                        : undefined
                 return streaming?.metrics
                     ? { ...lastRes.metrics, ...streaming.metrics }
                     : lastRes.metrics
@@ -73,7 +77,8 @@ export function useArenaMetrics(
             const results = activeSession?.results[model.id] || []
             const valid = results
                 .map((r) => {
-                    const s = streamingData[r.id]
+                    const s =
+                        r.status === 'pending' ? streamingData[r.id] : undefined
                     return s?.metrics
                         ? { ...r, metrics: { ...r.metrics, ...s.metrics } }
                         : r
@@ -115,6 +120,7 @@ export function useArenaMetrics(
     }, [activeModels, activeSession, streamingData])
 
     const displayModels = useMemo(() => {
+        if (arenaSortBy === 'default') return activeModels
         const models = [...activeModels]
         if (arenaSortBy !== 'default') {
             models.sort((a, b) => {

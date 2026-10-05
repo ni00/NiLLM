@@ -7,6 +7,7 @@ export function PenaltiesConfig({
     config,
     onChange,
     sources,
+    idPrefix,
     onResetField
 }: ConfigSectionProps) {
     const t = useI18n()
@@ -17,7 +18,7 @@ export function PenaltiesConfig({
             <div className="grid gap-6">
                 <ConfigSlider
                     label={t('Frequency Penalty')}
-                    id="freqP"
+                    id={`${idPrefix}-frequencyPenalty`}
                     value={config.frequencyPenalty ?? 0}
                     min={-2}
                     max={2}
@@ -33,7 +34,7 @@ export function PenaltiesConfig({
                 />
                 <ConfigSlider
                     label={t('Presence Penalty')}
-                    id="presP"
+                    id={`${idPrefix}-presencePenalty`}
                     value={config.presencePenalty ?? 0}
                     min={-2}
                     max={2}

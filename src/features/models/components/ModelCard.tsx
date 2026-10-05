@@ -81,37 +81,37 @@ export const ModelCard = memo(function ModelCard({
                     />
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 py-3 border-y border-border/10">
-                    <div className="flex flex-col">
-                        <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
-                            <Zap className="h-3.5 w-3.5 text-yellow-500" />{' '}
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 py-3 border-y border-border/10">
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
+                            <Zap className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
                             {t('Speed')}
                         </span>
-                        <span className="text-sm font-mono font-bold text-foreground">
+                        <span className="text-sm font-mono font-bold text-foreground whitespace-nowrap">
                             {avgTPS}
                             <span className="text-xs ml-0.5 font-normal opacity-50">
                                 {'t/s'}
                             </span>
                         </span>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-blue-500" />{' '}
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
+                            <Clock className="h-3.5 w-3.5 shrink-0 text-blue-500" />
                             {t('Latency')}
                         </span>
-                        <span className="text-sm font-mono font-bold text-foreground">
+                        <span className="text-sm font-mono font-bold text-foreground whitespace-nowrap">
                             {avgTTFT}
                             <span className="text-xs ml-0.5 font-normal opacity-50">
                                 {'ms'}
                             </span>
                         </span>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
-                            <BarChart3 className="h-3.5 w-3.5 text-green-500" />{' '}
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
+                            <BarChart3 className="h-3.5 w-3.5 shrink-0 text-green-500" />
                             {t('Tokens')}
                         </span>
-                        <span className="text-sm font-mono font-bold text-foreground">
+                        <span className="text-sm font-mono font-bold text-foreground whitespace-nowrap">
                             {(totalTokens / 1000).toFixed(1)}
                             <span className="text-xs ml-0.5 font-normal opacity-50">
                                 {'k'}

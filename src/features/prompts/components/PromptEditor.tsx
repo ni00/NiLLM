@@ -7,6 +7,7 @@ import { Save } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
+    DialogBody,
     DialogDescription,
     DialogFooter,
     DialogHeader,
@@ -51,7 +52,7 @@ export function PromptEditor({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-2xl flex flex-col max-h-[90vh]">
+            <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>
                         {editingId ? t('Edit Template') : t('New Template')}
@@ -61,7 +62,7 @@ export function PromptEditor({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1">
+                <DialogBody className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="prompt-title">{t('Title')}</Label>
                         <Input
@@ -139,7 +140,7 @@ export function PromptEditor({
                             })}
                         </div>
                     )}
-                </div>
+                </DialogBody>
 
                 <DialogFooter>
                     <Button variant="ghost" onClick={onClose}>

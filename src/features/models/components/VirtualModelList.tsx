@@ -15,6 +15,7 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
+    type CollisionDetection,
     type DragEndEvent
 } from '@dnd-kit/core'
 import {
@@ -52,6 +53,42 @@ interface Props extends CardActions {
 // outline show the destination; reordering takes place when the user drops.
 const overlaySorting: SortingStrategy = () => null
 const noLayoutAnimation = () => false
+
+// Virtual rows mount and unmount as the list scrolls under an active drag, so
+// dnd-kit's cached droppable rects and its drag-start collision rect describe
+// geometry from different scroll positions; stock closestCenter can then
+// resolve a drop to the wrong card. Detect with the live pointer position
+// against live card rects instead: the card containing the pointer wins,
+// otherwise the nearest card center. Keyboard drags carry no pointer
+// coordinates and keep the stock center distance.
+const livePointerCollision: CollisionDetection = (args) => {
+    const { pointerCoordinates, droppableContainers } = args
+    if (!pointerCoordinates) return closestCenter(args)
+    const measured = []
+    for (const container of droppableContainers) {
+        const node = container.node.current
+        if (!node) continue
+        const rect = node.getBoundingClientRect()
+        if (rect.width <= 0 || rect.height <= 0) continue
+        const contains =
+            pointerCoordinates.x >= rect.left &&
+            pointerCoordinates.x <= rect.right &&
+            pointerCoordinates.y >= rect.top &&
+            pointerCoordinates.y <= rect.bottom
+        const value =
+            Math.hypot(
+                pointerCoordinates.x - (rect.left + rect.width / 2),
+                pointerCoordinates.y - (rect.top + rect.height / 2)
+            ) - (contains ? rect.width + rect.height : 0)
+        measured.push({ container, id: container.id, value })
+    }
+    return measured
+        .sort((a, b) => a.value - b.value)
+        .map(({ container, id, value }) => ({
+            id,
+            data: { droppableContainer: container, value }
+        }))
+}
 
 const SortableModelCard = memo(function SortableModelCard({
     model,
@@ -213,6 +250,7 @@ export function VirtualModelList({
         estimateSize: (index) => (rows[index].kind === 'header' ? 100 : 224),
         getItemKey: (index) => rows[index].key,
         overscan: 3,
+        useAnimationFrameWithResizeObserver: true,
         useFlushSync: false,
         directDomUpdates: true,
         rangeExtractor: useCallback(
@@ -282,7 +320,7 @@ export function VirtualModelList({
                 )}
                 <DndContext
                     sensors={sensors}
-                    collisionDetection={closestCenter}
+                    collisionDetection={livePointerCollision}
                     onDragStart={(event) =>
                         setActiveId(String(event.active.id))
                     }

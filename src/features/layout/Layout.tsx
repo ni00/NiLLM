@@ -1,7 +1,7 @@
 import { useI18n } from '@/lib/i18n'
 import { Outlet, Link, useLocation } from 'react-router'
 import { useState } from 'react'
-import { Menu, RotateCcw, FileDown } from 'lucide-react'
+import { Menu, RotateCcw, FileDown, Loader2, Square } from 'lucide-react'
 import { useAppPreferences } from '@/features/settings/useAppPreferences'
 import { useGlobalHotkeys } from '@/features/layout/useGlobalHotkeys'
 import { useQueueProcessor } from '@/features/chat-arena/hooks/useQueueProcessor'
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
+    DialogBody,
     DialogHeader,
     DialogTitle
 } from '@/components/ui/dialog'
@@ -67,6 +68,51 @@ function StorageFailureBanner() {
     )
 }
 
+/** One non-destructive stop action covers generation, judging and queued work. */
+function WorkStatusBanner() {
+    const t = useI18n()
+    const isJudging = useAppStore((s) => s.isJudging)
+    const isProcessing = useAppStore((s) => s.isProcessing)
+    const hasPendingWork = useAppStore(
+        (s) =>
+            s.messageQueue.length > 0 ||
+            s.experimentRuns.some(
+                (run) =>
+                    run.status === 'queued' ||
+                    run.status === 'running' ||
+                    run.status === 'paused'
+            )
+    )
+    const stopAll = useAppStore((s) => s.stopAll)
+    if (!isJudging && !isProcessing && !hasPendingWork) return null
+    return (
+        <div
+            role="status"
+            className="flex flex-shrink-0 items-center gap-2 border-b bg-muted/40 px-4 py-1.5 text-sm"
+        >
+            {(isJudging || isProcessing) && (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            )}
+            <span className="flex-1">
+                {isJudging
+                    ? t('Judging Responses...')
+                    : isProcessing
+                      ? t('Running requests…')
+                      : t('Pending work')}
+            </span>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={stopAll}
+                className="gap-2"
+            >
+                <Square className="h-4 w-4" aria-hidden />
+                {t('Stop All')}
+            </Button>
+        </div>
+    )
+}
+
 const NAV_BAR_BOTTOM_PATHS = ['/', '/experiments', '/stats', '/models']
 const NAV_BAR_BOTTOM = APP_ROUTES.filter((r) =>
     NAV_BAR_BOTTOM_PATHS.includes(r.path)
@@ -88,7 +134,7 @@ export function Layout() {
     const [moreOpen, setMoreOpen] = useState(false)
     // Single scheduler mount: work continues on every route.
     useQueueProcessor()
-    useGlobalHotkeys()
+    const commandDialog = useGlobalHotkeys()
     const visible = usePageVisibility()
     if (!visible) pauseStreamingUI()
     else resumeStreamingUI()
@@ -160,7 +206,6 @@ export function Layout() {
 
     return (
         <div className="flex h-screen flex-col overflow-hidden bg-background pt-[var(--safe-area-inset-top)] md:flex-row">
-            {/* Wide sidebar: grouped, ≥1024px with labels; 768–1023px icon-only */}
             <aside className="relative hidden h-full w-16 flex-shrink-0 flex-col border-r bg-background md:flex lg:w-52">
                 <div className="flex h-14 items-center px-3 lg:px-4">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
@@ -188,7 +233,6 @@ export function Layout() {
                 </nav>
             </aside>
 
-            {/* Small-screen bottom nav: <768px */}
             <nav
                 className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-stretch border-t bg-background pb-[var(--safe-area-inset-bottom)] md:hidden"
                 aria-label={t('Main navigation')}
@@ -208,11 +252,14 @@ export function Layout() {
             </nav>
 
             <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
-                <DialogContent className="sm:max-w-xs">
+                <DialogContent
+                    className="sm:max-w-xs"
+                    aria-describedby={undefined}
+                >
                     <DialogHeader>
                         <DialogTitle>{t('More')}</DialogTitle>
                     </DialogHeader>
-                    <div className="flex flex-col gap-1">
+                    <DialogBody className="flex flex-col gap-1">
                         {NAV_MORE.map((item) => (
                             <Link
                                 key={item.path}
@@ -235,15 +282,16 @@ export function Layout() {
                                 {t(item.labelKey)}
                             </Link>
                         ))}
-                    </div>
+                    </DialogBody>
                 </DialogContent>
             </Dialog>
 
-            {/* Main Content */}
             <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden pb-16 md:pb-0">
                 <StorageFailureBanner />
+                <WorkStatusBanner />
                 <Outlet />
             </main>
+            {commandDialog}
         </div>
     )
 }

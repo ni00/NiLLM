@@ -12,10 +12,6 @@ export const ThinkingBlock = React.memo(
     ({ reasoning, isStreaming }: ThinkingBlockProps) => {
         const t = useI18n()
         const [isExpanded, setIsExpanded] = useState(isStreaming)
-        const contentRef = useRef<HTMLDivElement>(null)
-        const [contentHeight, setContentHeight] = useState<number | undefined>(
-            undefined
-        )
 
         const wasStreaming = useRef(isStreaming)
         useEffect(() => {
@@ -27,19 +23,6 @@ export const ThinkingBlock = React.memo(
             wasStreaming.current = isStreaming
         }, [isStreaming])
 
-        // Measure content height for smooth animation
-        useEffect(() => {
-            if (contentRef.current) {
-                const observer = new ResizeObserver((entries) => {
-                    for (const entry of entries) {
-                        setContentHeight(entry.contentRect.height)
-                    }
-                })
-                observer.observe(contentRef.current)
-                return () => observer.disconnect()
-            }
-        }, [])
-
         const toggleExpanded = () => {
             setIsExpanded((prev) => !prev)
         }
@@ -48,6 +31,7 @@ export const ThinkingBlock = React.memo(
             <div className="thinking-block mb-3">
                 <button
                     onClick={toggleExpanded}
+                    aria-expanded={isExpanded}
                     className="thinking-block-header"
                 >
                     <div className="thinking-block-indicator">
@@ -74,27 +58,14 @@ export const ThinkingBlock = React.memo(
                     />
                 </button>
 
-                <div
-                    className="thinking-block-content-wrapper"
-                    style={{
-                        height: isExpanded
-                            ? contentHeight
-                                ? `${contentHeight}px`
-                                : 'auto'
-                            : '0px',
-                        opacity: isExpanded ? 1 : 0,
-                        overflow: 'hidden',
-                        transition:
-                            'height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease'
-                    }}
-                >
-                    <div ref={contentRef} className="thinking-block-content">
+                {isExpanded && (
+                    <div className="thinking-block-content">
                         <StreamingMarkdown
                             content={reasoning}
                             isStreaming={isStreaming}
                         />
                     </div>
-                </div>
+                )}
             </div>
         )
     }

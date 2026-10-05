@@ -73,7 +73,10 @@ export const createModelsSlice: StateCreator<AppState, [], [], ModelsSlice> = (
         set((state) => ({
             models: state.models.map((m) =>
                 m.id === id ? { ...m, ...updates } : m
-            )
+            ),
+            ...(updates.enabled === false && {
+                activeModelIds: state.activeModelIds.filter((mid) => mid !== id)
+            })
         })),
 
     deleteModel: (id) =>

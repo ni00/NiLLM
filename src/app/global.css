@@ -149,7 +149,6 @@
         --safe-area-inset-right: env(safe-area-inset-right, 0px);
     }
 
-    /* WebKit/Blink browsers */
     *::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -184,7 +183,6 @@
     }
 }
 
-/* Custom Markdown Styles */
 .markdown-body {
     @apply select-text;
 }
@@ -201,7 +199,6 @@
     overflow-wrap: break-word;
 }
 
-/* ===== ThinkingBlock / Chain-of-Thought ===== */
 .thinking-block {
     border-radius: 8px;
     border: 1px solid oklch(0.7 0.15 280 / 20%);
@@ -309,10 +306,38 @@
     opacity: 0.85;
 }
 
-/* ===== Scroll Navigation Buttons (mobile/touch) ===== */
 @media (hover: none) {
     .scroll-nav-buttons {
         opacity: 0.7 !important;
         transform: translateY(0) !important;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
     }
 }

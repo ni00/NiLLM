@@ -8,11 +8,7 @@ interface FieldOverrideProps {
     onResetField?: (path: string) => void
 }
 
-/**
- * "Inherit again" control shown next to fields overridden by the layer being
- * edited. Absent in the global editor, which owns the base values and passes
- * no `sources`.
- */
+/** Show reset-to-inherited controls only for layers with field provenance. */
 export function FieldOverride({
     path,
     sources,

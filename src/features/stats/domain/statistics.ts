@@ -1,18 +1,25 @@
 import type { BenchmarkResult, ChatSession, LLMModel } from '@/lib/types'
+import { withEstimatedCost } from '@/lib/usage'
 import { providerGroupKey, providerLabel } from '@/lib/providers/catalog'
+import { sanitizeModels } from '@/lib/providers/export'
 
 export interface ModelStat {
     id: string
+    /** Distinguishes frozen configurations that share the workspace model ID. */
+    groupKey?: string
     name: string
     provider: string
     providerKey: string
-    mode: 'chat' | 'image'
+    mode: 'chat' | 'image' | 'decision'
     avgTPS: number
     avgTTFT: number
     avgRating: number
     avgDuration: number
     medianTTFT: number
     p95TTFT: number
+    medianDuration: number
+    p95Duration: number
+    durationSampleCount: number
     totalTokens: number
     inputTokens: number
     outputTokens: number
@@ -28,24 +35,42 @@ export interface ModelStat {
     speedSampleCount: number
     latencySampleCount: number
     ratingCount: number
+    apiAvgTPS: number
+    apiSpeedSampleCount: number
+    estimatedAvgTPS: number
+    estimatedSpeedSampleCount: number
+    unknownSpeedSampleCount: number
+    humanAvgRating: number
+    humanRatingCount: number
+    rulePassedCount: number
+    ruleEvaluatedCount: number
+    rulePassRate: number
+    aiAccuracyMean: number
+    aiInstructionFollowingMean: number
+    aiCompletenessMean: number
+    aiRatingCount: number
 }
 export interface StatsFilter {
     since?: number
     providerKey?: string
-    mode?: 'chat' | 'image'
+    mode?: 'chat' | 'image' | 'decision'
 }
 export interface ChartDataPoint {
+    id: string
     name: string
-    speed: number
-    latency: number
+    provider: string
+    speed?: number
+    latency?: number
     rating: number
     tokens: number
 }
 export interface RadarDataPoint {
+    id: string
     subject: string
-    Speed: number
-    Quality: number
-    Responsiveness: number
+    provider: string
+    Speed?: number
+    Quality?: number
+    Responsiveness?: number
 }
 const positive = (value: number | undefined): value is number =>
     typeof value === 'number' && Number.isFinite(value) && value > 0
@@ -65,15 +90,35 @@ export function resultStatus(result: BenchmarkResult) {
     )
 }
 
-function summarize(model: LLMModel, results: BenchmarkResult[]): ModelStat {
+export function summarizeModelResults(
+    model: LLMModel,
+    results: BenchmarkResult[]
+): ModelStat {
     const successful = results.filter(
         (r) => resultStatus(r) === 'completed' && !r.error
     )
-    const speeds =
-        model.mode === 'image'
+    const speedResults =
+        model.mode === 'image' || model.mode === 'decision'
             ? []
-            : successful.map((r) => r.metrics?.tps).filter(positive)
-    const latencies = successful.map((r) => r.metrics?.ttft).filter(positive)
+            : successful.filter((r) => positive(r.metrics?.tps))
+    const speeds = speedResults.map((r) => r.metrics.tps)
+    const apiSpeeds = speedResults
+        .filter((r) => r.metrics.tokenSource === 'api')
+        .map((r) => r.metrics.tps)
+    const estimatedSpeeds = speedResults
+        .filter((r) => r.metrics.tokenSource === 'estimated')
+        .map((r) => r.metrics.tps)
+    const unknownSpeeds = speedResults
+        .filter(
+            (r) =>
+                r.metrics.tokenSource !== 'api' &&
+                r.metrics.tokenSource !== 'estimated'
+        )
+        .map((r) => r.metrics.tps)
+    const latencies =
+        model.mode === 'decision'
+            ? []
+            : successful.map((r) => r.metrics?.ttft).filter(positive)
     const durations = successful
         .map((r) => r.metrics?.totalDuration)
         .filter(positive)
@@ -81,6 +126,23 @@ function summarize(model: LLMModel, results: BenchmarkResult[]): ModelStat {
         .map((r) => r.rating)
         .filter(positive)
         .filter((v) => v <= 5)
+    const humanRatings = successful
+        .map((r) => (r.ratingSource === 'human' ? r.rating : undefined))
+        .filter(positive)
+        .filter((v) => v <= 5)
+    const validScore = (value: number) =>
+        Number.isFinite(value) && value >= 1 && value <= 5
+    const judged = successful.filter((r) => {
+        const evaluation = r.judgeEvaluation
+        return (
+            !!evaluation &&
+            validScore(evaluation.accuracy) &&
+            validScore(evaluation.instructionFollowing) &&
+            validScore(evaluation.completeness)
+        )
+    })
+    const ruled = successful.filter((r) => r.ruleEvaluation)
+    const rulePassed = ruled.filter((r) => r.ruleEvaluation!.passed).length
     const errorCount = results.filter(
         (r) =>
             resultStatus(r) === 'error' ||
@@ -103,6 +165,9 @@ function summarize(model: LLMModel, results: BenchmarkResult[]): ModelStat {
         avgRating: average(ratings),
         medianTTFT: percentile(latencies, 0.5),
         p95TTFT: percentile(latencies, 0.95),
+        medianDuration: percentile(durations, 0.5),
+        p95Duration: percentile(durations, 0.95),
+        durationSampleCount: durations.length,
         totalTokens: successful.reduce(
             (sum, r) =>
                 sum +
@@ -134,7 +199,7 @@ function summarize(model: LLMModel, results: BenchmarkResult[]): ModelStat {
         totalCost: costs.reduce((sum, cost) => sum + cost, 0),
         costSampleCount: costs.length,
         estimatedCount:
-            model.mode === 'image'
+            model.mode === 'image' || model.mode === 'decision'
                 ? 0
                 : successful.filter(
                       (r) =>
@@ -143,8 +208,93 @@ function summarize(model: LLMModel, results: BenchmarkResult[]): ModelStat {
                   ).length,
         speedSampleCount: speeds.length,
         latencySampleCount: latencies.length,
-        ratingCount: ratings.length
+        ratingCount: ratings.length,
+        apiAvgTPS: average(apiSpeeds),
+        apiSpeedSampleCount: apiSpeeds.length,
+        estimatedAvgTPS: average(estimatedSpeeds),
+        estimatedSpeedSampleCount: estimatedSpeeds.length,
+        unknownSpeedSampleCount: unknownSpeeds.length,
+        humanAvgRating: average(humanRatings),
+        humanRatingCount: humanRatings.length,
+        rulePassedCount: rulePassed,
+        ruleEvaluatedCount: ruled.length,
+        rulePassRate: ruled.length ? (rulePassed / ruled.length) * 100 : 0,
+        aiAccuracyMean: average(judged.map((r) => r.judgeEvaluation!.accuracy)),
+        aiInstructionFollowingMean: average(
+            judged.map((r) => r.judgeEvaluation!.instructionFollowing)
+        ),
+        aiCompletenessMean: average(
+            judged.map((r) => r.judgeEvaluation!.completeness)
+        ),
+        aiRatingCount: judged.length
     }
+}
+
+export interface SelectedResult {
+    sessionId: string
+    model: LLMModel
+    result: BenchmarkResult
+    groupKey: string
+    providerKey: string
+}
+
+export function selectStatisticsResults(
+    models: LLMModel[],
+    sessions: ChatSession[],
+    filter: StatsFilter = {}
+): SelectedResult[] {
+    const knownModels = new Map(
+        sanitizeModels(models).map((model) => [model.id, model])
+    )
+    const selected: SelectedResult[] = []
+    for (const session of sessions) {
+        for (const [modelId, results] of Object.entries(session.results)) {
+            const fallback = knownModels.get(modelId) ?? {
+                id: modelId,
+                name: `${modelId} (removed)`,
+                provider: 'other' as const,
+                providerName: 'Removed provider',
+                enabled: false
+            }
+            for (const result of results) {
+                if (
+                    filter.since !== undefined &&
+                    result.timestamp < filter.since
+                )
+                    continue
+                const snapshot = result.requestSnapshot?.model
+                const model: LLMModel = snapshot
+                    ? {
+                          ...snapshot,
+                          id: modelId,
+                          baseURL: snapshot.endpoint,
+                          enabled: false
+                      }
+                    : fallback
+                const providerKey = providerGroupKey(model)
+                if (filter.providerKey && filter.providerKey !== providerKey)
+                    continue
+                if (filter.mode && filter.mode !== (model.mode || 'chat'))
+                    continue
+                const groupKey = JSON.stringify([
+                    modelId,
+                    providerKey,
+                    model.providerId ?? modelId,
+                    model.mode ?? 'chat',
+                    model.decisionProtocol ?? 'auto',
+                    snapshot?.endpointFingerprint ?? 'legacy'
+                ])
+                selected.push({
+                    sessionId: session.id,
+                    model,
+                    result: withEstimatedCost(result, model),
+                    groupKey,
+                    providerKey
+                })
+            }
+        }
+    }
+    return selected
 }
 
 export function aggregateStatistics(
@@ -152,41 +302,27 @@ export function aggregateStatistics(
     sessions: ChatSession[],
     filter: StatsFilter = {}
 ) {
-    const knownModels = new Map(models.map((model) => [model.id, model]))
+    return summarizeSelectedStatistics(
+        selectStatisticsResults(models, sessions, filter)
+    )
+}
+
+export function summarizeSelectedStatistics(selected: SelectedResult[]) {
+    const modelsById = new Map<string, LLMModel>()
     const resultsByModel = new Map<string, BenchmarkResult[]>()
     const sessionIds = new Set<string>()
-    for (const session of sessions) {
-        for (const [modelId, results] of Object.entries(session.results)) {
-            let model = knownModels.get(modelId)
-            if (!model) {
-                model = {
-                    id: modelId,
-                    name: `${modelId} (removed)`,
-                    provider: 'other',
-                    providerName: 'Removed provider',
-                    enabled: false
-                }
-                knownModels.set(modelId, model)
-            }
-            if (
-                filter.providerKey &&
-                filter.providerKey !== providerGroupKey(model)
-            )
-                continue
-            if (filter.mode && filter.mode !== (model.mode || 'chat')) continue
-            const selected = results.filter(
-                (result) => !filter.since || result.timestamp >= filter.since
-            )
-            if (!selected.length) continue
-            const entries = resultsByModel.get(modelId) || []
-            for (const result of selected) entries.push(result)
-            resultsByModel.set(modelId, entries)
-            sessionIds.add(session.id)
-        }
+    for (const { sessionId, model, result, groupKey } of selected) {
+        // Keep the first historical label; renames do not rewrite old records.
+        if (!modelsById.has(groupKey)) modelsById.set(groupKey, model)
+        const entries = resultsByModel.get(groupKey) || []
+        entries.push(result)
+        resultsByModel.set(groupKey, entries)
+        sessionIds.add(sessionId)
     }
-    const modelStats = [...resultsByModel].map(([id, results]) =>
-        summarize(knownModels.get(id)!, results)
-    )
+    const modelStats = [...resultsByModel].map(([groupKey, results]) => ({
+        ...summarizeModelResults(modelsById.get(groupKey)!, results),
+        groupKey
+    }))
     const totalMessages = modelStats.reduce(
         (sum, stat) => sum + stat.totalCount,
         0

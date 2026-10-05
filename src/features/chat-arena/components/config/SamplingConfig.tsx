@@ -9,6 +9,7 @@ export function SamplingConfig({
     config,
     onChange,
     sources,
+    idPrefix,
     onResetField
 }: ConfigSectionProps) {
     const t = useI18n()
@@ -19,7 +20,7 @@ export function SamplingConfig({
             <div className="grid gap-6">
                 <ConfigSlider
                     label={t('Temperature')}
-                    id="temp"
+                    id={`${idPrefix}-temperature`}
                     value={config.temperature ?? 0.7}
                     min={0}
                     max={2}
@@ -37,7 +38,7 @@ export function SamplingConfig({
 
                 <ConfigSlider
                     label={t('Top P')}
-                    id="topP"
+                    id={`${idPrefix}-topP`}
                     value={config.topP ?? 0.9}
                     min={0}
                     max={1}
@@ -56,7 +57,10 @@ export function SamplingConfig({
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2.5">
                         <div className="flex items-center gap-1.5">
-                            <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
+                            <Label
+                                htmlFor={`${idPrefix}-topK`}
+                                className="text-xs font-bold opacity-60 uppercase tracking-tight"
+                            >
                                 {t('Top K')}
                             </Label>
                             <FieldOverride
@@ -66,6 +70,7 @@ export function SamplingConfig({
                             />
                         </div>
                         <Input
+                            id={`${idPrefix}-topK`}
                             type="number"
                             placeholder={t('Auto')}
                             value={config.topK ?? ''}
@@ -81,7 +86,10 @@ export function SamplingConfig({
                     </div>
                     <div className="space-y-2.5">
                         <div className="flex items-center gap-1.5">
-                            <Label className="text-xs font-bold opacity-60 uppercase tracking-tight">
+                            <Label
+                                htmlFor={`${idPrefix}-minP`}
+                                className="text-xs font-bold opacity-60 uppercase tracking-tight"
+                            >
                                 {t('Min P')}
                             </Label>
                             <FieldOverride
@@ -91,6 +99,7 @@ export function SamplingConfig({
                             />
                         </div>
                         <Input
+                            id={`${idPrefix}-minP`}
                             type="number"
                             step="0.01"
                             placeholder={t('Off')}

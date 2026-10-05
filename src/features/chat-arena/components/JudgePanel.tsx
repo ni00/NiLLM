@@ -1,72 +1,85 @@
 import { useI18n } from '@/lib/i18n'
-import { Gavel, X, Loader2 } from 'lucide-react'
+import {
+    DialogHeader,
+    DialogTitle,
+    DialogBody,
+    DialogFooter
+} from '@/components/ui/dialog'
+import { Gavel, Loader2, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ChatSession, LLMModel } from '@/lib/types'
+import { useId } from 'react'
+import { useAppStore } from '@/lib/store'
+import { resultStatus } from '@/features/stats/domain/statistics'
 
 interface JudgePanelProps {
     models: LLMModel[]
+    activeModels: LLMModel[]
     judgeModelId: string
     setJudgeModelId: (id: string) => void
     judgePrompt: string
     setJudgePrompt: (p: string) => void
     isJudging: boolean
     judgeStatus: string | null
-    onClose: () => void
     onAutoJudge: () => void
+    onCancel: () => void
     activeSession: ChatSession | undefined
 }
 
 export const JudgePanel = ({
     models,
+    activeModels,
     judgeModelId,
     setJudgeModelId,
     judgePrompt,
     setJudgePrompt,
     isJudging,
     judgeStatus,
-    onClose,
     onAutoJudge,
+    onCancel,
     activeSession
 }: JudgePanelProps) => {
     const t = useI18n()
+    const radioGroup = useId()
+    const isProcessing = useAppStore((state) => state.isProcessing)
+    const eligibleModels = models.filter(
+        (model) => model.enabled && (model.mode ?? 'chat') === 'chat'
+    )
+    const hasCompletedResponse = activeModels.some((model) => {
+        if (model.mode === 'image') return false
+        const result = activeSession?.results[model.id]?.at(-1)
+        return result !== undefined && resultStatus(result) === 'completed'
+    })
     return (
         <>
-            <div className="p-4 border-b flex items-center justify-between bg-muted/30">
-                <h3 className="font-semibold text-base flex items-center gap-2">
+            <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
                     <Gavel className="w-4 h-4" /> {t('AI Judge Settings')}
-                </h3>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={onClose}
-                >
-                    <X className="h-4 w-4" />
-                </Button>
-            </div>
-            <div className="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                </DialogTitle>
+            </DialogHeader>
+            <DialogBody className="space-y-4">
                 <div className="space-y-2">
                     <Label>{t('Select Judge Model')}</Label>
                     <div className="grid gap-2 max-h-[200px] overflow-y-auto border rounded-md p-2">
-                        {models.map((model) => (
-                            <div
+                        {eligibleModels.map((model) => (
+                            <label
                                 key={model.id}
-                                className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                                className={`flex min-h-11 items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
                                     judgeModelId === model.id
                                         ? 'bg-primary/10 border-primary/20'
                                         : 'hover:bg-muted'
                                 }`}
-                                onClick={() => setJudgeModelId(model.id)}
                             >
-                                <div
-                                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${judgeModelId === model.id ? 'border-primary bg-primary' : 'border-muted-foreground'}`}
-                                >
-                                    {judgeModelId === model.id && (
-                                        <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                                    )}
-                                </div>
+                                <input
+                                    type="radio"
+                                    name={radioGroup}
+                                    value={model.id}
+                                    checked={judgeModelId === model.id}
+                                    onChange={() => setJudgeModelId(model.id)}
+                                    className="h-4 w-4 accent-primary"
+                                />
                                 <div className="flex-1 min-w-0">
                                     <div className="font-medium text-sm truncate">
                                         {model.name}
@@ -75,33 +88,37 @@ export const JudgePanel = ({
                                         {model.providerName || model.provider}
                                     </div>
                                 </div>
-                            </div>
+                            </label>
                         ))}
                     </div>
                 </div>
                 <div className="space-y-2">
-                    <Label className="text-xs font-semibold opacity-70 uppercase tracking-wider">
+                    <Label
+                        htmlFor="judge-system-prompt"
+                        className="text-xs font-semibold opacity-70 uppercase tracking-wider"
+                    >
                         {t('Judge System Prompt')}
                     </Label>
                     <Textarea
+                        id="judge-system-prompt"
                         value={judgePrompt}
                         onChange={(e) => setJudgePrompt(e.target.value)}
                         placeholder={t('Enter judge instructions...')}
                         className="min-h-[150px] text-sm leading-relaxed resize-none focus-visible:ring-primary/20"
                     />
                 </div>
-            </div>
-            <div className="p-4 border-t bg-muted/20 flex flex-col gap-3">
+            </DialogBody>
+            <DialogFooter className="flex-col sm:flex-col gap-3">
                 <Button
                     className="w-full"
                     onClick={onAutoJudge}
                     disabled={
-                        !judgeModelId ||
+                        !eligibleModels.some(
+                            (model) => model.id === judgeModelId
+                        ) ||
                         isJudging ||
-                        !activeSession ||
-                        !Object.values(activeSession.results).some(
-                            (r) => r.length > 0
-                        )
+                        isProcessing ||
+                        !hasCompletedResponse
                     }
                 >
                     {isJudging ? (
@@ -113,6 +130,20 @@ export const JudgePanel = ({
                         t('Start Judging')
                     )}
                 </Button>
+                <p className="text-sm text-muted-foreground">
+                    {t('Text judging uses only completed chat responses.')}
+                </p>
+
+                {isJudging && (
+                    <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={onCancel}
+                    >
+                        <Square className="w-4 h-4 mr-2" />
+                        {t('Cancel')}
+                    </Button>
+                )}
 
                 {judgeStatus && (
                     <div
@@ -133,7 +164,7 @@ export const JudgePanel = ({
                               : t(judgeStatus)}
                     </div>
                 )}
-            </div>
+            </DialogFooter>
         </>
     )
 }

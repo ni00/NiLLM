@@ -1,5 +1,7 @@
 import { useI18n } from '@/lib/i18n'
 import { BookTemplate } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Button } from '@/components/ui/button'
 
 interface EmptyPromptsProps {
     onImport: () => void
@@ -9,24 +11,26 @@ interface EmptyPromptsProps {
 export function EmptyPrompts({ onImport, onCreate }: EmptyPromptsProps) {
     const t = useI18n()
     return (
-        <div className="col-span-full flex flex-col items-center justify-center p-12 text-muted-foreground border-2 border-dashed rounded-xl bg-muted/10">
-            <BookTemplate className="h-10 w-10 mb-4 opacity-30" />
-            <p>{t('No templates yet. Create one to get started!')}</p>
-            <div className="flex gap-2 mt-4">
-                <button
-                    onClick={onImport}
-                    className="text-xs text-primary hover:underline"
-                >
-                    {t('Import template')}
-                </button>
-                <span className="text-xs">{t('or')}</span>
-                <button
-                    onClick={onCreate}
-                    className="text-xs text-primary hover:underline"
-                >
-                    {t('Create new')}
-                </button>
-            </div>
-        </div>
+        <EmptyState
+            icon={BookTemplate}
+            title={t('No prompt templates yet')}
+            description={t(
+                'Create a reusable prompt template or import a JSON template.'
+            )}
+            actions={
+                <>
+                    <Button
+                        className="min-h-11"
+                        variant="outline"
+                        onClick={onImport}
+                    >
+                        {t('Import template')}
+                    </Button>
+                    <Button className="min-h-11" onClick={onCreate}>
+                        {t('Create new')}
+                    </Button>
+                </>
+            }
+        />
     )
 }

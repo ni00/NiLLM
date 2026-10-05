@@ -5,6 +5,7 @@ import type {
     Message
 } from '@/lib/types'
 import type { StreamEvent } from '@/lib/streaming/protocol'
+import { generationWorkers, type WorkerLease } from './worker-pool'
 
 export interface StreamOutcome {
     response: string
@@ -24,12 +25,8 @@ export interface RunWorkerStreamOptions {
     signal?: AbortSignal
 }
 
-/**
- * Pure executor around the generation worker: no store access, callers own
- * the initial result and the single durable write after the outcome settles.
- * Keeps the two-tier connect/read timeouts, sanitized error strings and
- * single-settle semantics; cancellation preserves partial output.
- */
+/** Execute through the worker pool without store writes. Preserve partial output
+ * on cancellation and settle once, with separate connection/read timeouts. */
 export function runWorkerStream({
     model,
     messages,
@@ -37,7 +34,11 @@ export function runWorkerStream({
     onUpdate,
     signal
 }: RunWorkerStreamOptions): Promise<StreamOutcome> {
-    const connectMs = model.config?.connectTimeout ?? 15000
+    const isDecision =
+        model.mode === 'decision' || model.provider === 'typesafe'
+    const connectMs = isDecision
+        ? (model.config?.timeout?.totalMs ?? 120000)
+        : (model.config?.connectTimeout ?? 15000)
     const readMs = model.config?.readTimeout ?? 30000
     return new Promise<StreamOutcome>((resolve) => {
         let response = '',
@@ -49,15 +50,14 @@ export function runWorkerStream({
             totalDuration: 0,
             tokenCount: 0
         }
-        // Mutable cleanup registry: finish() may run before late
-        // initializations, so every handle lives here instead of a TDZ-prone
-        // const binding.
+        // finish() can run before initialization completes.
+
         const cleanup: {
             connectTimer?: ReturnType<typeof setTimeout>
             readTimer?: ReturnType<typeof setTimeout>
             unregisterSignal?: () => void
         } = {}
-        let worker: Worker | undefined
+        let lease: WorkerLease | undefined
         const finish = (
             status: StreamOutcome['status'],
             error?: string
@@ -67,7 +67,7 @@ export function runWorkerStream({
             clearTimeout(cleanup.connectTimer)
             clearTimeout(cleanup.readTimer)
             cleanup.unregisterSignal?.()
-            worker?.terminate()
+            lease?.release(status !== 'completed')
             resolve({
                 response,
                 reasoning: reasoning || undefined,
@@ -80,15 +80,6 @@ export function runWorkerStream({
             finish('cancelled', 'Generation cancelled.')
             return
         }
-        try {
-            worker = new Worker(
-                new URL('../../lib/workers/stream.worker.ts', import.meta.url),
-                { type: 'module' }
-            )
-        } catch {
-            finish('error', 'Could not start generation worker.')
-            return
-        }
         const onAbort = () => finish('cancelled', 'Generation cancelled.')
         signal?.addEventListener('abort', onAbort)
         cleanup.unregisterSignal = () =>
@@ -97,11 +88,13 @@ export function runWorkerStream({
             () =>
                 finish(
                     'error',
-                    `Connection timed out after ${connectMs / 1000}s.`
+                    isDecision
+                        ? `Decision request timed out after ${connectMs / 1000}s.`
+                        : `Connection timed out after ${connectMs / 1000}s.`
                 ),
             connectMs
         )
-        worker.onmessage = ({ data }: MessageEvent<StreamEvent>) => {
+        const onEvent = (data: StreamEvent) => {
             if (settled || data.resultId !== resultId) return
             if (data.type === 'error') {
                 finish('error', data.error)
@@ -136,7 +129,18 @@ export function runWorkerStream({
                 })
             }
         }
-        worker.onerror = () => finish('error', 'Generation worker failed.')
-        worker.postMessage({ model, messages, resultId })
+        try {
+            lease = generationWorkers.dispatch(
+                { model, messages, resultId },
+                {
+                    onEvent,
+                    onError: () => finish('error', 'Generation worker failed.')
+                }
+            )
+            if (settled) lease.release(true)
+            else if (signal?.aborted) onAbort()
+        } catch {
+            finish('error', 'Could not start generation worker.')
+        }
     })
 }

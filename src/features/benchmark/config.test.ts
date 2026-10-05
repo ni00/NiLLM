@@ -4,7 +4,8 @@ import {
     mergeConfigPatch,
     mergeGenerationConfig,
     resetConfigField,
-    resolveGenerationConfig
+    resolveGenerationConfig,
+    applyModelCapabilities
 } from './config'
 
 const global: GenerationConfig = {
@@ -57,6 +58,22 @@ describe('mergeGenerationConfig', () => {
         expect(merged.telemetry?.isEnabled).toBe(false)
         expect(merged.telemetry?.functionId).toBe('x')
     })
+
+    it('inherits undefined nested fields and retains telemetry choices when toggled', () => {
+        const merged = mergeGenerationConfig(global, {
+            timeout: { totalMs: undefined, chunkMs: 5000 },
+            telemetry: { isEnabled: true, recordInputs: undefined }
+        })
+        expect(merged.timeout).toEqual({
+            totalMs: 120000,
+            stepMs: 60000,
+            chunkMs: 5000
+        })
+        expect(merged.telemetry).toEqual({
+            ...global.telemetry,
+            isEnabled: true
+        })
+    })
 })
 
 describe('resolveGenerationConfig', () => {
@@ -101,9 +118,22 @@ describe('resolveGenerationConfig', () => {
         expect(resolved.sources.systemPrompt).toBe('model')
     })
 
-    it('marks no sampling parameters as excluded before capability filtering', () => {
-        const resolved = resolveGenerationConfig(global)
-        expect(resolved.excludedParameters).toEqual([])
+    it('omits declared unsupported fields without rewriting requested values', () => {
+        const resolved = resolveGenerationConfig(global, {
+            seed: 0,
+            temperature: 0
+        })
+        const filtered = applyModelCapabilities(resolved, {
+            unsupportedParameters: ['seed', 'temperature', 'seed']
+        })
+        expect(filtered.requested.seed).toBe(0)
+        expect(filtered.requested.temperature).toBe(0)
+        expect(filtered.effective.seed).toBeUndefined()
+        expect(filtered.effective.temperature).toBeUndefined()
+        expect(filtered.effective.maxTokens).toBe(4096)
+        expect(filtered.excludedParameters).toEqual(['seed', 'temperature'])
+        expect(filtered.sources.temperature).toBe('model')
+        expect(resolved.effective.seed).toBe(0)
     })
 })
 
@@ -132,6 +162,18 @@ describe('mergeConfigPatch / resetConfigField', () => {
             'timeout.chunkMs'
         )
         expect(patch).toEqual({ timeout: { totalMs: 30000 } })
+    })
+
+    it('keeps telemetry metadata and output choices when another field changes', () => {
+        const patch = mergeConfigPatch(
+            { telemetry: { metadata: { run: 'a' }, recordOutputs: false } },
+            { telemetry: { isEnabled: true } }
+        )
+        expect(patch.telemetry).toEqual({
+            metadata: { run: 'a' },
+            recordOutputs: false,
+            isEnabled: true
+        })
     })
 
     it('does not leak untouched fields into the patch', () => {

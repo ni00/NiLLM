@@ -1,15 +1,31 @@
 import type { LanguageModel } from 'ai'
 import type { LLMModel } from './types'
-import { getBaseURL } from './providers/catalog'
+import { getBaseURL, providerProtocol } from './providers/catalog'
+import { resolveDecisionProtocol } from '@/features/decisions/protocol'
 
 type ModelFactory = (modelId: string) => Exclude<LanguageModel, string>
 const providers = new Map<string, Promise<ModelFactory>>()
 const MAX_PROVIDERS = 32
 
 export function getProvider(model: LLMModel): Promise<ModelFactory> {
+    if (
+        model.provider === 'typesafe' ||
+        (model.mode === 'decision' &&
+            resolveDecisionProtocol(model) !== 'structured')
+    )
+        throw new Error('This decision protocol requires its native adapter.')
     const baseURL = getBaseURL(model)
+    const protocol = providerProtocol(model.provider, model)
     // Credentials and endpoint changes must never reuse a stale adapter.
-    const key = JSON.stringify([model.provider, baseURL, model.apiKey || ''])
+    const supportsStructuredOutputs =
+        model.provider === 'openai' && model.mode === 'decision'
+    const key = JSON.stringify([
+        model.provider,
+        protocol,
+        baseURL,
+        model.apiKey || '',
+        supportsStructuredOutputs
+    ])
     const cached = providers.get(key)
     if (cached) {
         providers.delete(key)
@@ -18,7 +34,7 @@ export function getProvider(model: LLMModel): Promise<ModelFactory> {
     }
     const provider = (async (): Promise<ModelFactory> => {
         const options = { baseURL, apiKey: model.apiKey || '' }
-        if (model.provider === 'anthropic') {
+        if (protocol === 'anthropic') {
             const { createAnthropic } = await import('@ai-sdk/anthropic')
             return createAnthropic({
                 ...options,
@@ -33,6 +49,7 @@ export function getProvider(model: LLMModel): Promise<ModelFactory> {
             await import('@ai-sdk/openai-compatible')
         return createOpenAICompatible({
             ...options,
+            supportsStructuredOutputs,
             name: model.provider === 'other' ? 'custom' : model.provider,
             headers:
                 model.provider === 'openrouter'

@@ -1,6 +1,12 @@
 import { useI18n } from '@/lib/i18n'
+import {
+    DialogHeader,
+    DialogTitle,
+    DialogBody,
+    DialogFooter
+} from '@/components/ui/dialog'
 import { useNavigate } from 'react-router'
-import { X, Settings2 } from 'lucide-react'
+import { Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
@@ -50,21 +56,13 @@ export const ArenaSettings = ({
 
     return (
         <>
-            <div className="p-4 border-b flex items-center justify-between bg-muted/30">
-                <h3 className="font-semibold text-base flex items-center gap-2">
+            <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
                     <Settings2 className="w-4 h-4" /> {t('Arena Settings')}
-                </h3>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={onClose}
-                >
-                    <X className="h-4 w-4" />
-                </Button>
-            </div>
+                </DialogTitle>
+            </DialogHeader>
 
-            <div className="flex border-b bg-muted/10">
+            <div className="shrink-0 flex border-b bg-muted/10">
                 {TABS.map((tab) => (
                     <button
                         key={tab.id}
@@ -81,7 +79,7 @@ export const ArenaSettings = ({
                 ))}
             </div>
 
-            <div className="p-6 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+            <DialogBody>
                 {arenaSettingsTab === 'models' && (
                     <ArenaModelSelector
                         models={models}
@@ -107,9 +105,8 @@ export const ArenaSettings = ({
                         onChange={updateGlobalConfig}
                     />
                 )}
-            </div>
-
-            <div className="p-4 border-t bg-muted/20 flex gap-3">
+            </DialogBody>
+            <DialogFooter>
                 {arenaSettingsTab === 'models' ? (
                     <>
                         <Button
@@ -144,7 +141,7 @@ export const ArenaSettings = ({
                         {t('Done')}
                     </Button>
                 )}
-            </div>
+            </DialogFooter>
         </>
     )
 }

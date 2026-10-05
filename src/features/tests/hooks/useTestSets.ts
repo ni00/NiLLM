@@ -3,7 +3,23 @@ import { z } from 'zod'
 import { useState, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/lib/store'
-import { TestCase, TestSet } from '@/lib/types'
+import type { TestCase, TestSet } from '@/lib/types'
+import { testSetSchema } from '@/lib/validation'
+import { readJsonFile, downloadJson } from '@/lib/utils'
+
+const rawImportedCaseSchema = z.union([
+    z.string(),
+    z.object({
+        prompt: z.string(),
+        expected: z.string().optional(),
+        evaluation: z
+            .object({
+                type: z.enum(['exact', 'contains', 'json', 'decision']),
+                tolerance: z.number().finite().nonnegative().optional()
+            })
+            .optional()
+    })
+])
 
 export interface TestSetForm {
     name: string
@@ -35,6 +51,7 @@ export function useTestSets() {
     )
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isImporting, setIsImporting] = useState(false)
+    const [importError, setImportError] = useState<string | null>(null)
 
     const [isEditing, setIsEditing] = useState(false)
     const [editingSetId, setEditingSetId] = useState<string | null>(null)
@@ -50,7 +67,8 @@ export function useTestSets() {
         setEditingSetId(null)
         setEditForm({
             name: '',
-            cases: [{ id: crypto.randomUUID(), prompt: '', expected: '' }]
+
+            cases: [{ id: crypto.randomUUID(), prompt: '' }]
         })
         setIsEditing(true)
     }
@@ -59,11 +77,15 @@ export function useTestSets() {
         setEditingSetId(set.id)
         setEditForm({
             name: set.name,
-            // Expected answers ride along the form so editing never drops them.
+            // Expected answers and scoring rules ride along the form so
+            // editing never drops them.
             cases: set.cases.map((c) => ({
                 id: c.id,
                 prompt: c.prompt,
-                expected: c.expected
+                ...(c.expected !== undefined && { expected: c.expected }),
+                ...(c.evaluation && {
+                    evaluation: { ...c.evaluation }
+                })
             }))
         })
         setIsEditing(true)
@@ -74,36 +96,38 @@ export function useTestSets() {
         const validCases = editForm.cases.filter((c) => c.prompt.trim())
         if (validCases.length === 0) return
 
+        const toStoredCase = (c: TestCase): TestCase => ({
+            id: c.id,
+            prompt: c.prompt,
+            ...(c.expected !== undefined && { expected: c.expected }),
+            ...(c.evaluation && { evaluation: { ...c.evaluation } })
+        })
+        const draft: TestSet = {
+            id: editingSetId ?? crypto.randomUUID(),
+            name: editForm.name,
+            cases: validCases.map(toStoredCase),
+            createdAt: Date.now()
+        }
+        const parsed = testSetSchema.safeParse(draft)
+        if (!parsed.success) return
+
         if (editingSetId) {
             const existsInStore = storedSets.some((s) => s.id === editingSetId)
-            const updates = {
-                name: editForm.name,
-                cases: validCases.map((c) => ({
-                    id: c.id,
-                    prompt: c.prompt,
-                    ...(c.expected !== undefined && { expected: c.expected })
-                }))
-            }
-
             if (existsInStore) {
-                updateTestSet(editingSetId, updates)
-            } else {
-                addTestSet({
-                    id: editingSetId,
-                    ...updates,
-                    createdAt: Date.now()
+                updateTestSet(editingSetId, {
+                    name: draft.name,
+                    cases: draft.cases
                 })
+            } else {
+                addTestSet({ ...draft, id: editingSetId })
             }
         } else {
             addTestSet({
-                id: crypto.randomUUID(),
-                name: editForm.name,
-                cases: validCases.map((c) => ({
-                    id: crypto.randomUUID(),
-                    prompt: c.prompt,
-                    ...(c.expected !== undefined && { expected: c.expected })
-                })),
-                createdAt: Date.now()
+                ...draft,
+                cases: draft.cases.map((c) => ({
+                    ...c,
+                    id: crypto.randomUUID()
+                }))
             })
         }
         setIsEditing(false)
@@ -112,10 +136,7 @@ export function useTestSets() {
     const addCase = () => {
         setEditForm((prev) => ({
             ...prev,
-            cases: [
-                ...prev.cases,
-                { id: crypto.randomUUID(), prompt: '', expected: '' }
-            ]
+            cases: [...prev.cases, { id: crypto.randomUUID(), prompt: '' }]
         }))
     }
 
@@ -160,51 +181,52 @@ export function useTestSets() {
         if (!file) return
 
         setIsImporting(true)
+        setImportError(null)
         try {
-            const { readJsonFile } = await import('@/lib/utils')
-            const data = z
+            const raw = z
                 .object({
                     name: z.string().min(1),
-                    cases: z.array(
-                        z.union([
-                            z.string(),
-                            z.object({
-                                prompt: z.string(),
-                                expected: z.string().optional()
-                            })
-                        ])
-                    )
+                    cases: z.array(rawImportedCaseSchema)
                 })
                 .parse(await readJsonFile(file))
 
+            // Normalize legacy string/object cases, then validate the whole
+            // set through the shared schema (rejects blank contains expected
+            // and invalid JSON rules).
             const newSet: TestSet = {
                 id: crypto.randomUUID(),
-                name: data.name,
-                cases: data.cases.map((c) => ({
+                name: raw.name,
+                cases: raw.cases.map((c) => ({
                     id: crypto.randomUUID(),
                     prompt: typeof c === 'string' ? c : c.prompt,
-                    expected: typeof c === 'string' ? undefined : c.expected
+                    ...(typeof c !== 'string' &&
+                        c.expected !== undefined && { expected: c.expected }),
+                    ...(typeof c !== 'string' &&
+                        c.evaluation && {
+                            evaluation: { ...c.evaluation }
+                        })
                 })),
                 createdAt: Date.now()
             }
 
-            addTestSet(newSet)
+            const parsed = testSetSchema.safeParse(newSet)
+            if (!parsed.success) {
+                setImportError(t('The file is not a valid test set.'))
+                return
+            }
+
+            addTestSet(parsed.data)
         } catch (err) {
             console.error(err)
-            alert(t('Failed to parse file.'))
+            setImportError(t('The file is not a valid test set.'))
         } finally {
             setIsImporting(false)
             if (fileInputRef.current) fileInputRef.current.value = ''
         }
     }
 
-    const handleExport = async (set: TestSet) => {
-        const { downloadJson } = await import('@/lib/utils')
-        await downloadJson(
-            set,
-            `${set.name.toLowerCase().replace(/\s+/g, '_')}.json`
-        )
-    }
+    const handleExport = (set: TestSet) =>
+        downloadJson(set, `${set.name.toLowerCase().replace(/\s+/g, '_')}.json`)
 
     // Batch and single-case runs both open the experiment configuration
     // dialog; nothing is silently pushed into the ordinary arena queue.
@@ -222,6 +244,8 @@ export function useTestSets() {
     return {
         fileInputRef,
         isImporting,
+        importError,
+        clearImportError: () => setImportError(null),
         isEditing,
         editingSetId,
         editForm,

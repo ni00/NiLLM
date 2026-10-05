@@ -1,75 +1,100 @@
 import { createStore } from 'zustand/vanilla'
-import { describe, expect, it } from 'vitest'
-import { createAppState } from './index'
-import { attachPersistence } from './persistence'
-import type { AppStorage } from './indexeddb-storage'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { createAppState, storeHydration } from './index'
+import { attachPersistence, type PersistenceController } from './persistence'
+import { indexedDBStorage } from './indexeddb-storage'
 
-const legacyStorage = (raw: string): AppStorage => ({
-    getItem: async (name) => (name === 'nillm-storage' ? raw : null),
-    setItem: async () => {},
-    removeItem: async () => {},
-    readMany: async (keys) =>
-        Object.fromEntries(
-            keys.map((key) => [key, key === 'nillm-storage' ? raw : null])
-        ),
-    commit: async () => {},
-    dump: async () => ({})
+const controllers: PersistenceController[] = []
+
+beforeEach(async () => {
+    await storeHydration
+    await indexedDBStorage.commit(
+        {},
+        Object.keys(await indexedDBStorage.dump())
+    )
 })
 
+afterEach(async () => {
+    for (const controller of controllers) {
+        await controller.flush()
+        controller.dispose()
+    }
+    controllers.length = 0
+})
+
+async function workspace() {
+    const store = createStore(createAppState)
+    const persistence = attachPersistence(store, indexedDBStorage)
+    controllers.push(persistence)
+    await persistence.hydrated
+    return { store, persistence }
+}
+
 describe('application preferences', () => {
-    it('restores old snapshots and preserves their language and content', async () => {
-        const store = createStore(createAppState)
-        const persistence = attachPersistence(
-            store,
-            legacyStorage(
-                JSON.stringify({
-                    state: { language: 'ja', promptTemplates: [] }
-                })
-            )
+    it('migrates language and an intentionally empty prompt library through IndexedDB', async () => {
+        await indexedDBStorage.setItem(
+            'nillm-storage',
+            JSON.stringify({
+                state: { language: 'ja', promptTemplates: [] },
+                version: 0
+            })
         )
-        await persistence.hydrated
-        expect(store.getState()).toMatchObject({
-            language: 'ja',
-            benchmarkLanguage: null,
-            theme: 'system',
-            promptTemplates: []
-        })
-        persistence.dispose()
+        const { store } = await workspace()
+        expect(store.getState().language).toBe('ja')
+        expect(store.getState().promptTemplates).toEqual([])
+        const { store: restored } = await workspace()
+        expect(restored.getState().language).toBe('ja')
+        expect(restored.getState().promptTemplates).toEqual([])
+        expect(await indexedDBStorage.getItem('nillm-storage')).toBeNull()
     })
 
-    it('round-trips preferences in a backup, including a null test-language override', async () => {
-        const source = createStore(createAppState)
+    it('roundtrips preferences and explicit null benchmark language, preserving omitted domains', async () => {
+        const { store: source, persistence } = await workspace()
         source.getState().setLanguage('zh')
         source.getState().setTheme('dark')
+        source.getState().setDensity('compact')
         source.getState().updateGlobalConfig({ maxConcurrent: 8 })
-        const destination = createStore(createAppState)
+        await persistence.flush()
+        const { store: destination } = await workspace()
         destination.getState().setBenchmarkLanguage('ja')
         await destination.getState().importData(source.getState().exportData())
         expect(destination.getState()).toMatchObject({
             language: 'zh',
             theme: 'dark',
+            density: 'compact',
             benchmarkLanguage: null,
             globalConfig: { maxConcurrent: 8 }
         })
         await destination
             .getState()
             .importData(JSON.stringify({ promptTemplates: [] }))
-        expect(destination.getState()).toMatchObject({
+        const { store: restored } = await workspace()
+        expect(restored.getState()).toMatchObject({
             language: 'zh',
             theme: 'dark',
-            benchmarkLanguage: null
+            density: 'compact',
+            benchmarkLanguage: null,
+            promptTemplates: [],
+            globalConfig: { maxConcurrent: 8 }
         })
     })
 
-    it('rejects malformed preferences without overwriting any existing data', async () => {
-        const store = createStore(createAppState)
+    it('rejects malformed preferences without changing memory or durable records', async () => {
+        const { store, persistence } = await workspace()
+        store.getState().setTheme('dark')
+        await persistence.flush()
         const models = store.getState().models
+        const original = await indexedDBStorage.dump()
         await expect(
-            store
-                .getState()
-                .importData(JSON.stringify({ models: [], theme: 'invalid' }))
+            store.getState().importData(
+                JSON.stringify({
+                    models: [],
+                    theme: 'invalid'
+                })
+            )
         ).rejects.toThrow('Invalid backup')
         expect(store.getState().models).toBe(models)
-        expect(store.getState().theme).toBe('system')
+        expect(store.getState().theme).toBe('dark')
+        expect(await indexedDBStorage.dump()).toEqual(original)
     })
 })

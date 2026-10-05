@@ -68,6 +68,7 @@ export const ArenaHeader = ({
                     <Button
                         variant="outline"
                         size="sm"
+                        aria-label={t('Layout')}
                         className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
                     >
                         <LayoutGrid className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -83,7 +84,7 @@ export const ArenaHeader = ({
                                 key={opt.value}
                                 onClick={() => setArenaColumns(opt.value)}
                                 className={cn(
-                                    'flex items-center justify-between px-3 py-2 text-sm rounded-sm hover:bg-accent transition-colors text-left',
+                                    'flex min-h-11 items-center justify-between px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left',
                                     arenaColumns === opt.value
                                         ? 'text-primary'
                                         : 'text-muted-foreground'
@@ -104,6 +105,7 @@ export const ArenaHeader = ({
                     <Button
                         variant="outline"
                         size="sm"
+                        aria-label={t('Sort')}
                         className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
                     >
                         <ArrowUpDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -125,7 +127,7 @@ export const ArenaHeader = ({
                                     )
                                 }
                                 className={cn(
-                                    'flex items-center justify-between px-3 py-2 text-sm rounded-sm hover:bg-accent transition-colors text-left',
+                                    'flex min-h-11 items-center justify-between px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left',
                                     arenaSortBy === opt.value
                                         ? 'text-primary'
                                         : 'text-muted-foreground'
@@ -146,6 +148,7 @@ export const ArenaHeader = ({
             <Button
                 variant="outline"
                 size="sm"
+                aria-label={t('Export')}
                 onClick={onExportAll}
                 className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
             >
@@ -158,6 +161,7 @@ export const ArenaHeader = ({
             <Button
                 variant="outline"
                 size="sm"
+                aria-label={t('Judge')}
                 onClick={onShowJudgePanel}
                 className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
             >
@@ -170,6 +174,7 @@ export const ArenaHeader = ({
             <Button
                 variant="outline"
                 size="sm"
+                aria-label={t('Configure')}
                 onClick={() => onShowArenaSettings()}
                 className="h-9 w-9 px-0 md:w-auto md:px-4 group gap-2"
             >

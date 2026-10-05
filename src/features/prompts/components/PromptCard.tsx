@@ -38,7 +38,8 @@ export function PromptCard({
                     <div className="flex items-center gap-3 space-y-0 text-left min-w-0">
                         <div
                             {...dragHandleProps}
-                            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded-md transition-colors -ml-1.5"
+                            aria-label={t('Drag to reorder')}
+                            className="cursor-grab active:cursor-grabbing min-h-11 min-w-11 flex items-center justify-center hover:bg-muted rounded-md transition-colors -ml-1.5"
                         >
                             <GripVertical className="h-4 w-4 text-muted-foreground/40" />
                         </div>
@@ -63,24 +64,27 @@ export function PromptCard({
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={t('Edit')}
                             onClick={() => onEdit(template)}
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            className="min-h-11 min-w-11 text-muted-foreground hover:text-primary"
                         >
                             <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={t('Export')}
                             onClick={() => onExport(template)}
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            className="min-h-11 min-w-11 text-muted-foreground hover:text-primary"
                         >
                             <Download className="h-4 w-4" />
                         </Button>
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={t('Delete')}
                             onClick={() => onDelete(template.id)}
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            className="min-h-11 min-w-11 text-muted-foreground hover:text-destructive"
                         >
                             <Trash2 className="h-4 w-4" />
                         </Button>
@@ -88,7 +92,7 @@ export function PromptCard({
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="bg-muted/30 p-3 rounded-md text-xs font-mono text-muted-foreground line-clamp-3 mb-4 h-16">
+                <div className="bg-muted/30 p-3 rounded-md text-sm font-mono text-muted-foreground line-clamp-3 mb-4">
                     {template.content}
                 </div>
                 <Button

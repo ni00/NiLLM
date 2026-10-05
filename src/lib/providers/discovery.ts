@@ -1,6 +1,13 @@
 import { z } from 'zod'
 import type { LLMModel } from '@/lib/types'
-import { getBaseURL } from './catalog'
+import { getBaseURL, providerProtocol } from './catalog'
+import { getModelPresets } from './presets'
+import { nonnegativeNumber } from '@/lib/usage'
+
+const perMillion = (value: string | undefined) => {
+    if (value === undefined || value.trim() === '') return undefined
+    return nonnegativeNumber(Number(value) * 1e6)
+}
 
 export type ProviderConnection = Pick<
     LLMModel,
@@ -9,16 +16,75 @@ export type ProviderConnection = Pick<
 export interface DiscoveredModel {
     id: string
     name: string
-    mode: 'chat' | 'image'
+    mode: 'chat' | 'image' | 'decision'
+    decisionProtocol?: LLMModel['decisionProtocol']
     pricing?: LLMModel['pricing']
+    config?: LLMModel['config']
+    capabilities?: LLMModel['capabilities']
+}
+
+const gatewayRate = z.object({
+    value: z.number().finite().nonnegative(),
+    currency: z.string(),
+    unit: z.string(),
+    conditions: z.unknown().optional()
+})
+const gatewayPrices = z.record(z.string(), z.array(gatewayRate))
+
+function flatGatewayRate(rates: z.infer<typeof gatewayRate>[] | undefined) {
+    const rate = rates?.length === 1 ? rates[0] : undefined
+    return rate &&
+        rate.currency === 'USD' &&
+        rate.unit === 'perMTokens' &&
+        (rate.conditions === undefined || rate.conditions === null)
+        ? rate.value
+        : undefined
+}
+
+function gatewayPricing(prices: z.infer<typeof gatewayPrices> | undefined) {
+    const input = flatGatewayRate(prices?.prompt)
+    const output = flatGatewayRate(prices?.completion)
+    if (input === undefined || output === undefined) return undefined
+    const cacheRead = flatGatewayRate(prices?.input_cache_read)
+    const writeKeys = Object.keys(prices ?? {}).filter((key) =>
+        key.startsWith('input_cache_write')
+    )
+    const cacheWrite =
+        writeKeys.length === 1
+            ? flatGatewayRate(prices?.[writeKeys[0]])
+            : undefined
+    // A cache tier or TTL that cannot be represented must not become an ordinary input price.
+    if (
+        (prices?.input_cache_read?.length && cacheRead === undefined) ||
+        (writeKeys.length && cacheWrite === undefined)
+    )
+        return undefined
+    return {
+        input,
+        output,
+        ...(cacheRead !== undefined && { cacheRead }),
+        ...(cacheWrite !== undefined && { cacheWrite })
+    }
 }
 
 const listedModel = z.object({
     id: z.string().min(1),
     name: z.string().optional(),
     display_name: z.string().optional(),
+    type: z.string().optional(),
+    supported_endpoints: z.array(z.string()).optional(),
+    input_modalities: z.array(z.string()).optional(),
+    output_modalities: z.array(z.string()).optional(),
+    pricings: gatewayPrices.optional(),
     pricing: z
-        .object({ prompt: z.string(), completion: z.string() })
+        .object({
+            prompt: z.string().optional(),
+            completion: z.string().optional(),
+            input: z.string().optional(),
+            output: z.string().optional(),
+            input_cache_read: z.string().optional(),
+            input_cache_write: z.string().optional()
+        })
         .optional(),
     architecture: z
         .object({ output_modalities: z.array(z.string()).optional() })
@@ -47,8 +113,19 @@ export async function discoverModels(
     signal?: AbortSignal
 ): Promise<DiscoveredModel[]> {
     const baseURL = getBaseURL(connection)
+    const knownPresets =
+        !['custom', 'other'].includes(connection.provider) &&
+        baseURL === getBaseURL({ provider: connection.provider })
+            ? new Map(
+                  getModelPresets(connection.provider).flatMap((preset) =>
+                      [preset.id, ...(preset.aliases ?? [])].map(
+                          (id) => [id, preset] as const
+                      )
+                  )
+              )
+            : new Map<string, DiscoveredModel>()
     const headers: Record<string, string> = {}
-    if (connection.provider === 'anthropic') {
+    if (providerProtocol(connection.provider) === 'anthropic') {
         headers['x-api-key'] = connection.apiKey || ''
         headers['anthropic-version'] = '2023-06-01'
         headers['anthropic-dangerous-direct-browser-access'] = 'true'
@@ -64,11 +141,14 @@ export async function discoverModels(
     const cursors = new Set<string>()
     let cursor = ''
     for (let page = 0; page < 100; page++) {
-        const url = new URL(`${baseURL}/models`)
+        const url = new URL(baseURL)
+        url.pathname = `${url.pathname.replace(/\/$/, '')}/models`
+        if (connection.provider === 'openrouter')
+            url.searchParams.set('output_modalities', 'text,image,decisions')
         if (connection.provider === 'google') {
             url.searchParams.set('pageSize', '1000')
             if (cursor) url.searchParams.set('pageToken', cursor)
-        } else if (connection.provider === 'anthropic') {
+        } else if (providerProtocol(connection.provider) === 'anthropic') {
             url.searchParams.set('limit', '1000')
             if (cursor) url.searchParams.set('after_id', cursor)
         } else if (cursor) url.searchParams.set('after', cursor)
@@ -79,7 +159,19 @@ export async function discoverModels(
                 `Could not fetch models (HTTP ${response.status}). Check the endpoint and API key.`
             )
         const json: unknown = await response.json()
-        if (connection.provider === 'google') {
+        if (connection.provider === 'typesafe') {
+            const data = z
+                .object({
+                    models: z.array(z.object({ name: z.string().min(1) }))
+                })
+                .parse(json)
+            return data.models.map((model) => ({
+                id: model.name,
+                name: model.name,
+                mode: 'decision' as const,
+                decisionProtocol: 'system-one' as const
+            }))
+        } else if (connection.provider === 'google') {
             const data = googlePage.parse(json)
             for (const model of data.models) {
                 if (
@@ -99,23 +191,98 @@ export async function discoverModels(
         } else {
             const data = compatiblePage.parse(json)
             for (const model of data.data) {
-                const input = Number(model.pricing?.prompt) * 1e6
-                const output = Number(model.pricing?.completion) * 1e6
+                const modalities =
+                    model.output_modalities ??
+                    model.architecture?.output_modalities
+                const endpoints = model.supported_endpoints
+                if (
+                    connection.provider === 'zenmux' &&
+                    modalities &&
+                    !modalities.some((value) =>
+                        ['text', 'image', 'decisions'].includes(value)
+                    )
+                )
+                    continue
+                if (
+                    connection.provider === 'commandcode' &&
+                    endpoints &&
+                    !endpoints.some((value) =>
+                        [
+                            '/chat/completions',
+                            '/messages',
+                            '/systemone'
+                        ].includes(value)
+                    )
+                )
+                    continue
+                if (
+                    connection.provider === 'vercel' &&
+                    model.type &&
+                    !['language', 'image', 'evaluation'].includes(model.type)
+                )
+                    continue
+                const input = perMillion(
+                    model.pricing?.prompt ?? model.pricing?.input
+                )
+                const output = perMillion(
+                    model.pricing?.completion ?? model.pricing?.output
+                )
+                const cacheRead = perMillion(model.pricing?.input_cache_read)
+                const cacheWrite = perMillion(model.pricing?.input_cache_write)
+                const nativeDecision =
+                    model.type === 'evaluation' ||
+                    modalities?.includes('decisions') ||
+                    (connection.provider === 'commandcode' &&
+                        (model.id === 'typesafe/jev' ||
+                            endpoints?.includes('/systemone'))) ||
+                    (connection.provider === 'zenmux' &&
+                        model.id === 'typesafe/jev-latest')
                 results.set(model.id, {
                     id: model.id,
                     name: model.name || model.display_name || model.id,
-                    mode: model.architecture?.output_modalities?.includes(
-                        'image'
-                    )
-                        ? 'image'
-                        : 'chat',
+                    mode: nativeDecision
+                        ? 'decision'
+                        : model.type === 'image' ||
+                            modalities?.includes('image')
+                          ? 'image'
+                          : 'chat',
+                    ...(nativeDecision && {
+                        decisionProtocol: 'system-one' as const
+                    }),
+                    capabilities:
+                        connection.provider === 'commandcode' &&
+                        endpoints &&
+                        !nativeDecision
+                            ? {
+                                  chatProtocol: endpoints.includes(
+                                      '/chat/completions'
+                                  )
+                                      ? 'openai-compatible'
+                                      : 'anthropic'
+                              }
+                            : connection.provider === 'zenmux' &&
+                                model.input_modalities
+                              ? {
+                                    vision: model.input_modalities.includes(
+                                        'image'
+                                    )
+                                }
+                              : undefined,
                     pricing:
-                        Number.isFinite(input) &&
-                        input >= 0 &&
-                        Number.isFinite(output) &&
-                        output >= 0
-                            ? { input, output }
-                            : undefined
+                        connection.provider === 'zenmux'
+                            ? gatewayPricing(model.pricings)
+                            : input !== undefined && output !== undefined
+                              ? {
+                                    input,
+                                    output,
+                                    ...(cacheRead !== undefined && {
+                                        cacheRead
+                                    }),
+                                    ...(cacheWrite !== undefined && {
+                                        cacheWrite
+                                    })
+                                }
+                              : undefined
                 })
             }
             cursor = data.has_more
@@ -125,9 +292,25 @@ export async function discoverModels(
                 throw new Error('Model list pagination is incomplete.')
         }
         if (!cursor)
-            return [...results.values()].sort((a, b) =>
-                a.name.localeCompare(b.name)
-            )
+            return [...results.values()]
+                .map((entry) => {
+                    const preset = knownPresets.get(entry.id)
+                    return preset && preset.mode === entry.mode
+                        ? {
+                              ...entry,
+                              config: preset.config,
+                              capabilities:
+                                  preset.capabilities || entry.capabilities
+                                      ? {
+                                            ...preset.capabilities,
+                                            ...entry.capabilities
+                                        }
+                                      : undefined,
+                              pricing: entry.pricing ?? preset.pricing
+                          }
+                        : entry
+                })
+                .sort((a, b) => a.name.localeCompare(b.name))
         if (cursors.has(cursor))
             throw new Error(
                 'The provider returned a repeated pagination cursor.'

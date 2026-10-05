@@ -1,6 +1,7 @@
 import { useI18n } from '@/lib/i18n'
 import { KeyboardEvent, useCallback, useEffect, useState, useMemo } from 'react'
 import { LLMModel } from '@/lib/types'
+import { parseDecisionPrompt } from '@/features/decisions/domain'
 import { ArenaHeader } from '@/features/chat-arena/components/ArenaHeader'
 import { ArenaInput } from '@/features/chat-arena/components/ArenaInput'
 import { ModelColumn } from '@/features/chat-arena/components/ModelColumn'
@@ -17,6 +18,7 @@ import { ArenaCarousel } from '@/features/chat-arena/components/ArenaCarousel'
 import {
     Dialog,
     DialogContent,
+    DialogBody,
     DialogHeader,
     DialogTitle,
     DialogDescription
@@ -30,7 +32,6 @@ import {
     useGlobalConfig,
     useIsProcessing,
     useAddToQueue,
-    useStreamingData,
     useArenaColumns,
     useArenaSortBy
 } from '@/lib/hooks/useStoreSelectors'
@@ -44,7 +45,6 @@ export function ArenaPage() {
     const globalConfig = useGlobalConfig()
     const isProcessing = useIsProcessing()
     const addToQueue = useAddToQueue()
-    const streamingData = useStreamingData()
     const arenaColumns = useArenaColumns()
     const arenaSortBy = useArenaSortBy()
 
@@ -166,13 +166,13 @@ export function ArenaPage() {
         setShowJudgePanel,
         judgePrompt,
         setJudgePrompt,
-        handleAutoJudge
+        handleAutoJudge,
+        cancelJudge
     } = useAutoJudge(activeModels, activeSession)
 
     const { metricsRanges, displayModels, footerRanges } = useArenaMetrics(
         activeModels,
         activeSession,
-        streamingData,
         arenaSortBy
     )
 
@@ -183,11 +183,22 @@ export function ArenaPage() {
 
     const handleSend = useCallback(async () => {
         if (!input.trim() && attachments.length === 0) return
+        if (activeModels.some((model) => model.mode === 'decision')) {
+            if (
+                attachments.length > 0 ||
+                activeModels.some((model) => model.mode !== 'decision')
+            )
+                return
+            try {
+                parseDecisionPrompt(input)
+            } catch {
+                return
+            }
+        }
 
         let prompt = input
 
         if (attachments.length > 0) {
-            // Process text files
             const textFiles = attachments.filter(
                 (f) => !f.type.startsWith('image/')
             )
@@ -200,7 +211,6 @@ export function ArenaPage() {
                 }
             }
 
-            // Process images
             const imageFiles = attachments.filter((f) =>
                 f.type.startsWith('image/')
             )
@@ -215,7 +225,7 @@ export function ArenaPage() {
                             reader.readAsDataURL(file)
                         }
                     )
-                    // Use a special marker that the worker can parse
+
                     prompt += `\n<<<<IMAGE_START>>>>${base64}<<<<IMAGE_END>>>>`
                 } catch (e) {
                     console.error('Failed to read image:', file.name, e)
@@ -226,7 +236,7 @@ export function ArenaPage() {
         addToQueue(prompt)
         setInput('')
         setAttachments([])
-    }, [input, attachments, addToQueue, setInput, setAttachments])
+    }, [input, attachments, addToQueue, setInput, setAttachments, activeModels])
 
     const handleKeyDown = useCallback(
         (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -271,33 +281,43 @@ export function ArenaPage() {
             className="w-full max-h-screen"
             headerClassName="p-2 pt-3 md:p-6 md:pb-4"
         >
-            {(showArenaSettings || showJudgePanel) && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-                    <div className="w-full max-w-2xl shadow-2xl border-primary/20 bg-background rounded-2xl overflow-hidden flex flex-col h-[80vh] animate-in zoom-in-95 duration-200">
-                        {showArenaSettings && (
-                            <ArenaSettings
-                                arenaSettingsTab={arenaSettingsTab}
-                                setArenaSettingsTab={setArenaSettingsTab}
-                                onClose={() => setShowArenaSettings(false)}
-                            />
-                        )}
-                        {showJudgePanel && (
-                            <JudgePanel
-                                models={models}
-                                judgeModelId={judgeModelId}
-                                setJudgeModelId={setJudgeModelId}
-                                judgePrompt={judgePrompt}
-                                setJudgePrompt={setJudgePrompt}
-                                isJudging={isJudging}
-                                judgeStatus={judgeStatus}
-                                onClose={() => setShowJudgePanel(false)}
-                                onAutoJudge={handleAutoJudge}
-                                activeSession={activeSession}
-                            />
-                        )}
-                    </div>
-                </div>
-            )}
+            <Dialog
+                open={showArenaSettings || showJudgePanel}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setShowArenaSettings(false)
+                        setShowJudgePanel(false)
+                    }
+                }}
+            >
+                <DialogContent
+                    aria-describedby={undefined}
+                    className="max-w-2xl h-[80dvh]"
+                >
+                    {showArenaSettings && (
+                        <ArenaSettings
+                            arenaSettingsTab={arenaSettingsTab}
+                            setArenaSettingsTab={setArenaSettingsTab}
+                            onClose={() => setShowArenaSettings(false)}
+                        />
+                    )}
+                    {showJudgePanel && (
+                        <JudgePanel
+                            models={models}
+                            activeModels={activeModels}
+                            judgeModelId={judgeModelId}
+                            setJudgeModelId={setJudgeModelId}
+                            judgePrompt={judgePrompt}
+                            setJudgePrompt={setJudgePrompt}
+                            isJudging={isJudging}
+                            judgeStatus={judgeStatus}
+                            onAutoJudge={handleAutoJudge}
+                            onCancel={cancelJudge}
+                            activeSession={activeSession}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
 
             {arenaColumns === 5 ? (
                 <div
@@ -326,7 +346,6 @@ export function ArenaPage() {
                                 onToggleBlock={toggleBlock}
                                 onStartEditingDetails={startEditingDetails}
                                 globalConfig={globalConfig}
-                                streamingData={streamingData}
                                 metricsRanges={metricsRanges}
                                 footerRanges={footerRanges}
                                 className="h-full border shadow-sm rounded-xl"
@@ -359,7 +378,6 @@ export function ArenaPage() {
                             onToggleBlock={toggleBlock}
                             onStartEditingDetails={startEditingDetails}
                             globalConfig={globalConfig}
-                            streamingData={streamingData}
                             metricsRanges={metricsRanges}
                             footerRanges={footerRanges}
                         />
@@ -382,8 +400,8 @@ export function ArenaPage() {
                 open={showFullScreenInput}
                 onOpenChange={setShowFullScreenInput}
             >
-                <DialogContent className="max-w-4xl w-[90vw] h-[80vh] flex flex-col p-6 gap-0">
-                    <DialogHeader className="px-0 pt-0 pb-4 border-b-0">
+                <DialogContent className="max-w-4xl h-[80dvh]">
+                    <DialogHeader>
                         <DialogTitle>{t('Full Screen Input')}</DialogTitle>
                         <DialogDescription>
                             {t(
@@ -391,7 +409,7 @@ export function ArenaPage() {
                             )}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 min-h-0 flex flex-col">
+                    <DialogBody className="flex flex-col">
                         <ArenaInput
                             input={input}
                             setInput={setInput}
@@ -412,7 +430,7 @@ export function ArenaPage() {
                             className="flex-1 h-full border-t-0 p-0"
                             textareaClassName="min-h-0 max-h-none h-full border-0 shadow-none rounded-none focus-visible:ring-0 p-4 text-base"
                         />
-                    </div>
+                    </DialogBody>
                 </DialogContent>
             </Dialog>
 

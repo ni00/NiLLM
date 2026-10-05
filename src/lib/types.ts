@@ -1,9 +1,4 @@
-/**
- * AI SDK timeout configuration
- * - totalMs: Total timeout for the entire call (all steps combined)
- * - stepMs: Timeout for each individual LLM call step (useful for multi-step tool calls)
- * - chunkMs: Timeout between stream chunks - aborts if no chunk received within this duration
- */
+/** SDK timeouts in milliseconds: whole call, individual step, and gap between chunks. */
 export interface TimeoutConfig {
     totalMs?: number
     stepMs?: number
@@ -36,10 +31,7 @@ export interface GenerationConfig {
     timeout?: TimeoutConfig
     telemetry?: TelemetryConfig
 }
-/**
- * Sampling-related generation parameters that models may declare unsupported.
- * Shared contract for capability editors, execution filtering and reporting.
- */
+
 export const SAMPLING_PARAMETERS = [
     'temperature',
     'maxTokens',
@@ -63,14 +55,9 @@ export interface TelemetryConfigPatch {
     metadata?: Record<string, string | number | boolean>
 }
 
-/**
- * Override layer applied on top of a base `GenerationConfig`.
- * - `undefined`/absent fields inherit from the base.
- * - `0`, `false`, `''` and `[]` are explicit values, not "unset".
- * - `timeout`/`telemetry` merge per field; `telemetry.metadata` replaces the
- *   whole map and arrays replace as a whole.
- * - `maxConcurrent` is a scheduling setting and only exists globally.
- */
+/** Override fields inherit when absent; explicit zero/false/empty values win.
+ * Timeout and telemetry merge per field; arrays and metadata replace wholesale.
+ * Scheduling concurrency is global-only. */
 export interface GenerationConfigPatch {
     temperature?: number
     maxTokens?: number
@@ -90,8 +77,17 @@ export interface GenerationConfigPatch {
 }
 
 export interface ModelCapabilities {
+    chatProtocol?: 'openai-compatible' | 'anthropic'
     vision?: boolean
     unsupportedParameters?: SamplingParameter[]
+}
+
+/** USD per million tokens; cache prices are optional provider-specific rates. */
+export interface ModelPricing {
+    input: number
+    output: number
+    cacheRead?: number
+    cacheWrite?: number
 }
 
 export type ConfigSource = 'global' | 'model' | 'experiment' | 'variant'
@@ -99,8 +95,7 @@ export type ConfigSource = 'global' | 'model' | 'experiment' | 'variant'
 export interface ResolvedGenerationConfig {
     /** Merged configuration exactly as requested by all layers. */
     requested: GenerationConfig
-    /** Values handed to the AI SDK: requested minus scheduling fields and
-     *  parameters excluded by model capabilities. */
+    /** Request payload after scheduling and unsupported parameters are removed. */
     effective: Partial<GenerationConfig>
     /** Field provenance keyed by dot paths such as `timeout.totalMs`. */
     sources: Record<string, ConfigSource>
@@ -112,29 +107,28 @@ export interface LLMModel {
     id: string
     name: string
     provider: LLMProvider
-    providerName?: string // Custom display name for provider
-    providerId?: string // e.g. "anthropic/claude-3-opus" for OpenRouter
-    apiKey?: string // Optional override
-    baseURL?: string // Optional override
+    providerName?: string
+    providerId?: string
+    apiKey?: string
+    baseURL?: string
     enabled: boolean
-    mode?: 'chat' | 'image'
-    config?: GenerationConfigPatch // Individual override
-    pricing?: { input: number; output: number } // USD per million tokens
+    mode?: 'chat' | 'image' | 'decision'
+    decisionProtocol?: DecisionProtocol
+    config?: GenerationConfigPatch
+    pricing?: ModelPricing
     capabilities?: ModelCapabilities
 }
 
-/**
- * Frozen identity of a model used by a request or experiment. Never contains
- * `apiKey`; `endpoint` is the sanitized public URL (query/hash stripped).
- */
+/** Frozen model identity without credentials; endpoint queries and hashes are stripped. */
 export interface ModelSnapshot {
     id: string
     name: string
     provider: LLMProvider
     providerName?: string
     providerId?: string
-    mode: 'chat' | 'image'
-    pricing?: { input: number; output: number }
+    mode: 'chat' | 'image' | 'decision'
+    decisionProtocol?: DecisionProtocol
+    pricing?: ModelPricing
     endpoint?: string
     endpointFingerprint: string
     capabilities?: ModelCapabilities
@@ -149,14 +143,46 @@ export interface RequestSnapshot {
     capturedAt: number
 }
 
-export type LLMProvider =
-    | 'openai'
-    | 'anthropic'
-    | 'openrouter'
-    | 'google'
-    | 'deepseek'
-    | 'custom'
-    | 'other' // Legacy custom provider data
+export type DecisionProtocol = 'structured' | 'system-one' | 'openai-responses'
+
+export const PROVIDER_IDS = [
+    'openai',
+    'anthropic',
+    'openrouter',
+    'google',
+    'deepseek',
+    'typesafe',
+    'vercel',
+    'commandcode',
+    'zenmux',
+    'xai',
+    'groq',
+    'mistral',
+    'togetherai',
+    'fireworks',
+    'cerebras',
+    'moonshot',
+    'moonshot-cn',
+    'dashscope',
+    'dashscope-intl',
+    'siliconflow',
+    'siliconflow-intl',
+    'zai',
+    'zhipu',
+    'zai-coding',
+    'zhipu-coding',
+    'minimax',
+    'minimax-cn',
+    'nebius',
+    'perplexity',
+    'opencode',
+    'opencode-go',
+    'ollama',
+    'lmstudio',
+    'custom',
+    'other'
+] as const
+export type LLMProvider = (typeof PROVIDER_IDS)[number]
 
 /** Global updates accept everything a patch accepts plus scheduling. */
 export type GlobalConfigUpdate = GenerationConfigPatch & {
@@ -176,8 +202,32 @@ export interface BenchmarkMetrics {
     inputTokens?: number
     outputTokens?: number
     cost?: number
+    costSource?: 'api' | 'estimated'
+    cacheReadTokens?: number
+    cacheWriteTokens?: number
     tokenSource?: 'api' | 'estimated'
     reasoningTokens?: number
+}
+
+export interface RuleEvaluation {
+    type: 'exact' | 'contains' | 'json' | 'decision'
+    passed: boolean
+    evaluatedAt: number
+    reason?: string
+}
+
+/** One retained score per answer; usage is shared by judgeCallId. */
+export interface JudgeEvaluation {
+    judgeCallId: string
+    accuracy: number
+    instructionFollowing: number
+    completeness: number
+    rationale: string
+    judge: ModelSnapshot
+    judgeConfig: Partial<GenerationConfig>
+    judgePrompt: string
+    judgedAt: number
+    usage?: { inputTokens?: number; outputTokens?: number; cost?: number }
 }
 
 export interface BenchmarkResult {
@@ -185,12 +235,15 @@ export interface BenchmarkResult {
     modelId: string
     prompt: string
     response: string
-    reasoning?: string // Chain-of-thought / thinking content
+    reasoning?: string
     metrics: BenchmarkMetrics
     timestamp: number
     error?: string
     rating?: number // 1-5 score
     ratingSource?: 'human' | 'ai'
+    ratedAt?: number
+    ruleEvaluation?: RuleEvaluation
+    judgeEvaluation?: JudgeEvaluation
     status?: 'pending' | 'completed' | 'error' | 'cancelled'
     requestSnapshot?: RequestSnapshot
     /** Set for attempts recorded inside an experiment run. */
@@ -201,8 +254,8 @@ export interface ChatSession {
     id: string
     title: string
     messages: Message[]
-    models: string[] // List of model IDs participating
-    results: Record<string, BenchmarkResult[]> // Keyed by modelId
+    models: string[]
+    results: Record<string, BenchmarkResult[]>
     createdAt: number
 }
 
@@ -210,6 +263,10 @@ export interface TestCase {
     id: string
     prompt: string
     expected?: string
+    evaluation?: {
+        type: 'exact' | 'contains' | 'json' | 'decision'
+        tolerance?: number
+    }
 }
 
 export interface TestSet {
