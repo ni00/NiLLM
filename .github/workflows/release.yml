@@ -72,9 +72,11 @@ jobs:
                 include:
                     - platform: 'macos-latest'
                       args: '--target aarch64-apple-darwin'
+                      target: 'aarch64-apple-darwin'
                       arch: 'aarch64'
                     - platform: 'macos-latest'
                       args: '--target x86_64-apple-darwin'
+                      target: 'x86_64-apple-darwin'
                       arch: 'x86_64'
                     - platform: 'windows-latest'
                       args: ''
@@ -125,14 +127,20 @@ jobs:
                   args: ${{ matrix.args }}
 
             - name: Rename bundle files with version
+              id: bundle
               shell: bash
+              env:
+                  TARGET: ${{ matrix.target }}
               run: |
                   VERSION="${{ needs.metadata.outputs.version }}"
                   ARCH="${{ matrix.arch }}"
-                  BUNDLE_DIR="src-tauri/target/release/bundle"
+                  BUNDLE_DIR="src-tauri/target/${TARGET:+$TARGET/}release/bundle"
+                  echo "path=$BUNDLE_DIR" >> "$GITHUB_OUTPUT"
+
+                  test -d "$BUNDLE_DIR"
 
                   # Rename files with version (only if version not already in filename)
-                  for file in $(find "$BUNDLE_DIR" -type f \( -name "*.msi" -o -name "*.exe" -o -name "*.dmg" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" -o -name "*.tar.gz" \)); do
+                  while IFS= read -r -d '' file; do
                     filename=$(basename "$file")
                     # Skip if version already in filename
                     if [[ "$filename" == *"$VERSION"* ]]; then
@@ -157,7 +165,7 @@ jobs:
                       mv "$file" "$(dirname "$file")/$newname"
                       echo "Renamed: $filename -> $newname"
                     fi
-                  done
+                  done < <(find "$BUNDLE_DIR" -type f \( -name "*.msi" -o -name "*.exe" -o -name "*.dmg" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" -o -name "*.tar.gz" \) -print0)
 
             - name: Upload Release Assets
               if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
@@ -165,13 +173,13 @@ jobs:
               with:
                   tag_name: ${{ needs.metadata.outputs.tag_name }}
                   files: |
-                      src-tauri/target/release/bundle/**/*.msi
-                      src-tauri/target/release/bundle/**/*.exe
-                      src-tauri/target/release/bundle/**/*.dmg
-                      src-tauri/target/release/bundle/**/*.deb
-                      src-tauri/target/release/bundle/**/*.AppImage
-                      src-tauri/target/release/bundle/**/*.rpm
-                      src-tauri/target/release/bundle/**/*.tar.gz
+                      ${{ steps.bundle.outputs.path }}/**/*.msi
+                      ${{ steps.bundle.outputs.path }}/**/*.exe
+                      ${{ steps.bundle.outputs.path }}/**/*.dmg
+                      ${{ steps.bundle.outputs.path }}/**/*.deb
+                      ${{ steps.bundle.outputs.path }}/**/*.AppImage
+                      ${{ steps.bundle.outputs.path }}/**/*.rpm
+                      ${{ steps.bundle.outputs.path }}/**/*.tar.gz
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -179,15 +187,16 @@ jobs:
               if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
               uses: actions/upload-artifact@v4
               with:
-                  name: NiLLM-${{ matrix.platform }}
+                  name: NiLLM-${{ matrix.platform }}${{ matrix.arch && format('-{0}', matrix.arch) || '' }}
+                  if-no-files-found: error
                   path: |
-                      src-tauri/target/release/bundle/**/*.msi
-                      src-tauri/target/release/bundle/**/*.exe
-                      src-tauri/target/release/bundle/**/*.dmg
-                      src-tauri/target/release/bundle/**/*.deb
-                      src-tauri/target/release/bundle/**/*.AppImage
-                      src-tauri/target/release/bundle/**/*.rpm
-                      src-tauri/target/release/bundle/**/*.tar.gz
+                      ${{ steps.bundle.outputs.path }}/**/*.msi
+                      ${{ steps.bundle.outputs.path }}/**/*.exe
+                      ${{ steps.bundle.outputs.path }}/**/*.dmg
+                      ${{ steps.bundle.outputs.path }}/**/*.deb
+                      ${{ steps.bundle.outputs.path }}/**/*.AppImage
+                      ${{ steps.bundle.outputs.path }}/**/*.rpm
+                      ${{ steps.bundle.outputs.path }}/**/*.tar.gz
     build-android:
         needs: [metadata, create-release]
         if: always() && needs.metadata.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
@@ -225,6 +234,8 @@ jobs:
 
             - name: Setup Android SDK
               uses: android-actions/setup-android@v3
+              with:
+                  packages: platform-tools
 
             - name: Install Rust stable
               uses: dtolnay/rust-toolchain@stable
@@ -311,6 +322,8 @@ jobs:
 
             - name: Setup Android SDK
               uses: android-actions/setup-android@v3
+              with:
+                  packages: platform-tools
 
             - name: Install Rust stable
               uses: dtolnay/rust-toolchain@stable
@@ -345,7 +358,7 @@ jobs:
                   cd src-tauri/gen/android/app
                   node ${{ github.workspace }}/scripts/setup-android-signing.js
             - name: Build Android AAB
-              run: pnpm tauri android build --aab
+              run: pnpm tauri android build --aab --target aarch64 armv7
 
             - name: Rename AAB
               run: |

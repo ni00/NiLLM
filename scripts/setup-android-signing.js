@@ -13,7 +13,7 @@ if (!content.includes('import java.util.Properties')) {
 
 if (importsToAdd.length > 0) {
     const newImports = importsToAdd.join('\n')
-    content = content.replace(/(plugins\s*\{[^}]*\})/, `$1\n\n${newImports}`)
+    content = `${newImports}\n${content}`
 }
 
 const signingConfig = `    signingConfigs {
