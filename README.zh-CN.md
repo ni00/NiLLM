@@ -16,6 +16,8 @@
 
 从 [Releases](https://github.com/ni00/NiLLM/releases) 下载安装包。在模型页面配置供应商，再到竞技场选择模型开始对比。
 
+发布流程构建的 Linux AppImage 包含 [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) 更新信息，可用该工具打开 AppImage，检查并下载更新。正式版跟随最新正式 Release，nightly 版跟随已发布的 `nightly` Release；每个 AppImage 都会附带对应的 `.AppImage.zsync` 文件。旧版（包括 v1.0.9）没有更新信息，需要先手动下载一次新版。
+
 ## 开发
 
 需要 Node.js 24+、pnpm 11 和 Rust stable。Linux 桌面构建还需要 WebKitGTK 4.1 开发库。

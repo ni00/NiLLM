@@ -112,12 +112,23 @@ jobs:
               if: matrix.platform == 'ubuntu-22.04'
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm
+                  sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm zsync
             - name: Install frontend dependencies
               run: pnpm install --frozen-lockfile
 
             - name: Validate frontend
               run: pnpm check
+
+            - name: Configure AppImage updates
+              if: matrix.platform == 'ubuntu-22.04'
+              shell: bash
+              run: |
+                  CHANNEL=nightly
+                  if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+                    CHANNEL=latest
+                  fi
+                  # Keep the version wildcard and architecture so updates survive version changes.
+                  echo "LDAI_UPDATE_INFORMATION=gh-releases-zsync|${GITHUB_REPOSITORY%/*}|${GITHUB_REPOSITORY#*/}|$CHANNEL|NiLLM_*_amd64.AppImage.zsync" >> "$GITHUB_ENV"
 
             - name: Build Tauri App
               uses: tauri-apps/tauri-action@v0
@@ -167,6 +178,20 @@ jobs:
                     fi
                   done < <(find "$BUNDLE_DIR" -type f \( -name "*.msi" -o -name "*.exe" -o -name "*.dmg" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" -o -name "*.tar.gz" \) -print0)
 
+            - name: Generate and verify AppImage update files
+              if: matrix.platform == 'ubuntu-22.04'
+              shell: bash
+              env:
+                  BUNDLE_DIR: ${{ steps.bundle.outputs.path }}
+              run: |
+                  shopt -s failglob
+                  # appimagetool may put .zsync in its working directory. Generate it
+                  # beside the final, renamed asset so the URL and checksums match.
+                  for image in "$BUNDLE_DIR"/appimage/*.AppImage; do
+                    zsyncmake -u "$(basename "$image")" -o "$image.zsync" "$image"
+                  done
+                  node scripts/verify-appimage-update.mjs "$BUNDLE_DIR/appimage" "$LDAI_UPDATE_INFORMATION"
+
             - name: Upload Release Assets
               if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
               uses: softprops/action-gh-release@v2
@@ -178,6 +203,7 @@ jobs:
                       ${{ steps.bundle.outputs.path }}/**/*.dmg
                       ${{ steps.bundle.outputs.path }}/**/*.deb
                       ${{ steps.bundle.outputs.path }}/**/*.AppImage
+                      ${{ steps.bundle.outputs.path }}/**/*.AppImage.zsync
                       ${{ steps.bundle.outputs.path }}/**/*.rpm
                       ${{ steps.bundle.outputs.path }}/**/*.tar.gz
               env:
@@ -195,6 +221,7 @@ jobs:
                       ${{ steps.bundle.outputs.path }}/**/*.dmg
                       ${{ steps.bundle.outputs.path }}/**/*.deb
                       ${{ steps.bundle.outputs.path }}/**/*.AppImage
+                      ${{ steps.bundle.outputs.path }}/**/*.AppImage.zsync
                       ${{ steps.bundle.outputs.path }}/**/*.rpm
                       ${{ steps.bundle.outputs.path }}/**/*.tar.gz
     build-android:
@@ -394,13 +421,14 @@ jobs:
                 build-android,
                 build-android-aab
             ]
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
         steps:
             - name: Publish Release
               uses: softprops/action-gh-release@v2
               with:
-                  tag_name: v${{ needs.metadata.outputs.version }}
+                  tag_name: ${{ needs.metadata.outputs.tag_name }}
                   draft: false
+                  prerelease: ${{ needs.metadata.outputs.tag_name == 'nightly' }}
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
