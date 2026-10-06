@@ -3,8 +3,8 @@ import { model } from '@/test/fixtures'
 import {
     applyModelCapabilities,
     resolveGenerationConfig
-} from '@/features/benchmark/config'
-import { decisionEndpoint, resolveDecisionProtocol } from './protocol'
+} from '@/lib/generation-config'
+import { decisionEndpoint, resolveDecisionProtocol } from './decisions'
 
 describe('decision transports', () => {
     it.each([

@@ -1,7 +1,10 @@
 import { z } from 'zod'
 import type { GenerationConfigPatch, LLMModel } from '@/lib/types'
-import { decisionOutputSchema, type DecisionRequest } from './domain'
-import { DECISION_SYSTEM_PROMPT, decisionEndpoint } from './protocol'
+import { decisionOutputSchema, type DecisionRequest } from '@/lib/decisions'
+import {
+    DECISION_SYSTEM_PROMPT,
+    decisionEndpoint
+} from '@/lib/providers/decisions'
 
 const responseSchema = z.object({
     status: z.literal('completed'),

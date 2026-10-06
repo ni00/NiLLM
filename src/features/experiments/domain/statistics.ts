@@ -9,17 +9,18 @@ import type {
 } from '@/lib/types'
 import { modelIdentity } from '@/lib/providers/catalog'
 import {
+    average,
     resultStatus,
     summarizeModelResults,
-    type ModelStat
-} from '@/features/stats/domain/statistics'
+    type ModelStat,
+    type TrialMetric,
+    type TrialStat
+} from '@/lib/statistics'
 
 const positive = (value: number | undefined): value is number =>
     typeof value === 'number' && Number.isFinite(value) && value > 0
 const nonnegative = (value: number | undefined): value is number =>
     typeof value === 'number' && Number.isFinite(value) && value >= 0
-const average = (values: number[]) =>
-    values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0
 
 // Mirrors the arena error-count semantics so attempt counters stay comparable.
 const isFailedAttempt = (result: BenchmarkResult) =>
@@ -54,21 +55,6 @@ export function modelFromSnapshot(snapshot: ModelSnapshot): LLMModel {
 /** Include the endpoint fingerprint so URLs sharing a public path stay distinct. */
 export function snapshotIdentityKey(snapshot: ModelSnapshot): string {
     return `${modelIdentity(modelFromSnapshot(snapshot))}|${snapshot.endpointFingerprint}`
-}
-
-export interface TrialMetric {
-    sampleCount: number
-    mean?: number
-    sampleStdDev?: number
-}
-
-export interface TrialStat {
-    caseId: string
-    modelId: string
-    variantId: string
-    ttft: TrialMetric
-    tps: TrialMetric
-    totalDuration: TrialMetric
 }
 
 export interface ExperimentModelStat extends ModelStat {

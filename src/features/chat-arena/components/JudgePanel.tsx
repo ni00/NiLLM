@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ChatSession, LLMModel } from '@/lib/types'
 import { useId } from 'react'
 import { useAppStore } from '@/lib/store'
-import { resultStatus } from '@/features/stats/domain/statistics'
+import { resultStatus } from '@/lib/statistics'
 
 interface JudgePanelProps {
     models: LLMModel[]

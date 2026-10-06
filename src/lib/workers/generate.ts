@@ -1,5 +1,5 @@
 import type { StreamRequest, StreamEvent } from '../streaming/protocol'
-import { DecisionError } from '@/features/decisions/errors'
+import { DecisionError } from '../errors'
 
 export async function executeGeneration(
     { model, messages, resultId, sessionId }: StreamRequest,

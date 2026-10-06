@@ -1,5 +1,5 @@
 import type { RuleEvaluation, TestCase } from '@/lib/types'
-import { parseDecisionPrompt, scoreDecision } from '@/features/decisions/domain'
+import { parseDecisionPrompt, scoreDecision } from '@/lib/decisions'
 
 function normalizeText(value: string): string {
     return value.replace(/\r\n/g, '\n').trim()

@@ -10,11 +10,11 @@ import {
 } from '@/lib/hooks/useStoreSelectors'
 import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { isSendShortcut } from '@/features/layout/useGlobalHotkeys'
+import { isSendShortcut } from '@/lib/hotkeys'
 import { MentionPicker } from './MentionPicker'
 import { AttachmentPreview, previewKeyFor } from './AttachmentPreview'
 import { DecisionComposer } from '@/features/decisions/DecisionComposer'
-import { decisionRequestSchema } from '@/features/decisions/domain'
+import { decisionRequestSchema } from '@/lib/decisions'
 
 interface ArenaInputProps {
     input: string

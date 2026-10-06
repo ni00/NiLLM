@@ -8,7 +8,7 @@ import {
     type ExperimentModelStat,
     type ComparisonMetric
 } from '@/features/experiments/domain/statistics'
-import { resultStatus } from '../domain/statistics'
+import { resultStatus } from '@/lib/statistics'
 import { formatStatCost as formatUSD } from '../display'
 import { ExperimentCharts } from './ExperimentCharts'
 

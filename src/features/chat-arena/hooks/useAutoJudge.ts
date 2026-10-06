@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/lib/store'
 import { LLMModel, ChatSession } from '@/lib/types'
-import { resultStatus } from '@/features/stats/domain/statistics'
+import { resultStatus } from '@/lib/statistics'
 import {
     registerStreamCancellation,
     streamGeneration

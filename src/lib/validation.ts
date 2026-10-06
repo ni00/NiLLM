@@ -1,9 +1,6 @@
 import { z } from 'zod'
 import { PROVIDER_IDS, SAMPLING_PARAMETERS } from './types'
-import {
-    parseDecisionPrompt,
-    validateDecisionExpected
-} from '@/features/decisions/domain'
+import { parseDecisionPrompt, validateDecisionExpected } from '@/lib/decisions'
 import type {
     BenchmarkResult,
     ChatSession,

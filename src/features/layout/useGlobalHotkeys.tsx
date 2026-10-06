@@ -11,14 +11,6 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
-export function isSendShortcut(event: KeyboardEvent): boolean {
-    return (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === 'Enter' &&
-        !event.shiftKey
-    )
-}
-
 interface CommandEntry {
     id: string
     label: string

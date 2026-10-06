@@ -1,5 +1,51 @@
 import { z } from 'zod'
 
+export const decisionExpectedSchema = z
+    .record(
+        z.string().min(1),
+        z.union([z.string(), z.number().finite(), z.boolean()])
+    )
+    .refine(
+        (value) => Object.keys(value).length > 0,
+        'Add at least one expected decision.'
+    )
+
+export function validateDecisionExpected(
+    request: { questions: Record<string, DecisionQuestion> },
+    value: unknown
+) {
+    const expected = decisionExpectedSchema.parse(value)
+    for (const [id, target] of Object.entries(expected)) {
+        const question = Object.hasOwn(request.questions, id)
+            ? request.questions[id]
+            : undefined
+        if (!question)
+            throw new Error('Expected decision refers to an unknown question.')
+        if (
+            question.type === 'choice' &&
+            (typeof target !== 'string' ||
+                !Object.hasOwn(question.criteria, target))
+        )
+            throw new Error(
+                'Expected choice must be one of the defined options.'
+            )
+        if (
+            question.type === 'score' &&
+            (typeof target !== 'number' ||
+                target < 0 ||
+                target > question.criteria.length - 1)
+        )
+            throw new Error('Expected score must be within the defined levels.')
+        if (
+            question.type === 'noul' &&
+            typeof target !== 'boolean' &&
+            (typeof target !== 'number' || target < 0 || target > 1)
+        )
+            throw new Error('Expected Noul must be a boolean or a probability.')
+    }
+    return expected
+}
+
 const description = z.union([
     z.string(),
     z.record(z.string(), z.json()),
@@ -236,6 +282,24 @@ export function parseDecisionPrompt(prompt: string): DecisionRequest {
     }
 }
 
+export function scoreDecision(
+    request: DecisionRequest,
+    value: unknown,
+    expectedValue: unknown,
+    tolerance = 0.1
+): boolean {
+    const expected = validateDecisionExpected(request, expectedValue)
+    const response = validateDecisionResponse(request, value)
+    return Object.entries(expected).every(([id, target]) => {
+        const answer = response.answers[id]
+        if (answer.type === 'choice') return answer.choice === target
+        if (answer.type === 'noul' && typeof target === 'boolean')
+            return answer.noul >= 0.5 === target
+        const actual = answer.type === 'noul' ? answer.noul : answer.score
+        return Math.abs(actual - Number(target)) <= tolerance + Number.EPSILON
+    })
+}
+
 export const DECISION_EXAMPLE: DecisionRequest = {
     state: 'I was charged twice. Please refund the duplicate payment today.',
     questions: {
@@ -258,68 +322,4 @@ export const DECISION_EXAMPLE: DecisionRequest = {
             criteria: ['No deadline', 'This week', 'Today']
         }
     }
-}
-
-export const decisionExpectedSchema = z
-    .record(
-        z.string().min(1),
-        z.union([z.string(), z.number().finite(), z.boolean()])
-    )
-    .refine(
-        (value) => Object.keys(value).length > 0,
-        'Add at least one expected decision.'
-    )
-
-export function validateDecisionExpected(
-    request: DecisionRequest,
-    value: unknown
-) {
-    const expected = decisionExpectedSchema.parse(value)
-    for (const [id, target] of Object.entries(expected)) {
-        const question = Object.hasOwn(request.questions, id)
-            ? request.questions[id]
-            : undefined
-        if (!question)
-            throw new Error('Expected decision refers to an unknown question.')
-        if (
-            question.type === 'choice' &&
-            (typeof target !== 'string' ||
-                !Object.hasOwn(question.criteria, target))
-        )
-            throw new Error(
-                'Expected choice must be one of the defined options.'
-            )
-        if (
-            question.type === 'score' &&
-            (typeof target !== 'number' ||
-                target < 0 ||
-                target > question.criteria.length - 1)
-        )
-            throw new Error('Expected score must be within the defined levels.')
-        if (
-            question.type === 'noul' &&
-            typeof target !== 'boolean' &&
-            (typeof target !== 'number' || target < 0 || target > 1)
-        )
-            throw new Error('Expected Noul must be a boolean or a probability.')
-    }
-    return expected
-}
-
-export function scoreDecision(
-    request: DecisionRequest,
-    value: unknown,
-    expectedValue: unknown,
-    tolerance = 0.1
-): boolean {
-    const expected = validateDecisionExpected(request, expectedValue)
-    const response = validateDecisionResponse(request, value)
-    return Object.entries(expected).every(([id, target]) => {
-        const answer = response.answers[id]
-        if (answer.type === 'choice') return answer.choice === target
-        if (answer.type === 'noul' && typeof target === 'boolean')
-            return answer.noul >= 0.5 === target
-        const actual = answer.type === 'noul' ? answer.noul : answer.score
-        return Math.abs(actual - Number(target)) <= tolerance + Number.EPSILON
-    })
 }

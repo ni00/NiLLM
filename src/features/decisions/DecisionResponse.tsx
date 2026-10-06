@@ -1,5 +1,5 @@
 import { useI18n } from '@/lib/i18n'
-import { decisionResponseSchema } from './domain'
+import { decisionResponseSchema } from '@/lib/decisions'
 
 export function DecisionResponse({ response }: { response: string }) {
     const t = useI18n()

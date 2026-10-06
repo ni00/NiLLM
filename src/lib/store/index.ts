@@ -5,7 +5,7 @@ import {
     persistenceFor
 } from './persistence'
 import { cancelAllStreams } from '../streaming/cancellation'
-import { abortStreamingUI } from '@/features/benchmark/streaming-ui'
+import { abortStreamingUI, configureStreamingUI } from './streaming-ui'
 import { parseBackup } from '../validation'
 import { ModelsSlice, createModelsSlice } from './models'
 import { SessionsSlice, createSessionsSlice } from './sessions'
@@ -132,6 +132,9 @@ export const createAppState: StateCreator<AppState> = (set, get, api) => ({
 })
 
 export const useAppStore = create<AppState>()(createAppState)
+configureStreamingUI((updates) =>
+    useAppStore.getState().setBatchedStreamingData(updates)
+)
 
 const persistence = attachPersistence(useAppStore, indexedDBStorage)
 export const storeHydration = persistence.hydrated

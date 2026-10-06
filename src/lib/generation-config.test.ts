@@ -6,7 +6,7 @@ import {
     resetConfigField,
     resolveGenerationConfig,
     applyModelCapabilities
-} from './config'
+} from './generation-config'
 
 const global: GenerationConfig = {
     maxConcurrent: 4,

@@ -19,7 +19,7 @@ import {
     mergeConfigPatch,
     resetConfigField,
     resolveGenerationConfig
-} from '@/features/benchmark/config'
+} from '@/lib/generation-config'
 import { MAX_EXPERIMENT_TASKS } from '../domain/plan'
 import { ConfigEditor } from '@/features/chat-arena/components/ConfigEditor'
 import { ParameterPresetControls } from '@/features/chat-arena/components/ParameterPresetControls'

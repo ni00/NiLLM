@@ -13,11 +13,9 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/components/ui/dialog'
-import {
-    DECISION_EXAMPLE,
-    decisionRequestSchema,
-    parseDecisionPrompt
-} from './domain'
+import { DECISION_EXAMPLE } from '@/lib/decisions'
+import type { DecisionRequest } from '@/lib/decisions'
+import { decisionRequestSchema, parseDecisionPrompt } from '@/lib/decisions'
 
 export function DecisionComposer({
     input,
@@ -34,7 +32,7 @@ export function DecisionComposer({
     const [questions, setQuestions] = useState('')
     const [error, setError] = useState('')
     const begin = () => {
-        let request = DECISION_EXAMPLE
+        let request: DecisionRequest = DECISION_EXAMPLE
         try {
             request = parseDecisionPrompt(input)
         } catch {

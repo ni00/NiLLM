@@ -9,7 +9,7 @@ import type {
     TelemetryConfigPatch,
     TimeoutConfig
 } from '@/lib/types'
-import { resolveDecisionProtocol } from '@/features/decisions/protocol'
+import { resolveDecisionProtocol } from '@/lib/providers/decisions'
 
 const SCALAR_KEYS = [
     'temperature',

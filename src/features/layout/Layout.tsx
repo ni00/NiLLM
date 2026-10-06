@@ -4,12 +4,9 @@ import { useState } from 'react'
 import { Menu, RotateCcw, FileDown, Loader2, Square } from 'lucide-react'
 import { useAppPreferences } from '@/features/settings/useAppPreferences'
 import { useGlobalHotkeys } from '@/features/layout/useGlobalHotkeys'
-import { useQueueProcessor } from '@/features/chat-arena/hooks/useQueueProcessor'
+import { useQueueProcessor } from '@/app/useQueueProcessor'
 import { usePageVisibility } from '@/lib/hooks/usePageVisibility'
-import {
-    pauseStreamingUI,
-    resumeStreamingUI
-} from '@/features/benchmark/streaming-ui'
+import { pauseStreamingUI, resumeStreamingUI } from '@/lib/store/streaming-ui'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import {

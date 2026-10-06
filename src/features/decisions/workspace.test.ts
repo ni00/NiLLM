@@ -7,7 +7,7 @@ import { compareExperiments } from '@/features/experiments/domain/statistics'
 import {
     applyModelCapabilities,
     resolveGenerationConfig
-} from '@/features/benchmark/config'
+} from '@/lib/generation-config'
 import { captureModelSnapshot } from '@/features/benchmark/snapshots'
 import { aggregateStatistics } from '@/features/stats/domain/statistics'
 import { buildReportDocument } from '@/features/stats/domain/report'

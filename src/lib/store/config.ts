@@ -1,6 +1,6 @@
 import type { AppState } from './index'
 import { StateCreator } from 'zustand'
-import { mergeGenerationConfig } from '@/features/benchmark/config'
+import { mergeGenerationConfig } from '@/lib/generation-config'
 import { parameterPresetSchema } from '@/lib/validation'
 import {
     GenerationConfig,

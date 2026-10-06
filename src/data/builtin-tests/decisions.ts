@@ -1,5 +1,5 @@
 import type { TestSet } from '@/lib/types'
-import { DECISION_EXAMPLE } from '@/features/decisions/domain'
+import { DECISION_EXAMPLE } from '@/lib/decisions'
 
 export function getDecisionTests(language: 'en' | 'zh' | 'ja'): TestSet {
     return {

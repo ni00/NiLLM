@@ -1,7 +1,7 @@
 import { useI18n } from '@/lib/i18n'
 import { Ban, CircleSlash, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { resultStatus } from '@/features/stats/domain/statistics'
+import { resultStatus } from '@/lib/statistics'
 import { StreamingMarkdown } from '../StreamingMarkdown'
 import { ThinkingBlock } from './ThinkingBlock'
 import { DecisionResponse } from '@/features/decisions/DecisionResponse'

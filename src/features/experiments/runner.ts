@@ -7,12 +7,12 @@ import type {
     ModelSnapshot
 } from '@/lib/types'
 import { getBaseURL } from '@/lib/providers/catalog'
-import { applyModelCapabilities } from '@/features/benchmark/config'
+import { applyModelCapabilities } from '@/lib/generation-config'
 import { hasImageInput } from '@/lib/streaming/messages'
 import { endpointFingerprint } from '@/features/benchmark/snapshots'
 import { runWorkerStream } from '@/features/benchmark/worker-stream'
 import { runConcurrent } from '@/features/benchmark/concurrency'
-import { scheduleStreamingUpdate } from '@/features/benchmark/streaming-ui'
+import { scheduleStreamingUpdate } from '@/lib/store/streaming-ui'
 import { registerExperimentExecution } from './runtime'
 import { evaluateExpected } from './domain/scoring'
 

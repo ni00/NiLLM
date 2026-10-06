@@ -1,7 +1,7 @@
 import { useI18n } from '@/lib/i18n'
 import { KeyboardEvent, useCallback, useEffect, useState, useMemo } from 'react'
 import { LLMModel } from '@/lib/types'
-import { parseDecisionPrompt } from '@/features/decisions/domain'
+import { parseDecisionPrompt } from '@/lib/decisions'
 import { ArenaHeader } from '@/features/chat-arena/components/ArenaHeader'
 import { ArenaInput } from '@/features/chat-arena/components/ArenaInput'
 import { ModelColumn } from '@/features/chat-arena/components/ModelColumn'

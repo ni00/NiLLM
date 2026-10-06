@@ -50,7 +50,7 @@ import {
     summarizeScoringCoverage,
     useExperimentJudging
 } from '@/features/experiments/hooks/useExperimentJudging'
-import { resultStatus } from '@/features/stats/domain/statistics'
+import { resultStatus } from '@/lib/statistics'
 import { formatUSD } from '@/features/stats/domain/export'
 
 const MODEL_PAGE_SIZE = 6

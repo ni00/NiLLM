@@ -13,7 +13,7 @@ import {
     exportStatsCSV,
     formatUSD
 } from './export'
-import type { ModelStat } from './statistics'
+import type { ModelStat } from '@/lib/statistics'
 
 const FINGERPRINT = 'b'.repeat(64)
 

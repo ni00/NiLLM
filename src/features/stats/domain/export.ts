@@ -1,5 +1,5 @@
 import { providerLabel } from '@/lib/providers/catalog'
-import type { ModelStat } from './statistics'
+import type { ModelStat } from '@/lib/statistics'
 import type {
     ReportDocument,
     ReportModelSnapshot,

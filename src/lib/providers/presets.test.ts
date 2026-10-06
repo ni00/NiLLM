@@ -5,7 +5,7 @@ import { model } from '@/test/fixtures'
 import {
     applyModelCapabilities,
     resolveGenerationConfig
-} from '@/features/benchmark/config'
+} from '@/lib/generation-config'
 import { buildProviderModels } from '@/features/models/domain/models'
 import { getBaseURL, providerGroupKey, providerProtocol } from './catalog'
 import {

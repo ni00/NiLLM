@@ -12,12 +12,12 @@ import {
     decisionOutputSchema,
     parseDecisionPrompt,
     validateDecisionResponse
-} from './domain'
+} from '@/lib/decisions'
 import {
     DECISION_SYSTEM_PROMPT,
     decisionEndpoint,
     resolveDecisionProtocol
-} from './protocol'
+} from '@/lib/providers/decisions'
 import { requestDecisionResponse } from './responses'
 import { normalizeUsage, usageMetrics, type TokenUsage } from '@/lib/usage'
 
@@ -32,8 +32,9 @@ const usageSchema = z.object({
         .optional()
 })
 
-import { DecisionError } from './errors'
-export { DecisionError } from './errors'
+import { DecisionError } from '@/lib/errors'
+
+export { DecisionError }
 
 /** One independent decision request. Native Jev never enters a chat adapter. */
 export async function executeDecision(

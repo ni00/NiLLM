@@ -12,7 +12,7 @@ import {
 import type { ChartDataPoint, RadarDataPoint } from '../display'
 import type { ReportInput } from '../domain/report'
 import { providerLabel } from '@/lib/providers/catalog'
-export type { ModelStat } from '../domain/statistics'
+export type { ModelStat } from '@/lib/statistics'
 
 export function useStats() {
     const sessions = useSessions(),

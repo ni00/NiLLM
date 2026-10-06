@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { getDecisionTests } from '@/data/builtin-tests/decisions'
 import { evaluateExpected } from '@/features/experiments/domain/scoring'
 import { testSetSchema } from '@/lib/validation'
+import { DECISION_EXAMPLE } from '@/lib/decisions'
 import {
-    DECISION_EXAMPLE,
     decisionOutputSchema,
     parseDecisionPrompt,
     validateDecisionResponse
-} from './domain'
+} from '@/lib/decisions'
 
 import { exampleResponse } from '@/test/decision-fixtures'
 

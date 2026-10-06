@@ -10,7 +10,7 @@ import {
     registerStreamCancellation,
     streamGeneration
 } from '@/lib/streaming/cancellation'
-import { resultStatus } from '@/features/stats/domain/statistics'
+import { resultStatus } from '@/lib/statistics'
 import {
     DEFAULT_JUDGE_PROMPT,
     judgeResponses,

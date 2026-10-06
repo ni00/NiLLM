@@ -9,7 +9,7 @@ import type {
 import {
     applyModelCapabilities,
     resolveGenerationConfig
-} from '@/features/benchmark/config'
+} from '@/lib/generation-config'
 import { captureModelSnapshot } from '@/features/benchmark/snapshots'
 import {
     providerOptionsKey,

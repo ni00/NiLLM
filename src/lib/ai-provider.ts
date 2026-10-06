@@ -5,7 +5,7 @@ import {
 } from 'ai'
 import type { LLMModel } from './types'
 import { getBaseURL, providerProtocol } from './providers/catalog'
-import { resolveDecisionProtocol } from '@/features/decisions/protocol'
+import { resolveDecisionProtocol } from './providers/decisions'
 import { providerFetch } from './providers/transport'
 
 type ModelFactory = (modelId: string) => Exclude<LanguageModel, string>

@@ -8,7 +8,7 @@ import {
     applyModelCapabilities,
     resetConfigField,
     resolveGenerationConfig
-} from '@/features/benchmark/config'
+} from '@/lib/generation-config'
 import { ConfigEditor } from './ConfigEditor'
 import { ParameterPresetControls } from './ParameterPresetControls'
 export interface ModelConfigPanelProps {

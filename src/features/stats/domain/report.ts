@@ -20,17 +20,15 @@ import { SAMPLING_PARAMETERS } from '@/lib/types'
 import { publicEndpoint } from '@/features/benchmark/snapshots'
 import {
     aggregateStatistics,
-    resultStatus,
     selectStatisticsResults,
-    type ModelStat,
     type StatsFilter
 } from './statistics'
 import {
     aggregateExperimentStatistics,
     compareExperiments,
-    type ExperimentComparison,
-    type TrialStat
+    type ExperimentComparison
 } from '../../experiments/domain/statistics'
+import { resultStatus, type ModelStat, type TrialStat } from '@/lib/statistics'
 
 /** Apply content exclusions throughout records, manifests, snapshots and
  * comparisons; reasoning requires includeContent. Scores remain available. */

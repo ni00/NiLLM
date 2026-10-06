@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { model, result, session } from '@/test/fixtures'
-import {
-    aggregateStatistics,
-    percentile,
-    selectStatisticsResults,
-    summarizeModelResults
-} from './statistics'
+import { aggregateStatistics, selectStatisticsResults } from './statistics'
+import { percentile, summarizeModelResults } from '@/lib/statistics'
 import { csvCell, exportStatsCSV } from './export'
 import { captureModelSnapshot } from '@/features/benchmark/snapshots'
-import { resolveGenerationConfig } from '@/features/benchmark/config'
+import { resolveGenerationConfig } from '@/lib/generation-config'
 import { providerGroupKey } from '@/lib/providers/catalog'
 import { buildReportDocument } from './report'
 

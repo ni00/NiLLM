@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { model } from '@/test/fixtures'
 import type { StreamEvent } from '@/lib/streaming/protocol'
-import { DECISION_EXAMPLE } from './domain'
+import { DECISION_EXAMPLE } from '@/lib/decisions'
 import { executeDecision } from './execute'
 import { exampleResponse } from '@/test/decision-fixtures'
 

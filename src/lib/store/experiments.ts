@@ -10,7 +10,7 @@ import {
     cancelExperimentExecution,
     cancelExperimentJudging
 } from '@/features/experiments/runtime'
-import { resultStatus } from '@/features/stats/domain/statistics'
+import { resultStatus } from '@/lib/statistics'
 import { INTERRUPTED_ERROR, closePendingAttempts } from './recovery'
 
 export interface ExperimentsSlice {

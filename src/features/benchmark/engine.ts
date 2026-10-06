@@ -1,10 +1,13 @@
 import { runConcurrent } from './concurrency'
-import { resolveGenerationConfig, applyModelCapabilities } from './config'
+import {
+    resolveGenerationConfig,
+    applyModelCapabilities
+} from '@/lib/generation-config'
 import { captureModelSnapshot } from './snapshots'
 import { runWorkerStream, type StreamOutcome } from './worker-stream'
-import { scheduleStreamingUpdate } from './streaming-ui'
+import { scheduleStreamingUpdate } from '@/lib/store/streaming-ui'
 import { hasImageInput } from '@/lib/streaming/messages'
-import { parseDecisionPrompt } from '@/features/decisions/domain'
+import { parseDecisionPrompt } from '@/lib/decisions'
 import { useAppStore } from '@/lib/store'
 import {
     registerStreamCancellation,

@@ -9,7 +9,7 @@ import type {
 import {
     applyModelCapabilities,
     resolveGenerationConfig
-} from '@/features/benchmark/config'
+} from '@/lib/generation-config'
 import {
     experimentVariantSchema,
     generationConfigPatchSchema,
@@ -17,7 +17,7 @@ import {
     testSetSchema
 } from '@/lib/validation'
 import { captureModelSnapshot } from '@/features/benchmark/snapshots'
-import { parseDecisionPrompt } from '@/features/decisions/domain'
+import { parseDecisionPrompt } from '@/lib/decisions'
 
 export const MAX_EXPERIMENT_TASKS = 50000
 
