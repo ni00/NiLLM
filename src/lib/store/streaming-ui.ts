@@ -55,10 +55,6 @@ export function resumeStreamingUI() {
     }
 }
 
-export function getPendingUpdatesCount(): number {
-    return Object.keys(pendingUpdates).length
-}
-
 export function scheduleStreamingUpdate(
     id: string,
     update: Partial<BenchmarkResult> | null
