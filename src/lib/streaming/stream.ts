@@ -1,6 +1,10 @@
 import { streamText, type LanguageModelUsage } from 'ai'
 import { normalizeUsage } from '@/lib/usage'
 import { resolveModelPricing } from '@/lib/providers/presets'
+import {
+    providerOptionsKey,
+    samplingProviderOptions
+} from '@/lib/providers/provider-options'
 import { getProvider } from '@/lib/ai-provider'
 import type { LLMModel, Message } from '@/lib/types'
 import type { StreamEvent } from './protocol'
@@ -44,12 +48,8 @@ export async function streamModel(
             ? { 'x-opencode-session': sessionId || resultId }
             : undefined,
         providerOptions: {
-            [model.provider === 'other' ? 'custom' : model.provider]: {
-                ...(config?.minP !== undefined ? { min_p: config.minP } : {}),
-                ...(config?.repetitionPenalty !== undefined
-                    ? { repetition_penalty: config.repetitionPenalty }
-                    : {})
-            }
+            [providerOptionsKey(model.provider)]:
+                samplingProviderOptions(config)
         },
         telemetry: {
             isEnabled: config?.telemetry?.isEnabled ?? false,

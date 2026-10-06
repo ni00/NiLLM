@@ -12,7 +12,7 @@ import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { isSendShortcut } from '@/features/layout/useGlobalHotkeys'
 import { MentionPicker } from './MentionPicker'
-import { AttachmentPreview } from './AttachmentPreview'
+import { AttachmentPreview, previewKeyFor } from './AttachmentPreview'
 import { DecisionComposer } from '@/features/decisions/DecisionComposer'
 import { decisionRequestSchema } from '@/features/decisions/domain'
 
@@ -251,8 +251,7 @@ export const ArenaInput = ({
         const processFiles = async () => {
             for (const file of attachments) {
                 if (file.type.startsWith('image/')) {
-                    const url = URL.createObjectURL(file)
-                    newPreviews[file.name] = url
+                    newPreviews[previewKeyFor(file)] = URL.createObjectURL(file)
                 }
             }
             if (isMounted) {

@@ -6,6 +6,7 @@ import { attachPersistence, type PersistenceController } from './persistence'
 import { indexedDBStorage } from './indexeddb-storage'
 import { model, result, session } from '@/test/fixtures'
 import { planExperiment } from '@/features/experiments/domain/plan'
+import { parseBackup } from '@/lib/validation'
 import type { BenchmarkResult, ExperimentRun } from '@/lib/types'
 
 const controllers: PersistenceController[] = []
@@ -194,6 +195,90 @@ describe('durable IndexedDB workspaces', () => {
         await indexedDBStorage.removeItem(
             `nillm-task:${encodeURIComponent(run.id)}:${encodeURIComponent(run.tasks[0].id)}`
         )
+        const original = await indexedDBStorage.dump()
+        const { store: restored, persistence: recovery } = await freshStore()
+        expect(restored.getState().persistenceError?.operation).toBe('read')
+        expect(restored.getState().experimentRuns).toEqual([])
+        restored.setState({ language: 'zh' })
+        await recovery.flush()
+        expect(await indexedDBStorage.dump()).toEqual(original)
+    })
+
+    it('keeps and persists records created while storage reads were failing', async () => {
+        const { store, persistence } = await freshStore()
+        store.setState({
+            models: [model()],
+            sessions: [session({ a: [result()] })]
+        })
+        await persistence.flush()
+        vi.spyOn(indexedDBStorage, 'readMany').mockRejectedValueOnce(
+            new Error('Read unavailable')
+        )
+        const { store: restored, persistence: recovery } = await freshStore()
+        expect(restored.getState().persistenceError?.operation).toBe('read')
+        const created = restored.getState().createSession('Offline', ['a'])
+        await recovery.retry()
+        expect(restored.getState().sessions.map((s) => s.id)).toEqual([
+            's',
+            created
+        ])
+        await recovery.flush()
+        const { store: rebooted } = await freshStore()
+        expect(rebooted.getState().sessions.map((s) => s.id)).toEqual([
+            's',
+            created
+        ])
+    })
+
+    it('persists edits that land while a restore is in flight', async () => {
+        const { store, persistence } = await freshStore()
+        store.setState({
+            models: [model()],
+            sessions: [session({ a: [result()] })],
+            theme: 'light'
+        })
+        await persistence.flush()
+        const commit = indexedDBStorage.commit.bind(indexedDBStorage)
+        let created = ''
+        vi.spyOn(indexedDBStorage, 'commit').mockImplementationOnce(
+            async (...args: Parameters<typeof commit>) => {
+                await commit(...args)
+                store.setState({ theme: 'dark' })
+                created = store.getState().createSession('Mid-flight', ['a'])
+            }
+        )
+        await persistence.importValidated(parseBackup({ promptTemplates: [] }))
+        expect(store.getState().theme).toBe('dark')
+        const { store: restored } = await freshStore()
+        expect(restored.getState().promptTemplates).toEqual([])
+        expect(restored.getState().theme).toBe('dark')
+        expect(restored.getState().sessions.map((s) => s.id)).toEqual([
+            created,
+            's'
+        ])
+    })
+
+    it('ignores duplicated ids in the stored workspace index', async () => {
+        const { store, persistence } = await freshStore()
+        store.setState({ sessions: [session({ a: [result()] })] })
+        await persistence.flush()
+        const meta = JSON.parse((await indexedDBStorage.getItem('nillm-meta'))!)
+        meta.sessionIds = ['s', 's']
+        await indexedDBStorage.setItem('nillm-meta', JSON.stringify(meta))
+        const { store: restored } = await freshStore()
+        expect(restored.getState().sessions.map((s) => s.id)).toEqual(['s'])
+        expect(restored.getState().persistenceState).toBe('ready')
+    })
+
+    it('rejects an experiment manifest that disagrees with the workspace index', async () => {
+        const { store, persistence } = await freshStore()
+        const run = await plannedRun()
+        store.setState({ experimentRuns: [run] })
+        await persistence.flush()
+        const key = `nillm-run:${encodeURIComponent(run.id)}`
+        const manifest = JSON.parse((await indexedDBStorage.getItem(key))!)
+        manifest.id = 'other'
+        await indexedDBStorage.setItem(key, JSON.stringify(manifest))
         const original = await indexedDBStorage.dump()
         const { store: restored, persistence: recovery } = await freshStore()
         expect(restored.getState().persistenceError?.operation).toBe('read')

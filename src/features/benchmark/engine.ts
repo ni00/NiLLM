@@ -51,6 +51,9 @@ async function executeStream(
     }
 }
 
+const escapeRegExp = (string: string) =>
+    string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export async function broadcastMessage(
     prompt: string,
     existingSessionId?: string
@@ -62,10 +65,6 @@ export async function broadcastMessage(
 
     if (activeModels.length === 0) {
         throw new Error('No active models selected')
-    }
-
-    const escapeRegExp = (string: string) => {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     }
 
     const isDecision = activeModels.some(

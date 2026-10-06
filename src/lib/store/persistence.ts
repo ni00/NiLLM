@@ -82,6 +82,19 @@ interface Baseline {
     sessions: Map<string, ChatSession>
     runs: Map<string, RunBaseline>
 }
+
+/** Everything persistence reads back out of the store. */
+type WorkspaceState = Pick<
+    AppState,
+    (typeof metaStateKeys)[number] | 'sessions' | 'experimentRuns'
+>
+
+/** The workspace a restore or import just put on disk. */
+interface RestoredWorkspace {
+    meta?: Partial<MetaState>
+    sessions?: ChatSession[]
+    runs?: ExperimentRun[]
+}
 /** The bound hook and vanilla API share getState, but not object identity. */
 const persistenceRegistry = new WeakMap<
     StoreApi<AppState>['getState'],
@@ -203,7 +216,7 @@ function runStateChanged(run: ExperimentRun, prev: RunBaseline | undefined) {
     )
 }
 
-function captureBaseline(state: AppState): Baseline {
+function captureBaseline(state: WorkspaceState): Baseline {
     const runs = new Map<string, RunBaseline>()
     for (const run of state.experimentRuns) {
         const tasks = new Map<
@@ -229,8 +242,33 @@ function captureBaseline(state: AppState): Baseline {
     }
 }
 
+/** Baseline for the workspace now on disk. Restored records replace whatever a
+ * merge kept in memory, so anything that only exists in memory stays dirty and
+ * the next flush writes it. */
+function baselineForDisk(
+    state: WorkspaceState,
+    restored: RestoredWorkspace
+): Baseline {
+    return captureBaseline({
+        ...state,
+        ...restored.meta,
+        ...(restored.sessions !== undefined && {
+            sessions: restored.sessions
+        }),
+        ...(restored.runs !== undefined && { experimentRuns: restored.runs })
+    })
+}
+
 function readError(error: unknown) {
     return error instanceof Error ? error.message : 'Local storage failed.'
+}
+
+/** Restored records first, in-memory records last, so entries created or edited
+ * while storage was unavailable survive a later successful restore. */
+function mergeById<T extends { id: string }>(restored: T[], local: T[]): T[] {
+    if (local.length === 0) return restored
+    const localIds = new Set(local.map((entry) => entry.id))
+    return [...restored.filter((entry) => !localIds.has(entry.id)), ...local]
 }
 
 /** Persist sessions and experiment tasks separately. Coalesce writes (200ms),
@@ -242,6 +280,7 @@ export function attachPersistence(
     let baseline: Baseline | null = null
     let writeBlocked = false
     let importing = false
+    let changedWhilePaused = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let writeQueue = Promise.resolve()
 
@@ -358,7 +397,13 @@ export function attachPersistence(
     let lastSessionsRef = store.getState().sessions
     let lastRunsRef = store.getState().experimentRuns
     const unsubscribe = store.subscribe((state) => {
-        if (!baseline || importing || writeBlocked) return
+        if (!baseline || writeBlocked) return
+        if (importing) {
+            // The import rebases the diff on the post-import state, so anything
+            // the user changes while it runs has to be diffed afterwards.
+            changedWhilePaused = true
+            return
+        }
         if (
             !metaStateKeys.some((key) => state[key] !== baseline!.meta[key]) &&
             state.sessions === lastSessionsRef &&
@@ -370,25 +415,27 @@ export function attachPersistence(
         if (timer === undefined) timer = setTimeout(() => void flush(), 200)
     })
 
-    function applyRestored(input: {
-        meta?: Partial<MetaState>
-        sessions?: ChatSession[]
-        runs?: ExperimentRun[]
-    }) {
+    function applyRestored(input: RestoredWorkspace) {
         store.setState((state) => {
+            // Restoring must never discard records created while storage was
+            // unavailable: in-memory copies win over the older snapshot.
+            const sessions =
+                input.sessions !== undefined
+                    ? mergeById(input.sessions, state.sessions)
+                    : state.sessions
+            const runs =
+                input.runs !== undefined
+                    ? mergeById(input.runs, state.experimentRuns)
+                    : state.experimentRuns
             const selectedSessionId =
                 input.meta?.activeSessionId !== undefined
                     ? input.meta.activeSessionId
                     : state.activeSessionId
             return {
                 ...input.meta,
-                ...(input.sessions !== undefined && {
-                    sessions: input.sessions
-                }),
-                ...(input.runs !== undefined && {
-                    experimentRuns: input.runs
-                }),
-                activeSessionId: (input.sessions ?? state.sessions).some(
+                sessions,
+                experimentRuns: runs,
+                activeSessionId: sessions.some(
                     (session) => session.id === selectedSessionId
                 )
                     ? selectedSessionId
@@ -418,12 +465,16 @@ export function attachPersistence(
 
         const validatedMeta = parseBackup(meta.state)
 
-        const sessionKeys = meta.sessionIds.map(sessionKeyOf)
-        const runKeys = meta.runIds.map(runKeyOf)
+        // A duplicated id would restore the same record twice and desync the
+        // in-memory maps from the diff baseline.
+        const sessionIds = [...new Set(meta.sessionIds)]
+        const runIds = [...new Set(meta.runIds)]
+        const sessionKeys = sessionIds.map(sessionKeyOf)
+        const runKeys = runIds.map(runKeyOf)
         const head = await storage.readMany([...sessionKeys, ...runKeys])
 
         const sessions: ChatSession[] = []
-        for (let index = 0; index < meta.sessionIds.length; index++) {
+        for (let index = 0; index < sessionIds.length; index++) {
             const raw = head[sessionKeys[index]]
             if (raw === null || raw === undefined)
                 throw new Error('Missing session record.')
@@ -437,17 +488,23 @@ export function attachPersistence(
         }
         const parts: RunParts[] = []
         const tailKeys: string[] = []
-        for (let index = 0; index < meta.runIds.length; index++) {
+        for (let index = 0; index < runIds.length; index++) {
+            const runId = runIds[index]
             const raw = head[runKeys[index]]
             if (raw === null || raw === undefined)
                 throw new Error('Missing experiment record.')
             const manifest = JSON.parse(raw) as RunManifest
             if (!manifest || !Array.isArray(manifest.taskIds))
                 throw new Error('Corrupted experiment record.')
-            const stateRaw = runStateKeyOf(manifest.id)
-            tailKeys.push(stateRaw)
+            // The manifest and every tail record are written under the run id
+            // declared by the meta record; a divergence means the record pair
+            // was damaged, and reading on would restore a run under a key that
+            // no future write would ever reach again.
+            if (manifest.id !== runId)
+                throw new Error('Corrupted experiment record.')
+            tailKeys.push(runStateKeyOf(runId))
             for (const taskId of manifest.taskIds)
-                tailKeys.push(taskKeyOf(manifest.id, taskId))
+                tailKeys.push(taskKeyOf(runId, taskId))
             parts.push({
                 manifest,
                 state: {} as RunStateRecord,
@@ -488,11 +545,13 @@ export function attachPersistence(
             )
         })
 
-        applyRestored({
+        const restored: RestoredWorkspace = {
             meta: validatedMeta as Partial<MetaState>,
             sessions: sessions.map(recoverInterruptedSession),
             runs: runs.map(recoverInterruptedExperiment)
-        })
+        }
+        applyRestored(restored)
+        return restored
     }
 
     async function migrateLegacy(raw: string) {
@@ -536,20 +595,27 @@ export function attachPersistence(
         // one transaction, or the old data survives untouched.
         await storage.commit(puts, [LEGACY_KEY])
 
-        applyRestored({
-            meta: validated as Partial<MetaState>,
+        const restored: RestoredWorkspace = {
+            meta,
             sessions,
             runs
-        })
+        }
+        applyRestored(restored)
+        return restored
     }
 
     const hydrate = async () => {
         try {
             store.setState({ persistenceState: 'loading' })
             const head = await storage.readMany([META_KEY, LEGACY_KEY])
-            if (head[META_KEY]) await restoreFromMeta(head[META_KEY])
-            else if (head[LEGACY_KEY]) await migrateLegacy(head[LEGACY_KEY])
-            baseline = captureBaseline(store.getState())
+            const restored = head[META_KEY]
+                ? await restoreFromMeta(head[META_KEY])
+                : head[LEGACY_KEY]
+                  ? await migrateLegacy(head[LEGACY_KEY])
+                  : null
+            baseline = restored
+                ? baselineForDisk(store.getState(), restored)
+                : captureBaseline(store.getState())
             lastSessionsRef = store.getState().sessions
             lastRunsRef = store.getState().experimentRuns
             writeBlocked = false
@@ -593,12 +659,20 @@ export function attachPersistence(
             if (importing)
                 throw new Error('A workspace restore is already in progress.')
             importing = true
+            let rebase = false
             try {
                 // Existing writes settle before the replacement transaction.
                 await flush()
                 if (!baseline || writeBlocked)
                     throw new Error('Local storage is not available.')
+                // Disk truth before the replacement transaction; rebased on if
+                // the workspace changes while the import is in flight.
+                const disk = baseline
                 const state = store.getState()
+                const supplied = {
+                    sessions: data.sessions !== undefined,
+                    runs: data.experimentRuns !== undefined
+                }
                 const sessions =
                     data.sessions !== undefined
                         ? data.sessions.map(recoverInterruptedSession)
@@ -608,7 +682,7 @@ export function attachPersistence(
                         ? data.experimentRuns.map(recoverInterruptedExperiment)
                         : state.experimentRuns
                 const meta = {
-                    ...baseline.meta,
+                    ...disk.meta,
                     ...Object.fromEntries(
                         metaStateKeys
                             .filter(
@@ -633,21 +707,28 @@ export function attachPersistence(
                     [META_KEY]: JSON.stringify({
                         schemaVersion: 1,
                         state: meta,
-                        sessionIds: sessions.map((s) => s.id),
-                        runIds: runs.map((r) => r.id)
+                        // Only a domain this import rewrites may be listed: an
+                        // id without a matching record makes the whole
+                        // workspace unreadable on the next start.
+                        sessionIds: supplied.sessions
+                            ? sessions.map((s) => s.id)
+                            : [...disk.sessions.keys()],
+                        runIds: supplied.runs
+                            ? runs.map((r) => r.id)
+                            : [...disk.runs.keys()]
                     } satisfies MetaRecord)
                 }
                 const deletes: string[] = []
-                if (data.sessions !== undefined) {
+                if (supplied.sessions) {
                     const keep = new Set(sessions.map((s) => s.id))
-                    for (const id of baseline.sessions.keys())
+                    for (const id of disk.sessions.keys())
                         if (!keep.has(id)) deletes.push(sessionKeyOf(id))
                     for (const session of sessions)
                         puts[sessionKeyOf(session.id)] = JSON.stringify(session)
                 }
-                if (data.experimentRuns !== undefined) {
+                if (supplied.runs) {
                     const keep = new Set(runs.map((r) => r.id))
-                    for (const [id, runBase] of baseline.runs) {
+                    for (const [id, runBase] of disk.runs) {
                         if (keep.has(id)) continue
                         deletes.push(runKeyOf(id), runStateKeyOf(id))
                         for (const taskId of runBase.tasks.keys())
@@ -669,16 +750,29 @@ export function attachPersistence(
                 // Commit the whole replacement workspace first; only then is
                 // the in-memory state allowed to follow.
                 await storage.commit(puts, deletes)
+                rebase = changedWhilePaused
+                changedWhilePaused = false
                 applyImportedData(
                     (partial) => store.setState(partial),
                     store.getState(),
                     data
                 )
-                baseline = captureBaseline(store.getState())
+                // An edit that landed while the import was in flight is not on
+                // disk, so diffing against the imported workspace would mark it
+                // as already written. Rebase on the pre-import snapshot instead
+                // and let the next flush rewrite the live workspace.
+                baseline = rebase
+                    ? disk
+                    : baselineForDisk(store.getState(), {
+                          meta,
+                          ...(supplied.sessions && { sessions }),
+                          ...(supplied.runs && { runs })
+                      })
                 lastSessionsRef = store.getState().sessions
                 lastRunsRef = store.getState().experimentRuns
             } finally {
                 importing = false
+                if (rebase) void flush()
             }
         },
         dispose: () => {

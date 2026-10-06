@@ -2,6 +2,18 @@ import { useI18n } from '@/lib/i18n'
 import { X, FileText, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+// Stable per-file identity so duplicate filenames get distinct preview keys.
+const previewKeys = new WeakMap<File, string>()
+
+export const previewKeyFor = (file: File): string => {
+    let key = previewKeys.get(file)
+    if (!key) {
+        key = crypto.randomUUID()
+        previewKeys.set(file, key)
+    }
+    return key
+}
+
 interface AttachmentPreviewProps {
     attachments: File[]
     previews: Record<string, string>
@@ -28,9 +40,9 @@ export function AttachmentPreview({
                     >
                         <div className="border rounded-lg overflow-hidden bg-muted relative w-16 h-16 flex items-center justify-center shadow-sm">
                             {file.type.startsWith('image/') &&
-                            previews[file.name] ? (
+                            previews[previewKeyFor(file)] ? (
                                 <img
-                                    src={previews[file.name]}
+                                    src={previews[previewKeyFor(file)]}
                                     alt={file.name}
                                     className="w-full h-full object-cover"
                                 />

@@ -1,3 +1,5 @@
+import { downloadBlob, isTauriRuntime } from '@/lib/utils'
+
 export async function downloadImage(src: string): Promise<void> {
     if (!src) return
 
@@ -31,14 +33,9 @@ export async function downloadImage(src: string): Promise<void> {
             blob = await response.blob()
         }
 
-        const isTauri =
-            typeof window !== 'undefined' &&
-            // @ts-expect-error Tauri internal properties not typed
-            !!(window.__TAURI_INTERNALS__ || window.__TAURI__)
-
         let savedViaTauri = false
 
-        if (isTauri) {
+        if (isTauriRuntime()) {
             try {
                 const { save } = await import('@tauri-apps/plugin-dialog')
                 const { writeFile } = await import('@tauri-apps/plugin-fs')
@@ -62,14 +59,7 @@ export async function downloadImage(src: string): Promise<void> {
         }
 
         if (!savedViaTauri) {
-            const url = URL.createObjectURL(blob)
-            const link = document.createElement('a')
-            link.href = url
-            link.download = fileName
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-            URL.revokeObjectURL(url)
+            downloadBlob(blob, fileName)
         }
     } catch (error) {
         console.error('Failed to download image:', error)

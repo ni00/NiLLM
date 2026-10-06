@@ -1,10 +1,14 @@
 import type { BenchmarkMetrics, LLMModel } from '@/lib/types'
 import { usageMetrics, type TokenUsage } from '@/lib/usage'
 
+function estimateFromCounts(total: number, cjk: number): number {
+    return Math.ceil(cjk * 1.5 + (total - cjk) / 4)
+}
+
 export function estimateTokens(text: string): number {
     const cjk =
         text.match(/[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]/g)?.length || 0
-    return Math.ceil(cjk * 1.5 + (text.length - cjk) / 4)
+    return estimateFromCounts(text.length, cjk)
 }
 
 /** Count deltas once, without retaining or rescanning the response. */
@@ -24,7 +28,7 @@ export function createTokenCounter() {
                     cjk++
             }
         },
-        count: () => Math.ceil(cjk * 1.5 + (length - cjk) / 4)
+        count: () => estimateFromCounts(length, cjk)
     }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/lib/store'
 import { LLMModel, ChatSession } from '@/lib/types'
 import { resultStatus } from '@/features/stats/domain/statistics'
@@ -27,6 +27,22 @@ export const useAutoJudge = (
     const [showJudgePanel, setShowJudgePanel] = useState(false)
     const [judgePrompt, setJudgePrompt] = useState(DEFAULT_JUDGE_PROMPT)
 
+    // Fire-and-forget status timers must never outlive the hook or leak
+    // into a later judging run's fresh status.
+    const statusTimersRef = useRef<number[]>([])
+
+    const clearStatusTimers = () => {
+        for (const id of statusTimersRef.current) clearTimeout(id)
+        statusTimersRef.current = []
+    }
+
+    const scheduleStatusClear = (fn: () => void, delay: number) => {
+        clearStatusTimers()
+        statusTimersRef.current.push(setTimeout(fn, delay))
+    }
+
+    useEffect(() => clearStatusTimers, [])
+
     useEffect(() => {
         const eligible = models.filter(
             (model) => model.enabled && (model.mode ?? 'chat') === 'chat'
@@ -44,6 +60,8 @@ export const useAutoJudge = (
 
     const handleAutoJudge = async () => {
         const store = useAppStore.getState()
+        // A stale status-clear timer must not wipe this run's fresh status.
+        clearStatusTimers()
         // Shared lock: never start while a generation or another judging
         // batch is running; the queue processor likewise waits for judging.
         if (
@@ -97,7 +115,7 @@ export const useAutoJudge = (
 
             if (candidates.length === 0) {
                 setJudgeStatus('Error: No completed responses to judge')
-                setTimeout(() => setJudgeStatus(null), 3000)
+                scheduleStatusClear(() => setJudgeStatus(null), 3000)
                 return
             }
 
@@ -107,7 +125,7 @@ export const useAutoJudge = (
                 setJudgeStatus(
                     'Error: Select responses to the same prompt before judging.'
                 )
-                setTimeout(() => setJudgeStatus(null), 3000)
+                scheduleStatusClear(() => setJudgeStatus(null), 3000)
                 return
             }
 
@@ -165,7 +183,7 @@ export const useAutoJudge = (
             }
 
             setJudgeStatus('Success! Ratings applied.')
-            setTimeout(() => {
+            scheduleStatusClear(() => {
                 setShowJudgePanel(false)
                 setJudgeStatus(null)
             }, 1000)

@@ -1728,6 +1728,10 @@ export const messages = {
         zh: '数据导入失败',
         ja: 'データのインポートに失敗しました'
     },
+    'Failed to export data': {
+        zh: '数据导出失败',
+        ja: 'データのエクスポートに失敗しました'
+    },
     'Permanently delete all performance data for “{name}”.': {
         zh: '永久删除“{name}”的全部性能数据。',
         ja: '「{name}」のすべての性能データを完全に削除します。'

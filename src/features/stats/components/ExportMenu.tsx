@@ -140,6 +140,9 @@ export function ExportMenu({ input, onClearAll }: ExportMenuProps) {
             setBackupOpen(false)
         } catch (e) {
             console.error('Export failed', e)
+            setImportStatus(
+                e instanceof Error ? e.message : t('Failed to export data')
+            )
         }
     }
 

@@ -11,9 +11,7 @@ import {
     cancelExperimentJudging
 } from '@/features/experiments/runtime'
 import { resultStatus } from '@/features/stats/domain/statistics'
-
-export const INTERRUPTED_ERROR = 'Experiment execution was interrupted.'
-export const CLOSED_ERROR = 'Application closed before the request finished.'
+import { INTERRUPTED_ERROR, closePendingAttempts } from './recovery'
 
 export interface ExperimentsSlice {
     experimentRuns: ExperimentRun[]
@@ -92,7 +90,12 @@ export const createExperimentsSlice: StateCreator<
         set((state) => ({
             experimentRuns: mapRun(state, id, (run) =>
                 run.status === 'paused' || run.status === 'interrupted'
-                    ? { ...run, status: 'queued', error: undefined }
+                    ? {
+                          ...run,
+                          status: 'queued',
+                          error: undefined,
+                          finishedAt: undefined
+                      }
                     : run
             )
         })),
@@ -126,7 +129,8 @@ export const createExperimentsSlice: StateCreator<
                     ...run,
                     status: 'queued',
                     pendingTaskIds: retryIds,
-                    error: undefined
+                    error: undefined,
+                    finishedAt: undefined
                 }
             })
         })),
@@ -233,36 +237,15 @@ export const createExperimentsSlice: StateCreator<
 
     interruptExperiment: (runId) =>
         set((state) => ({
-            experimentRuns: mapRun(state, runId, (run) => {
-                if (run.status !== 'running') return run
-                const recovered: string[] = []
-                const tasks = run.tasks.map((task) => {
-                    const last = task.attempts[task.attempts.length - 1]
-                    if (!last || last.status !== 'pending') return task
-                    recovered.push(task.id)
-                    return {
-                        ...task,
-                        attempts: task.attempts.map((attempt, index) =>
-                            index === task.attempts.length - 1
-                                ? {
-                                      ...attempt,
-                                      status: 'cancelled' as const,
-                                      error: INTERRUPTED_ERROR
-                                  }
-                                : attempt
-                        )
-                    }
-                })
-                const pending = new Set(run.pendingTaskIds)
-                for (const id of recovered) pending.add(id)
-                const order = tasks.map((task) => task.id)
-                return {
-                    ...run,
-                    status: 'interrupted',
-                    error: INTERRUPTED_ERROR,
-                    tasks,
-                    pendingTaskIds: order.filter((id) => pending.has(id))
-                }
-            })
+            experimentRuns: mapRun(state, runId, (run) =>
+                run.status !== 'running'
+                    ? run
+                    : {
+                          ...run,
+                          ...closePendingAttempts(run, INTERRUPTED_ERROR),
+                          status: 'interrupted',
+                          error: INTERRUPTED_ERROR
+                      }
+            )
         }))
 })

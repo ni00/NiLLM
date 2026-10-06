@@ -75,6 +75,7 @@ export function ArenaPage() {
     // Tauri v2 drag and drop support (registered once at page level)
     useEffect(() => {
         let unlisten: (() => void) | undefined
+        let cancelled = false
 
         const setupTauriDragDrop = async () => {
             try {
@@ -137,6 +138,12 @@ export function ArenaPage() {
                         }
                     }
                 })
+                // Unmount raced the async registration: tear the listener
+                // down immediately so it cannot outlive this effect.
+                if (cancelled) {
+                    unlisten()
+                    unlisten = undefined
+                }
             } catch {
                 // Not in Tauri environment
             }
@@ -144,7 +151,9 @@ export function ArenaPage() {
 
         setupTauriDragDrop()
         return () => {
+            cancelled = true
             unlisten?.()
+            unlisten = undefined
         }
     }, [setAttachments])
 

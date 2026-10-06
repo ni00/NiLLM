@@ -5,17 +5,31 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
 }
 
+export function isTauriRuntime() {
+    return (
+        typeof window !== 'undefined' &&
+        // @ts-expect-error Tauri internal properties not typed
+        !!(window.__TAURI_INTERNALS__ || window.__TAURI__)
+    )
+}
+
+export function downloadBlob(blob: Blob, fileName: string) {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+}
+
 export async function downloadFile(
     content: string,
     fileName: string,
     mimeType: string
 ) {
-    const isTauri =
-        typeof window !== 'undefined' &&
-        // @ts-expect-error Tauri internal properties not typed
-        !!(window.__TAURI_INTERNALS__ || window.__TAURI__)
-
-    if (isTauri) {
+    if (isTauriRuntime()) {
         try {
             const { save } = await import('@tauri-apps/plugin-dialog')
             const { writeTextFile } = await import('@tauri-apps/plugin-fs')
@@ -45,15 +59,7 @@ export async function downloadFile(
         }
     }
 
-    const blob = new Blob([content], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = fileName
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadBlob(new Blob([content], { type: mimeType }), fileName)
 }
 
 export async function downloadJson(data: unknown, fileName: string) {

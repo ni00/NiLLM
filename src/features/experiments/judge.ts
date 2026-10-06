@@ -11,6 +11,10 @@ import {
     resolveGenerationConfig
 } from '@/features/benchmark/config'
 import { captureModelSnapshot } from '@/features/benchmark/snapshots'
+import {
+    providerOptionsKey,
+    samplingProviderOptions
+} from '@/lib/providers/provider-options'
 import { judgeEvaluationSchema } from '@/lib/validation'
 
 /** The service appends schema and allowed-ID constraints to this editable prompt. */
@@ -293,16 +297,8 @@ export async function judgeResponses(
                 })
             },
             providerOptions: {
-                [judgeModel.provider === 'other'
-                    ? 'custom'
-                    : judgeModel.provider]: {
-                    ...(config.minP !== undefined
-                        ? { min_p: config.minP }
-                        : {}),
-                    ...(config.repetitionPenalty !== undefined
-                        ? { repetition_penalty: config.repetitionPenalty }
-                        : {})
-                }
+                [providerOptionsKey(judgeModel.provider)]:
+                    samplingProviderOptions(config)
             }
         })
         signal?.throwIfAborted()

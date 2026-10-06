@@ -2,6 +2,10 @@ import { generateObject } from 'ai'
 import { z } from 'zod'
 import { getProvider } from '@/lib/ai-provider'
 import { resolveModelPricing } from '@/lib/providers/presets'
+import {
+    providerOptionsKey,
+    samplingProviderOptions
+} from '@/lib/providers/provider-options'
 import type { LLMModel, Message } from '@/lib/types'
 import type { StreamEvent } from '@/lib/streaming/protocol'
 import {
@@ -141,14 +145,8 @@ export async function executeDecision(
             maxRetries: 0,
             abortSignal: signal,
             providerOptions: {
-                [model.provider === 'other' ? 'custom' : model.provider]: {
-                    ...(config?.minP !== undefined
-                        ? { min_p: config.minP }
-                        : {}),
-                    ...(config?.repetitionPenalty !== undefined
-                        ? { repetition_penalty: config.repetitionPenalty }
-                        : {})
-                }
+                [providerOptionsKey(model.provider)]:
+                    samplingProviderOptions(config)
             },
             telemetry: {
                 isEnabled: config?.telemetry?.isEnabled ?? false,

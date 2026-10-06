@@ -108,4 +108,27 @@ describe('experiment human ratings', () => {
             unregister()
         }
     })
+
+    it('clears the terminal timestamp when a run is resumed or retried', async () => {
+        const { store, run, task } = await workspace('error')
+        store.setState({ experimentRuns: [{ ...run, finishedAt: 999 }] })
+        store.getState().retryFailedExperiment(run.id)
+        expect(store.getState().experimentRuns[0]).toMatchObject({
+            status: 'queued',
+            pendingTaskIds: [task.id],
+            finishedAt: undefined
+        })
+        store.setState((state) => ({
+            experimentRuns: state.experimentRuns.map((current) => ({
+                ...current,
+                status: 'paused' as const,
+                finishedAt: 999
+            }))
+        }))
+        store.getState().resumeExperiment(run.id)
+        expect(store.getState().experimentRuns[0]).toMatchObject({
+            status: 'queued',
+            finishedAt: undefined
+        })
+    })
 })
