@@ -55,23 +55,6 @@ export interface StatsFilter {
     providerKey?: string
     mode?: 'chat' | 'image' | 'decision'
 }
-export interface ChartDataPoint {
-    id: string
-    name: string
-    provider: string
-    speed?: number
-    latency?: number
-    rating: number
-    tokens: number
-}
-export interface RadarDataPoint {
-    id: string
-    subject: string
-    provider: string
-    Speed?: number
-    Quality?: number
-    Responsiveness?: number
-}
 const positive = (value: number | undefined): value is number =>
     typeof value === 'number' && Number.isFinite(value) && value > 0
 const nonnegative = (value: number | undefined): value is number =>

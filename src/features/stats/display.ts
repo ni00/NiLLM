@@ -7,6 +7,25 @@ const currencyFormat = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 2
 })
 
+export interface ChartDataPoint {
+    id: string
+    name: string
+    provider: string
+    speed?: number
+    latency?: number
+    rating: number
+    tokens: number
+}
+
+export interface RadarDataPoint {
+    id: string
+    subject: string
+    provider: string
+    Speed?: number
+    Quality?: number
+    Responsiveness?: number
+}
+
 export function formatStatNumber(value: number | undefined) {
     return value !== undefined && Number.isFinite(value)
         ? numberFormat.format(value)

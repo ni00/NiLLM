@@ -7,17 +7,12 @@ import {
 } from '@/lib/hooks/useStoreSelectors'
 import {
     summarizeSelectedStatistics,
-    selectStatisticsResults,
-    type ChartDataPoint,
-    type RadarDataPoint
+    selectStatisticsResults
 } from '../domain/statistics'
+import type { ChartDataPoint, RadarDataPoint } from '../display'
 import type { ReportInput } from '../domain/report'
 import { providerLabel } from '@/lib/providers/catalog'
-export type {
-    ModelStat,
-    ChartDataPoint,
-    RadarDataPoint
-} from '../domain/statistics'
+export type { ModelStat } from '../domain/statistics'
 
 export function useStats() {
     const sessions = useSessions(),

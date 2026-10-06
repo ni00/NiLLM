@@ -16,7 +16,7 @@ import { SelectDropdown } from '@/components/ui/select-dropdown'
 import { useI18n } from '@/lib/i18n'
 import type { BenchmarkResult } from '@/lib/types'
 import type { ExperimentModelStat } from '@/features/experiments/domain/statistics'
-import { formatStatCost as formatUSD, formatStatNumber } from '../display'
+import { formatStatCost, formatStatNumber } from '../display'
 
 interface ChartTrial {
     result: BenchmarkResult
@@ -318,7 +318,7 @@ export function ExperimentCharts({
                                                 'Mean known generation cost (USD)'
                                             )}
                                             tickFormatter={(value: number) =>
-                                                formatUSD(value)
+                                                formatStatCost(value)
                                             }
                                             fontSize={10}
                                         />
@@ -363,7 +363,7 @@ export function ExperimentCharts({
                                                                 'Mean known generation cost (USD)'
                                                             )}
                                                             :{' '}
-                                                            {formatUSD(
+                                                            {formatStatCost(
                                                                 row.cost
                                                             )}{' '}
                                                             · n={row.priced}
@@ -419,7 +419,7 @@ export function ExperimentCharts({
                                                 </td>
                                                 <td className="p-2">{row.n}</td>
                                                 <td className="p-2">
-                                                    {formatUSD(row.cost)}
+                                                    {formatStatCost(row.cost)}
                                                 </td>
                                                 <td className="p-2">
                                                     {row.priced}

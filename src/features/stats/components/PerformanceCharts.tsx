@@ -8,8 +8,7 @@ import {
     CardDescription
 } from '@/components/ui/card'
 import { Activity, Clock } from 'lucide-react'
-import type { ChartDataPoint } from '../hooks/useStats'
-import { formatStatNumber } from '../display'
+import { formatStatNumber, type ChartDataPoint } from '../display'
 
 export const PerformanceCharts = memo(function PerformanceCharts({
     chartData

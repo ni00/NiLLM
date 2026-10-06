@@ -8,8 +8,7 @@ import {
     CardDescription
 } from '@/components/ui/card'
 import { Star, Zap, MessageSquare } from 'lucide-react'
-import type { RadarDataPoint } from '../hooks/useStats'
-import { formatStatNumber } from '../display'
+import { formatStatNumber, type RadarDataPoint } from '../display'
 
 export const CapabilityRadar = memo(function CapabilityRadar({
     radarData,

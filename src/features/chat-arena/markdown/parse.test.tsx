@@ -47,6 +47,21 @@ it('preserves full-document Markdown semantics through unfinished fences, tables
     expect(html('See [reference][later].')).not.toContain('href=')
 })
 
+it('pins literal HTML for representative Markdown constructs', () => {
+    expect(html('[unsafe](javascript:alert%281%29)')).toBe(
+        '<p><a href="">unsafe</a></p>'
+    )
+    expect(
+        html('See [reference][later].\n\n[later]: https://example.com')
+    ).toBe('<p>See <a href="https://example.com">reference</a>.</p>')
+    expect(html('*a* and **b**')).toBe(
+        '<p><em>a</em> and <strong>b</strong></p>'
+    )
+    expect(html('```typescript\nconst x = "<tag>";\n```')).toBe(
+        '<pre><code class="language-typescript">const x = &quot;&lt;tag&gt;&quot;;\n</code></pre>'
+    )
+})
+
 it('blocks unsafe URLs and raw HTML while allowing only raster data images', () => {
     const output = html(
         '[unsafe](javascript:alert%281%29)\n\n![svg](data:image/svg+xml;base64,PHN2Zz4=)\n\n![png](data:image/png;base64,aGVsbG8=)\n\n<img onerror="alert(1)">'

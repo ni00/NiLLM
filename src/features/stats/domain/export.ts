@@ -314,13 +314,15 @@ export function exportResultsCSV(document: ReportDocument): string {
 
 const DASH = '—'
 
-function mdEscapeCell(value: string): string {
+function escapeBase(value: string): string {
     return value
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/\|/g, '\\|')
-        .replace(/\r?\n/g, ' ')
+}
+
+function mdEscapeCell(value: string): string {
+    return escapeBase(value).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 }
 
 function mdTable(headers: string[], rows: string[][]): string {
@@ -869,12 +871,7 @@ export function exportReportMarkdown(document: ReportDocument): string {
 }
 
 function escapeHtml(value: string): string {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;')
+    return escapeBase(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 const HTML_STYLES = `

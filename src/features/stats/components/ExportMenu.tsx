@@ -45,6 +45,17 @@ import {
 import { useAppStore } from '@/lib/store'
 import { downloadJson, downloadFile } from '@/lib/utils'
 
+type DownloadFormat = Exclude<'json' | 'csv' | 'md' | 'html', 'json'>
+
+const DOWNLOAD_FORMATS: Record<
+    DownloadFormat,
+    { extension: string; mimeType: string }
+> = {
+    csv: { extension: 'csv', mimeType: 'text/csv;charset=utf-8;' },
+    md: { extension: 'md', mimeType: 'text/markdown;charset=utf-8;' },
+    html: { extension: 'html', mimeType: 'text/html;charset=utf-8;' }
+}
+
 interface ExportMenuProps {
     input?: ReportInput
     onClearAll?: () => void
@@ -85,15 +96,8 @@ export function ExportMenu({ input, onClearAll }: ExportMenuProps) {
                     : format === 'md'
                       ? exportReportMarkdown(document)
                       : exportReportHTML(document)
-            await downloadFile(
-                content,
-                `${name}.${format}`,
-                format === 'csv'
-                    ? 'text/csv;charset=utf-8;'
-                    : format === 'md'
-                      ? 'text/markdown;charset=utf-8;'
-                      : 'text/html;charset=utf-8;'
-            )
+            const { extension, mimeType } = DOWNLOAD_FORMATS[format]
+            await downloadFile(content, `${name}.${extension}`, mimeType)
         }
     }
 
@@ -123,7 +127,7 @@ export function ExportMenu({ input, onClearAll }: ExportMenuProps) {
             await downloadFile(
                 exportResultsCSV(document),
                 `${name}.csv`,
-                'text/csv;charset=utf-8;'
+                DOWNLOAD_FORMATS.csv.mimeType
             )
         }
         closeRawExport()

@@ -171,12 +171,13 @@ export function withEstimatedCost(
 /** Sum known costs; weight cache hits by input tokens, never by response count. */
 export function summarizeUsage(metrics: BenchmarkMetrics[]) {
     const priced = metrics.filter(
-        (entry) => nonnegativeNumber(entry.cost) !== undefined
+        (entry): entry is BenchmarkMetrics & { cost: number } =>
+            nonnegativeNumber(entry.cost) !== undefined
     )
     const cached = metrics.filter((entry) => cacheHitRate(entry) !== undefined)
     return {
         cost: priced.length
-            ? priced.reduce((sum, entry) => sum + entry.cost!, 0)
+            ? priced.reduce((sum, entry) => sum + entry.cost, 0)
             : undefined,
         costSource:
             priced.length && priced.every((entry) => entry.costSource === 'api')
@@ -204,12 +205,15 @@ export function summarizeUsage(metrics: BenchmarkMetrics[]) {
     }
 }
 
+const usdFormat = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 8
+})
+
 export function formatUsageCost(cost: number | undefined) {
-    if (nonnegativeNumber(cost) === undefined) return '—'
-    if (cost! > 0 && cost! < 1e-8) return `$${cost!.toExponential(2)}`
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 8
-    }).format(cost!)
+    const value = nonnegativeNumber(cost)
+    if (value === undefined) return '—'
+    if (value > 0 && value < 1e-8) return `$${value.toExponential(2)}`
+    return usdFormat.format(value)
 }
