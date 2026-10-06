@@ -1,11 +1,9 @@
 import { useI18n } from '@/lib/i18n'
-import { buildReportDocument, type ReportInput } from '../domain/report'
-import {
-    exportStatsCSV,
-    exportResultsCSV,
-    exportReportMarkdown,
-    exportReportHTML
-} from '../domain/export'
+import { buildReportDocument } from '../domain/report'
+import type { ReportInput } from '../domain/report-types'
+import { exportStatsCSV, exportResultsCSV } from '../domain/export-csv'
+import { exportReportMarkdown } from '../domain/export-markdown'
+import { exportReportHTML } from '../domain/export-html'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {

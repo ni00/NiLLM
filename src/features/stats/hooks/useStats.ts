@@ -10,7 +10,7 @@ import {
     selectStatisticsResults
 } from '../domain/statistics'
 import type { ChartDataPoint, RadarDataPoint } from '../display'
-import type { ReportInput } from '../domain/report'
+import type { ReportInput } from '../domain/report-types'
 import { providerLabel } from '@/lib/providers/catalog'
 export type { ModelStat } from '@/lib/statistics'
 

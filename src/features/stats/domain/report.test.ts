@@ -10,11 +10,9 @@ import type {
     ResolvedGenerationConfig
 } from '@/lib/types'
 import { result, session } from '@/test/fixtures'
-import {
-    buildReportDocument,
-    sanitizeReportIdentity,
-    type ReportInput
-} from './report'
+import { buildReportDocument } from './report'
+import { sanitizeReportIdentity } from './report-sanitize'
+import type { ReportInput } from './report-types'
 
 const FINGERPRINT = 'a'.repeat(64)
 

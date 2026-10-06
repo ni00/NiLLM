@@ -5,7 +5,7 @@ async function loadReportTools() {
     const [{ buildReportDocument }, { exportReportMarkdown }] =
         await Promise.all([
             import('@/features/stats/domain/report'),
-            import('@/features/stats/domain/export')
+            import('@/features/stats/domain/export-markdown')
         ])
     return { buildReportDocument, exportReportMarkdown }
 }
