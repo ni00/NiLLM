@@ -18,7 +18,31 @@ export default defineConfig({
     // Match the previously supported Tauri WebViews explicitly across Vite upgrades.
     build: {
         target: ['es2022', 'chrome107', 'safari16'],
-        reportCompressedSize: false
+        reportCompressedSize: false,
+        // The module-preload helper injects <link> tags through `document`,
+        // which does not exist in the generation worker that shares this
+        // build's chunks. Dynamic imports still resolve without the hint.
+        modulePreload: false,
+        rollupOptions: {
+            // The streaming worker is an entry of the main build, not a Vite
+            // worker build, so it can share the provider SDK chunks with the
+            // window instead of carrying a second copy of them.
+            input: {
+                index: fileURLToPath(new URL('./index.html', import.meta.url)),
+                'stream-worker': fileURLToPath(
+                    new URL(
+                        './src/lib/workers/stream.worker.ts',
+                        import.meta.url
+                    )
+                )
+            },
+            output: {
+                entryFileNames: (chunk) =>
+                    chunk.name === 'stream-worker'
+                        ? 'assets/stream-worker.js'
+                        : 'assets/[name]-[hash].js'
+            }
+        }
     },
     // Imports in model workers must remain separate from the application entry.
     worker: { format: 'es' },

@@ -22,15 +22,22 @@ export interface WorkerLease {
 const REQUESTS_PER_RUNTIME = 8
 const MAX_RUNTIMES = 4
 
+// The worker entry is emitted as a chunk of the main build so the two graphs
+// share the provider SDK instead of bundling a second copy of it. Only the URL
+// differs between the dev server and the built assets.
+const streamWorkerUrl = import.meta.env.DEV
+    ? new URL(
+          /* @vite-ignore */ '../../lib/workers/stream.worker.ts',
+          import.meta.url
+      )
+    : new URL(/* @vite-ignore */ './stream-worker.js', import.meta.url)
+
 export class GenerationWorkerPool {
     private slots = new Set<Slot>()
     private nativeJobs = new Map<AbortController, Job>()
     constructor(
         private createWorker = () =>
-            new Worker(
-                new URL('../../lib/workers/stream.worker.ts', import.meta.url),
-                { type: 'module' }
-            ),
+            new Worker(streamWorkerUrl, { type: 'module' }),
         private idleMs = 30000
     ) {}
     dispatch(request: StreamRequest, job: Job): WorkerLease {

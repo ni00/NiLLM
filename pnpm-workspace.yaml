@@ -3,3 +3,9 @@ packages:
 
 allowBuilds:
     esbuild: true
+
+# The provider packages each pin their own @ai-sdk/provider(-utils) patch, so a
+# workspace without these overrides bundles three copies of the same runtime.
+overrides:
+    '@ai-sdk/provider': 4.0.22
+    '@ai-sdk/provider-utils': 5.0.54
