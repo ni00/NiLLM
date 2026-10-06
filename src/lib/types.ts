@@ -77,7 +77,7 @@ export interface GenerationConfigPatch {
 }
 
 export interface ModelCapabilities {
-    chatProtocol?: 'openai-compatible' | 'anthropic'
+    chatProtocol?: 'openai-compatible' | 'anthropic' | 'openai-responses'
     vision?: boolean
     unsupportedParameters?: SamplingParameter[]
 }

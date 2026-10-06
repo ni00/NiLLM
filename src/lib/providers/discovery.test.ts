@@ -1,11 +1,50 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { discoverModels } from './discovery'
+import { modelSchema } from '@/lib/validation'
+import { model } from '@/test/fixtures'
 afterEach(() => vi.unstubAllGlobals())
 const response = (data: unknown) =>
     new Response(JSON.stringify(data), {
         headers: { 'Content-Type': 'application/json' }
     })
 describe('model discovery', () => {
+    it('preserves Go model protocols in imported and persisted models', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue(
+                response({
+                    data: [
+                        { id: 'gpt-6-luna' },
+                        { id: 'grok-4.7' },
+                        { id: 'muse-spark-1.3-contributor' },
+                        { id: 'minimax-m3' },
+                        { id: 'qwen3.8-flash' },
+                        { id: 'hy4-preview' },
+                        { id: 'kimi-k2.6' }
+                    ]
+                })
+            )
+        )
+        const models = await discoverModels({ provider: 'opencode-go' })
+        const protocols = Object.fromEntries(
+            models.map((entry) => [
+                entry.id,
+                modelSchema.parse(
+                    model(entry.id, { ...entry, provider: 'opencode-go' })
+                ).capabilities?.chatProtocol
+            ])
+        )
+        expect(protocols).toEqual({
+            'gpt-6-luna': 'openai-responses',
+            'grok-4.7': 'openai-responses',
+            'muse-spark-1.3-contributor': 'openai-responses',
+            'minimax-m3': 'anthropic',
+            'qwen3.8-flash': 'anthropic',
+            'hy4-preview': 'openai-compatible',
+            'kimi-k2.6': 'openai-compatible'
+        })
+    })
+
     it('imports Command Code model endpoints and preserves Messages routing through preset enrichment', async () => {
         const fetcher = vi.fn().mockResolvedValue(
             response({

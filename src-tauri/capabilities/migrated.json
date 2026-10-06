@@ -6,6 +6,10 @@
     "main"
   ],
   "permissions": [
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://opencode.ai/zen/*" }]
+    },
     "core:default",
     "process:default",
     "shell:default",

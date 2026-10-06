@@ -7,6 +7,77 @@ import { getBaseURL } from './catalog'
 afterEach(() => vi.unstubAllGlobals())
 describe('named provider adapters', () => {
     it.each([
+        'minimax-m3',
+        'minimax-m2.7',
+        'minimax-m2.5',
+        'qwen3.8-max',
+        'qwen3.8-flash',
+        'qwen3.7-plus'
+    ])('uses Go Messages for saved %s models', async (id) => {
+        const fetcher = vi.fn().mockResolvedValue(
+            Response.json({
+                id: 'msg',
+                type: 'message',
+                role: 'assistant',
+                model: id,
+                content: [{ type: 'text', text: 'Done' }],
+                stop_reason: 'end_turn',
+                stop_sequence: null,
+                usage: { input_tokens: 3, output_tokens: 2 }
+            })
+        )
+        vi.stubGlobal('fetch', fetcher)
+        const adapter = await getProvider(
+            model('saved-local-id', {
+                provider: 'opencode-go',
+                providerId: id,
+                apiKey: 'test-key'
+            })
+        )
+        const result = await generateText({
+            model: adapter(id),
+            prompt: 'Hi',
+            maxOutputTokens: 4096,
+            maxRetries: 0
+        })
+        expect(result.text).toBe('Done')
+        const [url, init] = fetcher.mock.calls[0]
+        expect(String(url)).toBe('https://opencode.ai/zen/go/v1/messages')
+        expect(new Headers(init.headers).get('x-api-key')).toBe('test-key')
+        expect(JSON.parse(init.body)).toMatchObject({
+            model: id,
+            max_tokens: 4096
+        })
+    })
+
+    it('keeps Go protocol adapters separate while preserving custom OpenAI-compatible routing', async () => {
+        const connection = {
+            provider: 'opencode-go' as const,
+            apiKey: 'same-key'
+        }
+        const adapters = await Promise.all(
+            ['gpt-6-luna', 'minimax-m3', 'hy4-preview'].map((id) =>
+                getProvider(model(id, connection))
+            )
+        )
+        expect(new Set(adapters).size).toBe(3)
+        const custom = await getProvider(
+            model('gpt-6-luna', {
+                provider: 'custom',
+                baseURL: 'https://custom.test/v1'
+            })
+        )
+        expect(custom('gpt-6-luna').provider).toBe('custom.chat')
+        const alias = await getProvider(
+            model('alias', {
+                ...connection,
+                capabilities: { chatProtocol: 'openai-responses' }
+            })
+        )
+        expect(alias('alias').provider).toContain('responses')
+    })
+
+    it.each([
         ['groq', 'https://api.groq.com/openai/v1/chat/completions'],
         [
             'dashscope',

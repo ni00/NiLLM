@@ -19,6 +19,7 @@ export interface RunWorkerStreamOptions {
     model: LLMModel
     messages: Message[]
     resultId: string
+    sessionId?: string
     /** Streaming progress for transient UI state; never a durable write. */
     onUpdate: (update: Partial<BenchmarkResult>) => void
     /** Pre-cancelled signals never spawn a worker. */
@@ -31,6 +32,7 @@ export function runWorkerStream({
     model,
     messages,
     resultId,
+    sessionId,
     onUpdate,
     signal
 }: RunWorkerStreamOptions): Promise<StreamOutcome> {
@@ -131,7 +133,7 @@ export function runWorkerStream({
         }
         try {
             lease = generationWorkers.dispatch(
-                { model, messages, resultId },
+                { model, messages, resultId, sessionId },
                 {
                     onEvent,
                     onError: () => finish('error', 'Generation worker failed.')

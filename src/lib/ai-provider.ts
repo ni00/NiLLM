@@ -1,7 +1,12 @@
-import type { LanguageModel } from 'ai'
+import {
+    defaultSettingsMiddleware,
+    wrapLanguageModel,
+    type LanguageModel
+} from 'ai'
 import type { LLMModel } from './types'
 import { getBaseURL, providerProtocol } from './providers/catalog'
 import { resolveDecisionProtocol } from '@/features/decisions/protocol'
+import { providerFetch } from './providers/transport'
 
 type ModelFactory = (modelId: string) => Exclude<LanguageModel, string>
 const providers = new Map<string, Promise<ModelFactory>>()
@@ -33,7 +38,25 @@ export function getProvider(model: LLMModel): Promise<ModelFactory> {
         return cached
     }
     const provider = (async (): Promise<ModelFactory> => {
-        const options = { baseURL, apiKey: model.apiKey || '' }
+        const options = {
+            baseURL,
+            apiKey: model.apiKey || '',
+            fetch: providerFetch
+        }
+        if (protocol === 'openai-responses') {
+            const { createOpenAI } = await import('@ai-sdk/openai')
+            const provider = createOpenAI(options)
+            return (modelId) =>
+                wrapLanguageModel({
+                    model: provider.responses(modelId),
+                    middleware: defaultSettingsMiddleware({
+                        // NiLLM sends complete local conversation history each turn.
+                        settings: {
+                            providerOptions: { openai: { store: false } }
+                        }
+                    })
+                })
+        }
         if (protocol === 'anthropic') {
             const { createAnthropic } = await import('@ai-sdk/anthropic')
             return createAnthropic({

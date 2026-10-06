@@ -44,7 +44,9 @@ const telemetryPatchSchema = z.object({
         .optional()
 })
 const capabilitiesSchema = z.object({
-    chatProtocol: z.enum(['openai-compatible', 'anthropic']).optional(),
+    chatProtocol: z
+        .enum(['openai-compatible', 'anthropic', 'openai-responses'])
+        .optional(),
     vision: z.boolean().optional(),
     unsupportedParameters: z.array(z.enum(SAMPLING_PARAMETERS)).optional()
 })

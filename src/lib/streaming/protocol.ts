@@ -4,6 +4,7 @@ export interface StreamRequest {
     model: LLMModel
     messages: Message[]
     resultId: string
+    sessionId?: string
 }
 export type GenerationWorkerRequest =
     | (StreamRequest & { type: 'generate'; requestId: string })

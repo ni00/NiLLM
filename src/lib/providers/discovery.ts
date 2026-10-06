@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { LLMModel } from '@/lib/types'
 import { getBaseURL, providerProtocol } from './catalog'
 import { getModelPresets } from './presets'
+import { providerFetch } from './transport'
 import { nonnegativeNumber } from '@/lib/usage'
 
 const perMillion = (value: string | undefined) => {
@@ -152,7 +153,10 @@ export async function discoverModels(
             url.searchParams.set('limit', '1000')
             if (cursor) url.searchParams.set('after_id', cursor)
         } else if (cursor) url.searchParams.set('after', cursor)
-        const response = await fetch(url, { headers, signal: requestSignal })
+        const response = await providerFetch(url, {
+            headers,
+            signal: requestSignal
+        })
         // Provider error bodies may contain credentials. Keep diagnostics to status.
         if (!response.ok)
             throw new Error(
@@ -294,6 +298,24 @@ export async function discoverModels(
         if (!cursor)
             return [...results.values()]
                 .map((entry) => {
+                    if (connection.provider === 'opencode-go') {
+                        const protocol = providerProtocol(
+                            connection.provider,
+                            entry
+                        )
+                        if (
+                            protocol === 'openai-compatible' ||
+                            protocol === 'anthropic' ||
+                            protocol === 'openai-responses'
+                        )
+                            entry = {
+                                ...entry,
+                                capabilities: {
+                                    ...entry.capabilities,
+                                    chatProtocol: protocol
+                                }
+                            }
+                    }
                     const preset = knownPresets.get(entry.id)
                     return preset && preset.mode === entry.mode
                         ? {

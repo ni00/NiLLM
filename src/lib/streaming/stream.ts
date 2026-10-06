@@ -12,7 +12,8 @@ export async function streamModel(
     messages: Message[],
     resultId: string,
     emit: (event: StreamEvent) => void,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    sessionId?: string
 ) {
     const start = performance.now()
     let firstToken: number | undefined
@@ -39,6 +40,9 @@ export async function streamModel(
         timeout: config?.timeout,
         maxRetries: 0,
         abortSignal,
+        headers: ['opencode', 'opencode-go'].includes(model.provider)
+            ? { 'x-opencode-session': sessionId || resultId }
+            : undefined,
         providerOptions: {
             [model.provider === 'other' ? 'custom' : model.provider]: {
                 ...(config?.minP !== undefined ? { min_p: config.minP } : {}),

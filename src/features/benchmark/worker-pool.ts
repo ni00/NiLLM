@@ -2,6 +2,7 @@ import type {
     StreamRequest,
     GenerationWorkerEvent
 } from '@/lib/streaming/protocol'
+import { needsNativeTransport } from '@/lib/providers/transport'
 
 interface Job {
     onEvent: (event: GenerationWorkerEvent) => void
@@ -23,6 +24,7 @@ const MAX_RUNTIMES = 4
 
 export class GenerationWorkerPool {
     private slots = new Set<Slot>()
+    private nativeJobs = new Map<AbortController, Job>()
     constructor(
         private createWorker = () =>
             new Worker(
@@ -32,6 +34,36 @@ export class GenerationWorkerPool {
         private idleMs = 30000
     ) {}
     dispatch(request: StreamRequest, job: Job): WorkerLease {
+        // Tauri IPC is available in the WebView, not in Web Workers. Keep
+        // these asynchronous streams here so discovery and generation use
+        // the same native transport. The scheduler still bounds concurrency.
+        if (needsNativeTransport(request.model)) {
+            const controller = new AbortController()
+            const requestId = crypto.randomUUID()
+            this.nativeJobs.set(controller, job)
+            void import('@/lib/workers/generate')
+                .then(async ({ executeGeneration }) => {
+                    controller.signal.throwIfAborted()
+                    await executeGeneration(
+                        request,
+                        (event) => {
+                            if (this.nativeJobs.has(controller))
+                                job.onEvent({ ...event, requestId })
+                        },
+                        controller
+                    )
+                })
+                .catch(() => {
+                    if (this.nativeJobs.has(controller)) job.onError()
+                })
+                .finally(() => this.nativeJobs.delete(controller))
+            return {
+                release: (cancel = false) => {
+                    this.nativeJobs.delete(controller)
+                    if (cancel) controller.abort()
+                }
+            }
+        }
         let slot = [...this.slots].sort((a, b) => a.jobs.size - b.jobs.size)[0]
         if (
             !slot ||
@@ -94,6 +126,12 @@ export class GenerationWorkerPool {
         for (const job of jobs) job.onError()
     }
     dispose() {
+        const nativeJobs = [...this.nativeJobs]
+        this.nativeJobs.clear()
+        for (const [controller, job] of nativeJobs) {
+            controller.abort()
+            job.onError()
+        }
         for (const slot of this.slots) this.retire(slot)
     }
 }

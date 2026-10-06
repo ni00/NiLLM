@@ -31,6 +31,7 @@ async function executeStream(
             model: executionModel,
             messages,
             resultId,
+            sessionId,
             onUpdate: (update) => scheduleStreamingUpdate(resultId, update),
             signal: controller.signal
         })

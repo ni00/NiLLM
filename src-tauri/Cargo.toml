@@ -1,6 +1,6 @@
 [package]
 name = "nillm"
-version = "1.1.0"
+version = "1.1.1"
 description = "NiLLM Arena App"
 authors = ["you"]
 edition = "2024"
@@ -21,6 +21,7 @@ tauri-plugin-process = "2.4.0"
 tauri-plugin-fs = "2.6.0"
 tauri-plugin-dialog = "2.8.1"
 tauri-plugin-safe-area-insets-css = "0.2"
+tauri-plugin-http = "2.8.0"
 
 [features]
 # Embed frontend assets in production builds.

@@ -110,6 +110,21 @@ export function providerProtocol(
     provider: LLMProvider,
     model?: Pick<LLMModel, 'id' | 'providerId' | 'capabilities'>
 ) {
+    if (provider === 'opencode-go') {
+        if (model?.capabilities?.chatProtocol)
+            return model.capabilities.chatProtocol
+        const id = model?.providerId || model?.id || ''
+        // Go exposes model-specific wire protocols, not one compatible chat API.
+        // https://opencode.ai/docs/go/#endpoints
+        // Resolve here as well as during import so saved models need no migration.
+        if (/^(?:gpt-|grok-4[.-]|muse-spark-)/.test(id))
+            return 'openai-responses'
+        if (
+            /^minimax-/.test(id) ||
+            ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-plus'].includes(id)
+        )
+            return 'anthropic'
+    }
     if (provider === 'commandcode') {
         if (model?.capabilities?.chatProtocol)
             return model.capabilities.chatProtocol
